@@ -49,6 +49,7 @@ from paces.model import (
     validate_document,
 )
 from paces.edits import apply_edits, merge_regenerated
+from paces.measure import GridMeasurement, measure_grid
 from paces.projection import to_document
 from paces.render import render_html
 from paces.segmenters import (
@@ -87,6 +88,8 @@ __all__ = [
     "Capability",
     "register",
     "capabilities",
+    "measure_grid",
+    "GridMeasurement",
     "to_document",
     # editing & regeneration
     "apply_edits",
