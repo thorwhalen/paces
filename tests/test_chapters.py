@@ -199,3 +199,10 @@ def test_a_grid_rides_along_even_when_placement_did_not_use_it():
     )
     assert seg.method == "chapters"
     assert seg.grid is not None and seg.unit == "eight"
+
+
+def test_non_finite_times_are_refused():
+    with pytest.raises(ValueError, match="non-finite"):
+        segment(metadata=[{"start": "nan", "end": "nan", "title": "x"}])
+    with pytest.raises(ValueError, match="non-finite"):
+        segment(metadata=[{"start": 0, "end": "inf", "title": "x"}])

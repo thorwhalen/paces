@@ -30,6 +30,7 @@ by an exception.
 from __future__ import annotations
 
 import importlib
+import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -238,6 +239,12 @@ def _normalize_chapters(metadata: Mapping | Sequence | None) -> list[dict]:
             raise ValueError(
                 f"chapters[{i}]: unreadable times {start_raw!r} / {end_raw!r}"
             ) from None
+        if not (math.isfinite(start) and math.isfinite(end)):
+            # NaN also defeats the end <= start comparison below (always
+            # False), so this must come first.
+            raise ValueError(
+                f"chapters[{i}]: non-finite times {start_raw!r} / {end_raw!r}"
+            )
         if start < 0:
             raise ValueError(f"chapters[{i}]: negative start ({start})")
         if end <= start:

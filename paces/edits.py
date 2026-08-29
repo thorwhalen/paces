@@ -24,10 +24,14 @@ Path rules (each earned by an adversarial review, PR #11):
   ``Lock.path``\\ s are canonicalised to snake_case and to id-form where an
   unambiguous id exists.
 - On merge, a lock is re-applied by **matching list items structurally**
-  (id; a span's ``(source, role)``; an artifact's ``uri``; a scalar's value)
-  — never by bare position, because regeneration reorders lists and a
-  positional write would land on the wrong item. When no confident match
-  exists, nothing is written and the lock survives as the record.
+  (id; a span's exact ``(source, role, start)``, falling back to
+  ``(source, role)`` only for singleton groups; an artifact's ``uri``) —
+  never by bare position, not even within a group, because regeneration
+  reorders lists and a positional write would land on the wrong item. When
+  no confident match exists, nothing is written and the lock survives as
+  the record. Scalar list items (tags) have no identity besides their
+  value, so an edited scalar cannot be re-found after regeneration — the
+  edit does not survive; only its lock record does.
 - ``attrs`` bags merge committed-over-fresh per key: they are user/renderer
   data that analysis does not produce, so regeneration never wins there.
 
@@ -210,10 +214,11 @@ def apply_edits(
         raw_path = edit.get("path", "")
         segments = _canonical_segments(dump, _split_path(raw_path), path=raw_path)
         container, key = _resolve_parent(dump, segments, path=raw_path)
+        # The lock site must resolve BEFORE the mutation: an edit may change
+        # the very value a segment addresses (renaming a step's id).
+        site, relative = _lock_site(dump, segments)
         was = copy.deepcopy(container[key])
         container[key] = copy.deepcopy(edit["value"])
-
-        site, relative = _lock_site(dump, segments)
         locks = site.setdefault("locks", [])
         locks[:] = [lock for lock in locks if lock.get("path") != relative]
         locks.append(
@@ -238,21 +243,36 @@ def _match_index(citems: list, cidx: int, fitems: list) -> int | None:
                 if isinstance(fitem, Mapping) and fitem.get("id") == cid:
                     return j
             return None
-        if _SPAN_KEYS <= set(citem):  # a SourceSpan: identity is (source, role)
-            key = (citem.get("source"), citem.get("role"))
+        if _SPAN_KEYS <= set(citem):  # a SourceSpan
+            # Anchor on the exact (source, role, start) triple first — a
+            # reorder keeps starts, so this survives insertion AND intra-group
+            # shuffling. Only when that fails, fall back to (source, role),
+            # and ONLY when that group is a singleton on both sides: an
+            # ordinal within a group is bare position wearing a costume
+            # (adversarial re-review of PR #11). Anything else declines.
+            def _triple(item):
+                return (item.get("source"), item.get("role"), item.get("start"))
 
-            def _key(item):
+            def _pair(item):
                 return (item.get("source"), item.get("role"))
 
-            ordinal = sum(
-                1 for x in citems[:cidx] if isinstance(x, Mapping) and _key(x) == key
-            )
-            seen = 0
-            for j, fitem in enumerate(fitems):
-                if isinstance(fitem, Mapping) and _key(fitem) == key:
-                    if seen == ordinal:
-                        return j
-                    seen += 1
+            triple_hits = [
+                j
+                for j, fitem in enumerate(fitems)
+                if isinstance(fitem, Mapping) and _triple(fitem) == _triple(citem)
+            ]
+            if len(triple_hits) == 1:
+                return triple_hits[0]
+            committed_group = [
+                x for x in citems if isinstance(x, Mapping) and _pair(x) == _pair(citem)
+            ]
+            fresh_group = [
+                j
+                for j, fitem in enumerate(fitems)
+                if isinstance(fitem, Mapping) and _pair(fitem) == _pair(citem)
+            ]
+            if len(committed_group) == 1 and len(fresh_group) == 1:
+                return fresh_group[0]
             return None
         if "uri" in citem:  # an ArtifactRef: the uri is its identity
             for j, fitem in enumerate(fitems):

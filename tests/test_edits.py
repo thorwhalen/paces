@@ -336,3 +336,120 @@ def test_camel_case_paths_are_accepted_and_canonicalised():
     )
     assert doc.steps[0].variant_of == "b"
     assert doc.steps[0].locks[0].path == "/variant_of"
+
+
+# ── re-review regressions (the probes that beat the first fix) ─────────────
+
+
+def test_span_lock_survives_a_same_role_insertion():
+    """R1: the inserted span shares (source, role) with the locked one —
+    exact-start anchoring must carry the caption to the right span."""
+    committed = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/b/spans/0/caption", "value": "hand-fixed"}],
+        by="user:thor",
+    )
+    fresh = _doc()
+    fresh.steps[1].spans = [
+        SourceSpan(source="vid", start="5", end="9", caption="new closeup"),
+        SourceSpan(source="vid", start="20", end="35", caption="machine v2"),
+    ]
+    merged = merge_regenerated(committed, fresh)
+    first, second = merged.steps[1].spans
+    assert first.caption == "new closeup"  # untouched
+    assert second.caption == "hand-fixed"  # the lock followed start=20
+
+
+def test_span_lock_survives_an_intra_group_swap():
+    """R1b: two same-(source, role) spans, fresh emits them reordered."""
+    committed = _doc()
+    committed.steps[1].spans = [
+        SourceSpan(source="vid", start="20", end="35", caption="first"),
+        SourceSpan(source="vid", start="40", end="55", caption="second"),
+    ]
+    committed = apply_edits(
+        committed,
+        [{"op": "set", "path": "/steps/b/spans/1/caption", "value": "hand-fixed"}],
+        by="user:thor",
+    )
+    fresh = _doc()
+    fresh.steps[1].spans = [
+        SourceSpan(source="vid", start="40", end="55", caption="second v2"),
+        SourceSpan(source="vid", start="20", end="35", caption="first v2"),
+    ]
+    merged = merge_regenerated(committed, fresh)
+    by_start = {span.start: span for span in merged.steps[1].spans}
+    assert by_start["40"].caption == "hand-fixed"
+    assert by_start["20"].caption == "first v2"
+
+
+def test_ambiguous_span_lock_declines_instead_of_guessing():
+    """Moved start + non-singleton group = no confident match: nothing is
+    written to any span; the lock survives as the record."""
+    committed = _doc()
+    committed.steps[1].spans = [
+        SourceSpan(source="vid", start="20", end="35", caption="first"),
+        SourceSpan(source="vid", start="40", end="55", caption="second"),
+    ]
+    committed = apply_edits(
+        committed,
+        [{"op": "set", "path": "/steps/b/spans/0/caption", "value": "hand-fixed"}],
+        by="user:thor",
+    )
+    fresh = _doc()
+    fresh.steps[1].spans = [  # both starts moved, group of two: ambiguous
+        SourceSpan(source="vid", start="21", end="35", caption="first v2"),
+        SourceSpan(source="vid", start="41", end="55", caption="second v2"),
+    ]
+    merged = merge_regenerated(committed, fresh)
+    assert [s.caption for s in merged.steps[1].spans] == ["first v2", "second v2"]
+    assert merged.steps[1].locks  # the record survives even when unapplied
+
+
+def test_singleton_group_still_matches_when_the_boundary_moved():
+    """The original headline case must keep working: one span per (source,
+    role) on each side, start changed by regeneration — the lock re-applies."""
+    committed = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/b/spans/0/caption", "value": "hand-fixed"}],
+        by="user:thor",
+    )
+    fresh = _doc()
+    fresh.steps[1].spans[0].start = "21"
+    merged = merge_regenerated(committed, fresh)
+    assert merged.steps[1].spans[0].caption == "hand-fixed"
+
+
+def test_renaming_a_step_id_works_in_both_spellings():
+    """R2: the lock site resolves before the mutation, so /id is editable."""
+    by_id = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/a/id", "value": "renamed"}],
+        by="user:t",
+    )
+    assert by_id.steps[0].id == "renamed"
+    assert by_id.steps[0].locks[0].path == "/id"
+    assert by_id.steps[0].locks[0].was == "a"
+
+    by_index = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/0/id", "value": "renamed"}],
+        by="user:t",
+    )
+    assert by_index.steps[0].id == "renamed"
+
+
+def test_scalar_list_edits_do_not_survive_but_keep_their_record():
+    """R4: documented limitation — a scalar has no identity but its value."""
+    committed = _doc()
+    committed.steps[0].tags = ["wrong-tag"]
+    committed = apply_edits(
+        committed,
+        [{"op": "set", "path": "/steps/a/tags/0", "value": "right-tag"}],
+        by="user:t",
+    )
+    fresh = _doc()
+    fresh.steps[0].tags = ["wrong-tag"]
+    merged = merge_regenerated(committed, fresh)
+    assert merged.steps[0].tags == ["wrong-tag"]  # not protected, by design
+    assert merged.steps[0].locks  # but the record survives
