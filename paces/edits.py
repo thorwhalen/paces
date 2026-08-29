@@ -15,15 +15,31 @@ here and both store-independent (``docs/07 §6.4`` steps 4–6):
   takes the fresh value, and committed-only steps that carry protection
   survive.
 
-Paths address list items by index (``/steps/3/name``) or, for lists whose
-items carry an ``id`` (steps, sources, cues, questions), by that id
-(``/steps/b4/spans/0/caption``) — ids are stabler across regenerations, so
-prefer them.
+Path rules (each earned by an adversarial review, PR #11):
+
+- List items are addressed **by id first** (``/steps/b4/name``); an ASCII
+  digit segment is an index only when no item carries that id. Ids are
+  stabler across regenerations — always prefer them.
+- Field segments accept the wire's camelCase or Python's snake_case; recorded
+  ``Lock.path``\\ s are canonicalised to snake_case and to id-form where an
+  unambiguous id exists.
+- On merge, a lock is re-applied by **matching list items structurally**
+  (id; a span's ``(source, role)``; an artifact's ``uri``; a scalar's value)
+  — never by bare position, because regeneration reorders lists and a
+  positional write would land on the wrong item. When no confident match
+  exists, nothing is written and the lock survives as the record.
+- ``attrs`` bags merge committed-over-fresh per key: they are user/renderer
+  data that analysis does not produce, so regeneration never wins there.
+
+Not yet recorded anywhere: the fresh values a merge *rejects*
+(``Origin.value_digest`` and the op-log arrive with the evidence layer,
+issue #4).
 """
 
 from __future__ import annotations
 
 import copy
+import re
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
@@ -34,13 +50,22 @@ from paces.model import Lock, StepDocument
 #: (they require tombstone semantics in the merge — see issue #5).
 SUPPORTED_OPS = ("set",)
 
+_CAMEL_BOUNDARY = re.compile(r"(?<!^)(?=[A-Z])")
+
+#: Structural identity keys for list items that carry no ``id``.
+_SPAN_KEYS = frozenset({"source", "role", "start"})
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _snake(key: str) -> str:
+    return _CAMEL_BOUNDARY.sub("_", key).lower()
+
+
 def _split_path(path: str) -> list[str]:
-    if not path.startswith("/") or path == "/":
+    if not isinstance(path, str) or not path.startswith("/") or path == "/":
         raise ValueError(
             f"path must be a JSON-pointer-style path like '/steps/b4/name'; "
             f"got {path!r}"
@@ -48,77 +73,102 @@ def _split_path(path: str) -> list[str]:
     return path[1:].split("/")
 
 
+def _is_index(segment: str) -> bool:
+    return segment.isascii() and segment.isdigit()
+
+
 def _index_of(items: list, segment: str, *, at: str) -> int:
-    """Resolve a list segment: a digit is an index, otherwise an item id."""
-    if segment.isdigit():
-        index = int(segment)
-        if index >= len(items):
-            raise ValueError(f"{at}: index {index} out of range (len {len(items)})")
-        return index
+    """Resolve a list segment: an item id first; an ASCII digit index second.
+
+    Id-first because ids are the stable address — and because a segmenter can
+    legitimately mint all-digit ids (chapters titled "1", "2", ...), which
+    index-first would silently misroute.
+    """
     for i, item in enumerate(items):
         if isinstance(item, Mapping) and item.get("id") == segment:
             return i
+    if _is_index(segment):
+        index = int(segment)
+        if index < len(items):
+            return index
+        raise ValueError(f"{at}: index {index} out of range (len {len(items)})")
     ids = [item.get("id") for item in items if isinstance(item, Mapping)]
     raise ValueError(f"{at}: no item with id {segment!r} (have: {ids})")
 
 
-def _resolve(root: dict, segments: list[str]) -> tuple[Any, list[str | int]]:
-    """Walk *segments* from *root*; return (parent container, resolved keys)."""
-    node: Any = root
-    resolved: list[str | int] = []
+def _key_of(container: Mapping, segment: str, *, at: str) -> str:
+    """Resolve a field segment; accepts wire camelCase, returns snake_case."""
+    if segment in container:
+        return segment
+    snake = _snake(segment)
+    if snake in container:
+        return snake
+    raise ValueError(f"{at}: no field {segment!r} (have: {sorted(container)})")
+
+
+def _resolve_parent(root: Any, segments: list[str], *, path: str):
+    """The parent container of the leaf, and the resolved leaf key."""
+    node = root
     for i, segment in enumerate(segments[:-1]):
         at = "/" + "/".join(segments[: i + 1])
         if isinstance(node, list):
-            key: str | int = _index_of(node, segment, at=at)
+            node = node[_index_of(node, segment, at=at)]
         elif isinstance(node, Mapping):
-            if segment not in node:
-                raise ValueError(f"{at}: no field {segment!r}")
-            key = segment
+            node = node[_key_of(node, segment, at=at)]
         else:
             raise ValueError(f"{at}: cannot descend into {type(node).__name__}")
-        resolved.append(key)
-        node = node[key]
-    return node, resolved
+    leaf = segments[-1]
+    if isinstance(node, list):
+        return node, _index_of(node, leaf, at=path)
+    if isinstance(node, Mapping):
+        return node, _key_of(node, leaf, at=path)
+    raise ValueError(f"{path}: cannot set into {type(node).__name__}")
 
 
-def _leaf_key(container: Any, segment: str, *, path: str) -> str | int:
-    if isinstance(container, list):
-        return _index_of(container, segment, at=path)
-    if isinstance(container, Mapping):
-        if segment not in container:
-            raise ValueError(
-                f"{path}: no field {segment!r} (have: {sorted(container)})"
-            )
-        return segment
-    raise ValueError(f"{path}: cannot set into {type(container).__name__}")
+def _canonical_segments(root: Any, segments: list[str], *, path: str) -> list[str]:
+    """The stablest spelling of a path: snake_case fields; list items by id
+    when one exists unambiguously in that list, by index otherwise."""
+    node, out = root, []
+    for i, segment in enumerate(segments):
+        at = "/" + "/".join(segments[: i + 1])
+        if isinstance(node, list):
+            index = _index_of(node, segment, at=at)
+            item = node[index]
+            item_id = item.get("id") if isinstance(item, Mapping) else None
+            ids = [x.get("id") for x in node if isinstance(x, Mapping)]
+            unambiguous = item_id is not None and ids.count(item_id) == 1
+            out.append(str(item_id) if unambiguous else str(index))
+            node = item
+        elif isinstance(node, Mapping):
+            key = _key_of(node, segment, at=at)
+            out.append(key)
+            node = node[key]
+        else:
+            raise ValueError(f"{at}: cannot descend into {type(node).__name__}")
+    return out
 
 
 def _lock_site(dump: dict, segments: list[str]) -> tuple[dict, str]:
     """The node that records the lock, and the lock path relative to it.
 
-    The nearest enclosing step owns the lock (its locks travel with it through
-    a merge); anything above the steps list locks on the document itself.
+    Structural, not heuristic: only paths of the form
+    ``steps/<item>(/steps/<item>)*/<field>...`` are owned by the innermost
+    step; everything else — ``attrs`` contents included, whatever shape the
+    user's data takes — locks on the document itself.
     """
-    node: Any = dump
-    site, site_depth = dump, 0
-    for i, segment in enumerate(segments[:-1]):
-        if isinstance(node, list):
-            node = node[_index_of(node, segment, at="/" + "/".join(segments[: i + 1]))]
-            if (
-                isinstance(node, Mapping)
-                and "duration" in node
-                and "spans" in node  # a Step dump
-            ):
-                site, site_depth = node, i + 1
-        else:
-            node = node[segment]
-    relative = "/" + "/".join(segments[site_depth:])
-    return site, relative
+    site, node, depth, i = dump, dump, 0, 0
+    while i + 2 <= len(segments) - 1 and segments[i] == "steps":
+        items = node["steps"]
+        at = "/" + "/".join(segments[: i + 2])
+        node = items[_index_of(items, segments[i + 1], at=at)]
+        site, depth = node, i + 2
+        i += 2
+    return site, "/" + "/".join(segments[depth:])
 
 
 def apply_edits(
     doc: StepDocument,
-    edits: Sequence[Mapping[str, Any]],
+    edits: Mapping[str, Any] | Sequence[Mapping[str, Any]],
     *,
     by: str,
     at: str | None = None,
@@ -126,10 +176,11 @@ def apply_edits(
 ) -> StepDocument:
     """Apply typed patches to a document, recording a Lock per edit.
 
-    Each edit is ``{"op": "set", "path": ..., "value": ...}``. All edits are
-    validated together — an invalid edit means NO edit is applied. Editing an
-    already-locked path replaces the lock (``was`` becomes the value this edit
-    overwrote, keeping the last edit reversible).
+    Each edit is ``{"op": "set", "path": ..., "value": ...}`` (a single edit
+    may be passed bare). All edits are validated together — an invalid edit
+    means NO edit is applied. Editing an already-locked path replaces the
+    lock (``was`` becomes the value this edit overwrote, keeping the last
+    edit reversible).
 
     >>> from paces.model import Measure, Step, StepDocument
     >>> doc = StepDocument(id='g', title='G', steps=[
@@ -139,18 +190,26 @@ def apply_edits(
     >>> edited.steps[0].name, edited.steps[0].locks[0].was
     ('new', 'old')
     """
+    if isinstance(edits, Mapping):
+        edits = [edits]
     timestamp = at or _now_iso()
     dump = doc.model_dump(mode="python", by_alias=False)
     for i, edit in enumerate(edits):
+        if not isinstance(edit, Mapping):
+            raise ValueError(
+                f"edits[{i}]: expected a mapping like "
+                f"{{'op': 'set', 'path': ..., 'value': ...}}; "
+                f"got {type(edit).__name__}"
+            )
         op = edit.get("op")
         if op not in SUPPORTED_OPS:
             raise ValueError(
                 f"edits[{i}]: unsupported op {op!r} (v1 supports: "
                 f"{', '.join(SUPPORTED_OPS)})"
             )
-        segments = _split_path(edit["path"])
-        container, _ = _resolve(dump, segments)
-        key = _leaf_key(container, segments[-1], path=edit["path"])
+        raw_path = edit.get("path", "")
+        segments = _canonical_segments(dump, _split_path(raw_path), path=raw_path)
+        container, key = _resolve_parent(dump, segments, path=raw_path)
         was = copy.deepcopy(container[key])
         container[key] = copy.deepcopy(edit["value"])
 
@@ -165,18 +224,100 @@ def apply_edits(
     return StepDocument.model_validate(dump)
 
 
+# ── merge: locked values win, matched structurally ──────────────────────────
+
+
+def _match_index(citems: list, cidx: int, fitems: list) -> int | None:
+    """The fresh index corresponding to committed item *cidx* — never bare
+    position on a reorderable list. ``None`` means no confident match."""
+    citem = citems[cidx]
+    if isinstance(citem, Mapping):
+        cid = citem.get("id")
+        if cid is not None:
+            for j, fitem in enumerate(fitems):
+                if isinstance(fitem, Mapping) and fitem.get("id") == cid:
+                    return j
+            return None
+        if _SPAN_KEYS <= set(citem):  # a SourceSpan: identity is (source, role)
+            key = (citem.get("source"), citem.get("role"))
+
+            def _key(item):
+                return (item.get("source"), item.get("role"))
+
+            ordinal = sum(
+                1 for x in citems[:cidx] if isinstance(x, Mapping) and _key(x) == key
+            )
+            seen = 0
+            for j, fitem in enumerate(fitems):
+                if isinstance(fitem, Mapping) and _key(fitem) == key:
+                    if seen == ordinal:
+                        return j
+                    seen += 1
+            return None
+        if "uri" in citem:  # an ArtifactRef: the uri is its identity
+            for j, fitem in enumerate(fitems):
+                if isinstance(fitem, Mapping) and fitem.get("uri") == citem["uri"]:
+                    return j
+            return None
+        return None
+    for j, fitem in enumerate(fitems):  # scalar: first equal value
+        if fitem == citem:
+            return j
+    return None
+
+
+def _apply_lock(fresh: Any, committed: Any, path: str) -> bool:
+    """Re-apply the committed value at *path* onto *fresh*.
+
+    Walks both structures in parallel, matching list items structurally.
+    Returns False — writing nothing — when the path cannot be confidently
+    resolved in the fresh structure; the lock then survives as the record.
+    """
+    try:
+        segments = _split_path(path)
+        cnode, fnode = committed, fresh
+        for i, segment in enumerate(segments[:-1]):
+            at = "/" + "/".join(segments[: i + 1])
+            if isinstance(cnode, list):
+                if not isinstance(fnode, list):
+                    return False
+                cidx = _index_of(cnode, segment, at=at)
+                fidx = _match_index(cnode, cidx, fnode)
+                if fidx is None:
+                    return False
+                cnode, fnode = cnode[cidx], fnode[fidx]
+            elif isinstance(cnode, Mapping):
+                key = _key_of(cnode, segment, at=at)
+                if not isinstance(fnode, Mapping) or key not in fnode:
+                    return False
+                cnode, fnode = cnode[key], fnode[key]
+            else:
+                return False
+        leaf = segments[-1]
+        if isinstance(cnode, list):
+            if not isinstance(fnode, list):
+                return False
+            cidx = _index_of(cnode, leaf, at=path)
+            fidx = _match_index(cnode, cidx, fnode)
+            if fidx is None:
+                return False
+            fnode[fidx] = copy.deepcopy(cnode[cidx])
+            return True
+        if isinstance(cnode, Mapping):
+            key = _key_of(cnode, leaf, at=path)
+            if not isinstance(fnode, Mapping) or key not in fnode:
+                return False
+            fnode[key] = copy.deepcopy(cnode[key])
+            return True
+        return False
+    except ValueError:
+        return False
+
+
 def _value_at(dump: Mapping, path: str) -> Any:
     segments = _split_path(path)
-    container, _ = _resolve(dict(dump), segments)
-    key = _leaf_key(container, segments[-1], path=path)
+    container, key = _resolve_parent(dict(dump), segments, path=path)
     return copy.deepcopy(container[key])
-
-
-def _set_at(dump: dict, path: str, value: Any) -> None:
-    segments = _split_path(path)
-    container, _ = _resolve(dump, segments)
-    key = _leaf_key(container, segments[-1], path=path)
-    container[key] = copy.deepcopy(value)
 
 
 def _is_protected(step_dump: Mapping) -> bool:
@@ -185,8 +326,16 @@ def _is_protected(step_dump: Mapping) -> bool:
     return bool(step_dump.get("locks")) or generated_by.startswith("user:")
 
 
+def _merged_attrs(committed: Mapping, fresh: Mapping) -> dict:
+    """attrs are user/renderer data analysis does not produce: committed wins
+    per key, fresh-only keys are kept."""
+    return {**copy.deepcopy(dict(fresh)), **copy.deepcopy(dict(committed))}
+
+
 def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
-    committed_by_id = {step["id"]: step for step in committed}
+    committed_by_id: dict[str, dict] = {}
+    for step in committed:  # first occurrence wins, matching apply_edits
+        committed_by_id.setdefault(step["id"], step)
     fresh_ids = {step["id"] for step in fresh}
     merged: list[dict] = []
     for fresh_step in fresh:
@@ -198,15 +347,12 @@ def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
         out["steps"] = _merge_steps(
             committed_step.get("steps", []), fresh_step.get("steps", [])
         )
+        out["attrs"] = _merged_attrs(
+            committed_step.get("attrs", {}), fresh_step.get("attrs", {})
+        )
         out["locks"] = copy.deepcopy(committed_step.get("locks", []))
         for lock in out["locks"]:
-            try:
-                _set_at(out, lock["path"], _value_at(committed_step, lock["path"]))
-            except ValueError:
-                # The locked path no longer exists in the fresh structure
-                # (e.g. a span index gone). Keep the lock as the record; the
-                # value it protected is in lock['was'] and the committed doc.
-                continue
+            _apply_lock(out, committed_step, lock["path"])
         merged.append(out)
 
     # Committed-only steps survive when they carry protection (locks anywhere
@@ -220,7 +366,7 @@ def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
         if not subtree_protected:
             continue
         insert_at = len(merged)
-        for j, earlier in enumerate(reversed(committed[:position])):
+        for earlier in reversed(committed[:position]):
             index = _find_index(merged, earlier["id"])
             if index is not None:
                 insert_at = index + 1
@@ -258,9 +404,12 @@ def merge_regenerated(committed: StepDocument, fresh: StepDocument) -> StepDocum
     The rules, in order of authority:
 
     1. **Locked paths keep the committed value** — on the document and on
-       every step matched by id, recursively.
+       every step matched by id, recursively — re-applied by structural
+       match, never by bare position (a reorder must not land a locked value
+       on the wrong item).
     2. Everything else takes the fresh value (regeneration is allowed to
-       improve what nobody protected).
+       improve what nobody protected) — except ``attrs``, where committed
+       wins per key.
     3. Committed-only steps survive when protected (locks in their subtree or
        a ``user:`` origin); unprotected ones are superseded analysis output.
     4. Cues, questions and sources are unioned by id (fresh wins on shared
@@ -276,10 +425,8 @@ def merge_regenerated(committed: StepDocument, fresh: StepDocument) -> StepDocum
     out["steps"] = _merge_steps(committed_dump["steps"], out["steps"])
     for key in ("cues", "questions", "sources"):
         out[key] = _union_by_id(committed_dump[key], out[key])
+    out["attrs"] = _merged_attrs(committed_dump.get("attrs", {}), out.get("attrs", {}))
     out["locks"] = copy.deepcopy(committed_dump.get("locks", []))
     for lock in out["locks"]:
-        try:
-            _set_at(out, lock["path"], _value_at(committed_dump, lock["path"]))
-        except ValueError:
-            continue
+        _apply_lock(out, committed_dump, lock["path"])
     return StepDocument.model_validate(out)

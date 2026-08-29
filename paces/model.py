@@ -323,13 +323,17 @@ def validate_document(doc: StepDocument) -> list[str]:
     (empty list = clean); never raises.
 
     Checks: children durations account for the parent's (``repeat`` included),
-    span sources exist, cue anchors point at real steps.
+    span sources exist, cue anchors point at real steps, step ids are unique
+    (id-addressed edits and the regeneration merge both key on them — a
+    duplicate makes those silently ambiguous).
     """
     issues: list[str] = []
     source_ids = {s.id for s in doc.sources}
     step_ids: set[str] = set()
 
     def _walk(step: Step, path: str) -> None:
+        if step.id in step_ids:
+            issues.append(f"{path}: duplicate step id {step.id!r}")
         step_ids.add(step.id)
         for i, span in enumerate(step.spans):
             if span.source not in source_ids:

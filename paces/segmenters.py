@@ -99,6 +99,8 @@ class Capability:
     summary: str
     target: str  # "module:func", resolved lazily
     needs: frozenset[str] = frozenset()  # facts; hard filter
+    reads: frozenset[str] = frozenset()  # facts used opportunistically when present
+    boosts: Mapping[str, float] = field(default_factory=dict)  # fact -> rank bonus
     requires: tuple[str, ...] = ()  # importable modules; preflighted
     licence: str = "MIT"
     base: float = 0.0  # prior preference; breaks ties
@@ -199,7 +201,10 @@ def _normalize_chapters(metadata: Mapping | Sequence | None) -> list[dict]:
     Accepts a yt-dlp info dict (``{"chapters": [{"start_time", "end_time",
     "title"}, ...]}``), ffprobe's ``-show_chapters`` output (times as strings,
     title under ``tags``), a plain ``{"chapters": [...]}``, or a bare list of
-    chapter mappings. Emits uniform ``{"title", "start", "end"}`` rows.
+    chapter mappings. Emits uniform ``{"title", "start", "end"}`` rows,
+    sorted by start. Degenerate chapters (unreadable, negative, or
+    non-positive-length times) are refused with the defect named — inventing
+    structure from garbage would violate ADR-0003's honesty rules.
     """
     if metadata is None:
         return []
@@ -212,15 +217,35 @@ def _normalize_chapters(metadata: Mapping | Sequence | None) -> list[dict]:
             raise TypeError(
                 f"chapters[{i}]: expected a mapping — got {type(chapter).__name__}"
             )
-        title = chapter.get("title") or chapter.get("tags", {}).get("title", "")
-        start = chapter.get("start_time", chapter.get("start"))
-        end = chapter.get("end_time", chapter.get("end"))
-        if start is None or end is None:
+        title = str(
+            chapter.get("title") or chapter.get("tags", {}).get("title", "") or ""
+        ).strip()
+        start_raw = chapter.get("start_time", chapter.get("start"))
+        end_raw = chapter.get("end_time", chapter.get("end"))
+        if start_raw is None or end_raw is None:
             raise ValueError(
                 f"chapters[{i}]: needs start_time/end_time (or start/end); "
                 f"got keys {sorted(chapter)}"
             )
-        rows.append({"title": str(title), "start": float(start), "end": float(end)})
+        for value, name in ((start_raw, "start"), (end_raw, "end")):
+            if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+                raise ValueError(
+                    f"chapters[{i}]: {name} must be a number of seconds; got {value!r}"
+                )
+        try:
+            start, end = float(start_raw), float(end_raw)
+        except ValueError:
+            raise ValueError(
+                f"chapters[{i}]: unreadable times {start_raw!r} / {end_raw!r}"
+            ) from None
+        if start < 0:
+            raise ValueError(f"chapters[{i}]: negative start ({start})")
+        if end <= start:
+            raise ValueError(
+                f"chapters[{i}]: end ({end}) must be after start ({start})"
+            )
+        rows.append({"title": title, "start": start, "end": end})
+    rows.sort(key=lambda row: (row["start"], row["end"]))
     return rows
 
 
@@ -338,7 +363,13 @@ def segment(
                 ),
                 elapsed_s=time.perf_counter() - started,
             )
-        capability = max(candidates, key=lambda cap: cap.base)
+
+        def _score(cap: Capability) -> float:
+            return cap.base + sum(
+                bonus for fact, bonus in cap.boosts.items() if fact in facts
+            )
+
+        capability = max(candidates, key=lambda cap: (_score(cap), cap.name))
 
     missing_modules = _preflight(capability)
     if missing_modules:
@@ -347,14 +378,41 @@ def segment(
             f"{', '.join(missing_modules)} — pip install them first"
         )
     result: Segmentation = _resolve_target(capability)(inputs)
+
+    # Honesty: an explicitly supplied input the chosen segmenter neither
+    # needs nor reads was silently discarded — say so instead of implying it
+    # was consumed.
+    ignorable = {
+        "steps": "steps",
+        "boundaries": "boundaries",
+        "meta.chapters": "metadata (chapters)",
+        "k": "k",
+    }
+    used = capability.needs | capability.reads
+    ignored = sorted(
+        label for fact, label in ignorable.items() if fact in facts and fact not in used
+    )
+    extra_flags = (f"ignored: {', '.join(ignored)}",) if ignored else ()
+
+    # A grid describes the media's own clock; any segmentation over that
+    # media may carry it (and its unit) even when placement didn't use it —
+    # this is what lets the projection express durations in domain units.
+    out_grid = result.grid if result.grid is not None else grid
+    out_unit = result.unit
+    if (
+        out_unit == "seconds"
+        and out_grid is not None
+        and seconds_per_unit(out_grid) is not None
+    ):
+        out_unit = out_grid.unit
     return Segmentation(
         steps=result.steps,
         boundaries=result.boundaries,
-        unit=result.unit,
-        grid=result.grid,
+        unit=out_unit,
+        grid=out_grid,
         confidence=result.confidence,
         method=capability.name,
-        flags=result.flags,
+        flags=result.flags + extra_flags,
         elapsed_s=time.perf_counter() - started,
         spent_usd=result.spent_usd,
     )
@@ -465,10 +523,20 @@ def _segment_chapters(inputs: Mapping[str, Any]) -> Segmentation:
     """Adopt the author's own chapter list — names AND times, for ~0 cost.
 
     External-explicit like ``explicit``, but the coordinates come from the
-    media's metadata rather than a human in this run. Untitled chapters stay
+    media's metadata rather than a human in this run. A caller-supplied step
+    list of matching length overrides the chapter titles (the human's
+    explicit input outranks the author's metadata); untitled chapters stay
     honestly unnamed.
     """
-    chapters = inputs["chapters"]
+    chapters = inputs["chapters"]  # normalised, validated, sorted by start
+    step_rows = inputs["steps"]
+    user_names = bool(step_rows) and len(step_rows) == len(chapters)
+    flags: tuple[str, ...] = ()
+    if step_rows and not user_names:
+        flags += (
+            f"step-count-mismatch: {len(step_rows)} steps vs "
+            f"{len(chapters)} chapters (using chapter titles)",
+        )
     seen: dict[str, int] = {}
 
     def _unique_id(title: str, index: int) -> str:
@@ -476,22 +544,34 @@ def _segment_chapters(inputs: Mapping[str, Any]) -> Segmentation:
         seen[slug] = seen.get(slug, 0) + 1
         return slug if seen[slug] == 1 else f"{slug}-{seen[slug]}"
 
-    steps = tuple(
-        SegStep(
-            id=_unique_id(chapter["title"], i),
-            name=chapter["title"],
+    def _step(i: int, chapter: dict) -> SegStep:
+        if user_names:
+            row = step_rows[i]
+            name, step_id = row["name"], row["id"]
+            evidence = {"chapter_title": chapter["title"]}
+        else:
+            name, step_id = chapter["title"], _unique_id(chapter["title"], i)
+            evidence = {}
+        return SegStep(
+            id=step_id,
+            name=name,
             spans=((chapter["start"], chapter["end"]),),
             confidence=DFLT_CHAPTERS_CONFIDENCE,
             source="chapters",
+            evidence=evidence,
         )
-        for i, chapter in enumerate(chapters)
-    )
+
+    steps = tuple(_step(i, chapter) for i, chapter in enumerate(chapters))
+    # Starts AND ends: a gap between chapters is real structure, and an
+    # unsorted source must not cost us the true final boundary.
     boundaries = tuple(
-        sorted({chapter["start"] for chapter in chapters} | {chapters[-1]["end"]})
+        sorted(
+            {chapter["start"] for chapter in chapters}
+            | {chapter["end"] for chapter in chapters}
+        )
     )
-    flags: tuple[str, ...] = ()
-    if not any(chapter["title"] for chapter in chapters):
-        flags = ("naming-abstained",)
+    if not any(step.name for step in steps):
+        flags += ("naming-abstained",)
     return Segmentation(
         steps=steps,
         boundaries=boundaries,
@@ -510,7 +590,7 @@ GRID_PLACED = register(
         ),
         target="paces.segmenters:_segment_grid_placed",
         needs=frozenset({"steps", "steps.durations", "grid"}),
-        base=1.0,
+        base=1.2,  # a caller who spelled out steps+grid meant them: top rank
         resolution_s=0.1,
     )
 )
@@ -525,6 +605,11 @@ EXPLICIT = register(
         ),
         target="paces.segmenters:_segment_explicit",
         needs=frozenset({"boundaries"}),
+        reads=frozenset({"steps"}),  # names zip on when the count matches
+        # Bare boundaries rank below chapters (which carry names), but a
+        # human who supplied boundaries AND a step list gave the full
+        # explicit picture — e.g. to CORRECT bad chapters — and outranks them.
+        boosts={"steps": 0.5},
         base=0.5,
         resolution_s=0.01,
     )
@@ -540,6 +625,7 @@ CHAPTERS = register(
         ),
         target="paces.segmenters:_segment_chapters",
         needs=frozenset({"meta.chapters"}),
+        reads=frozenset({"steps"}),  # a matching user step list renames them
         base=0.75,  # names beat bare boundaries; a user's steps+grid beat both
         resolution_s=0.1,
     )

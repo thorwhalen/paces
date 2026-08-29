@@ -235,3 +235,104 @@ def test_tools_roundtrip_edit_and_merge():
     assert edited["steps"][0]["name"] == "Intro!"
     merged = tools.merge(edited, doc_dict)
     assert merged["steps"][0]["name"] == "Intro!"
+
+
+# ── adversarial-review regressions (PR #11) ────────────────────────────────
+
+
+def test_span_lock_follows_the_span_through_a_reorder():
+    """Finding 1 (BLOCKER): a fresh doc inserts a new span BEFORE the locked
+    one; the locked caption must land on the matched span, not position 0."""
+    committed = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/b/spans/0/caption", "value": "hand-fixed"}],
+        by="user:thor",
+    )
+    fresh = _doc()
+    fresh.steps[1].spans = [
+        SourceSpan(source="vid", role="closeup", start="5", end="9"),
+        SourceSpan(source="vid", start="20", end="35", caption="machine v2"),
+    ]
+    merged = merge_regenerated(committed, fresh)
+    closeup, performance = merged.steps[1].spans
+    assert closeup.caption is None  # the new span is untouched
+    assert performance.caption == "hand-fixed"  # the lock followed its span
+
+
+def test_source_lock_follows_the_source_through_a_reorder():
+    committed = _doc()
+    committed.sources.append(Source(id="notes", kind="document", uri="notes.html"))
+    committed = apply_edits(
+        committed,
+        [{"op": "set", "path": "/sources/1/uri", "value": "notes-v2.html"}],
+        by="user:thor",
+    )
+    # canonicalised to id-form at record time
+    assert committed.locks[0].path == "/sources/notes/uri"
+    fresh = _doc()
+    fresh.sources = [
+        Source(id="notes", kind="document", uri="notes.html"),
+        Source(id="vid", kind="video", uri="https://example.com/v"),
+    ]
+    merged = merge_regenerated(committed, fresh)
+    by_id = {s.id: s for s in merged.sources}
+    assert by_id["notes"].uri == "notes-v2.html"
+    assert by_id["vid"].uri == "https://example.com/v"
+
+
+def test_digit_step_ids_resolve_id_first():
+    """Finding 2: chapters titled '1','2' mint digit ids; /steps/1 must mean
+    the step whose id is '1', not position 1."""
+    doc = _doc()
+    doc.steps[0].id = "1"
+    doc.steps[1].id = "0"
+    edited = apply_edits(
+        doc, [{"op": "set", "path": "/steps/1/name", "value": "hit"}], by="user:t"
+    )
+    assert edited.steps[0].name == "hit"  # id '1' is at position 0
+    assert edited.steps[1].name == "Step B"
+
+
+def test_step_shaped_attrs_data_does_not_capture_the_lock():
+    """Finding 3: user data in attrs that happens to look like a Step must
+    not swallow the Lock, and the edit must survive a merge."""
+    committed = _doc()
+    committed.attrs["things"] = [{"duration": 1, "spans": [], "note": "orig"}]
+    committed = apply_edits(
+        committed,
+        [{"op": "set", "path": "/attrs/things/0/note", "value": "fixed"}],
+        by="user:thor",
+    )
+    assert committed.locks and committed.locks[0].path == "/attrs/things/0/note"
+    assert "locks" not in committed.attrs["things"][0]  # user data unpolluted
+    assert all(not s.locks for s in committed.steps)
+    fresh = _doc()
+    fresh.attrs["things"] = [{"duration": 1, "spans": [], "note": "orig"}]
+    merged = merge_regenerated(committed, fresh)
+    assert merged.attrs["things"][0]["note"] == "fixed"  # committed attrs win
+
+
+def test_duplicate_step_ids_are_flagged_by_the_validator():
+    from paces.model import validate_document
+
+    doc = _doc()
+    doc.steps[1].id = "a"
+    issues = validate_document(doc)
+    assert any("duplicate step id 'a'" in issue for issue in issues)
+
+
+def test_a_single_bare_edit_mapping_is_accepted():
+    doc = apply_edits(
+        _doc(), {"op": "set", "path": "/title", "value": "One edit"}, by="user:t"
+    )
+    assert doc.title == "One edit"
+
+
+def test_camel_case_paths_are_accepted_and_canonicalised():
+    doc = apply_edits(
+        _doc(),
+        [{"op": "set", "path": "/steps/a/variantOf", "value": "b"}],
+        by="user:t",
+    )
+    assert doc.steps[0].variant_of == "b"
+    assert doc.steps[0].locks[0].path == "/variant_of"

@@ -111,3 +111,91 @@ def test_empty_or_null_chapters_are_no_fact():
 def test_malformed_chapter_says_what_is_wrong():
     with pytest.raises(ValueError, match="start_time"):
         segment(metadata=[{"title": "no times"}])
+
+
+# ── adversarial-review regressions (PR #11) ────────────────────────────────
+
+
+def test_unsorted_chapters_are_sorted_and_no_boundary_is_lost():
+    seg = segment(
+        metadata=[
+            {"start": 30, "end": 40, "title": "Late"},
+            {"start": 0, "end": 10, "title": "Early"},
+        ]
+    )
+    assert [s.name for s in seg.steps] == ["Early", "Late"]
+    assert seg.boundaries == (0.0, 10.0, 30.0, 40.0)  # 40 must not vanish
+
+
+def test_gapped_chapters_keep_the_gap_visible():
+    seg = segment(
+        metadata=[
+            {"start": 0, "end": 10, "title": "A"},
+            {"start": 20, "end": 30, "title": "B"},
+        ]
+    )
+    assert seg.boundaries == (0.0, 10.0, 20.0, 30.0)
+
+
+def test_degenerate_chapters_are_refused_with_the_defect_named():
+    with pytest.raises(ValueError, match="must be after start"):
+        segment(metadata=[{"start": 10, "end": 5, "title": "backwards"}])
+    with pytest.raises(ValueError, match="must be a number"):
+        segment(metadata=[{"start": 0, "end": True, "title": "bool"}])
+    with pytest.raises(ValueError, match="negative"):
+        segment(metadata=[{"start": -5, "end": 10, "title": "neg"}])
+    with pytest.raises(ValueError, match="unreadable"):
+        segment(metadata=[{"start": "abc", "end": 10, "title": "junk"}])
+
+
+def test_whitespace_titles_count_as_unnamed():
+    seg = segment(metadata=[{"start": 0, "end": 10, "title": "   "}])
+    assert seg.steps[0].name == ""
+    assert "naming-abstained" in seg.flags
+
+
+def test_matching_user_step_names_override_chapter_titles():
+    """The human's explicit input outranks the author's metadata."""
+    seg = segment(steps=["My intro", "My verse", "My outro"], metadata=YTDLP_METADATA)
+    assert seg.method == "chapters"
+    assert [s.name for s in seg.steps] == ["My intro", "My verse", "My outro"]
+    assert seg.steps[0].evidence["chapter_title"] == "Intro"
+    assert not any(flag.startswith("ignored") for flag in seg.flags)
+
+
+def test_mismatched_user_step_count_is_flagged_not_silent():
+    seg = segment(steps=["only", "two"], metadata=YTDLP_METADATA)
+    assert [s.name for s in seg.steps] == [
+        "Intro",
+        "The basic step",
+        "Putting it together",
+    ]
+    assert any("step-count-mismatch" in flag for flag in seg.flags)
+
+
+def test_discarded_explicit_inputs_are_flagged():
+    """Finding 6: chapters winning over caller-typed boundaries must say so."""
+    seg = segment(boundaries=[0, 10, 20], metadata=YTDLP_METADATA)
+    assert seg.method == "chapters"
+    assert any(flag == "ignored: boundaries" for flag in seg.flags)
+
+
+def test_boundaries_plus_steps_outrank_chapters():
+    """A human supplying boundaries AND names gave the full explicit picture
+    — e.g. to correct bad chapters — and wins."""
+    seg = segment(
+        boundaries=[0, 10, 20],
+        steps=["fixed intro", "fixed verse"],
+        metadata=YTDLP_METADATA,
+    )
+    assert seg.method == "explicit"
+    assert [s.name for s in seg.steps] == ["fixed intro", "fixed verse"]
+
+
+def test_a_grid_rides_along_even_when_placement_did_not_use_it():
+    seg = segment(
+        metadata=YTDLP_METADATA,
+        grid={"unit": "eight", "subdivisions": 8, "tempoBpm": "120", "origin": "0"},
+    )
+    assert seg.method == "chapters"
+    assert seg.grid is not None and seg.unit == "eight"
