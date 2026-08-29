@@ -273,7 +273,7 @@ def _facts(
     if media:
         facts.add("media")
         try:
-            if Path(media).exists():
+            if Path(media).is_file():  # a directory is not measurable media
                 facts.add("media.local")  # intrinsic measurement needs bytes
         except OSError:
             pass

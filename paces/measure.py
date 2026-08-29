@@ -14,11 +14,20 @@ the POC proved out (``docs/01-what-was-built.md §3.1``):
    default chosen automatically must be reported with its confidence and
    overridable by one keyword (``grid=``).
 
+Honesty under failure (adversarial review, PR #13): media with no beat
+structure — silence, ambience, an empty file — yields a grid whose tempo is
+honestly ``None`` (never ``"0"``: :class:`~paces.model.MetricGrid` refuses
+non-positive tempi) plus a ``tempo-unmeasured`` flag, and the ``segment()``
+facade keeps its returns-a-Segmentation-always contract.
+
 The ``grid-measured`` capability wires this into :func:`~paces.segmenters.
-segment`: media + a step list with durations, no grid → measure, then place
-exactly as ``grid-placed`` would. A *partial* ``grid=`` (unit/subdivisions,
-no tempo/origin) is honoured as "what the caller knows"; measurement fills
-the rest.
+segment`: media + a step list with durations, no full grid → measure, then
+place exactly as ``grid-placed`` would. A *partial* ``grid=`` is honoured as
+"what the caller knows" — unit and subdivisions always, and a caller-supplied
+tempo or origin **wins over the measured value** (explicit beats inferred),
+with a ``tempo-disagreement`` flag when the media measurably disagrees — the
+POC's doc-said-100-video-says-129 lesson, surfaced as a diff instead of
+silently resolved either way.
 
 Everything heavy is imported lazily — ``import paces`` never pulls librosa —
 and the capability preflights ``mixing``/``librosa`` (the ``[audio]`` extra).
@@ -28,10 +37,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-from paces.model import MetricGrid, seconds_per_unit
+from paces.model import MetricGrid, decimal_str, seconds_per_unit
 from paces.segmenters import (
     Capability,
     Segmentation,
@@ -46,15 +56,22 @@ DFLT_SAMPLE_RATE = 22050
 #: The origin estimate is the honest weak link: "first beat of the music
 #: region" is right when the routine starts on bar one, and wrong by an intro.
 DFLT_MEASURED_CONFIDENCE = 0.5
+#: A caller-supplied origin removes the weak link; the tempo half is reliable.
+KNOWN_ORIGIN_CONFIDENCE = 0.75
 #: Earned when the declared routine length fits inside the music region.
 FIT_BONUS = 0.2
 FIT_TOLERANCE = 1.15  # the routine may overrun the region by 15% before we flag
-NO_MUSIC_CONFIDENCE = 0.2
+UNMEASURED_CONFIDENCE = 0.2
+#: A caller tempo further than this (relative) from the measured one is flagged.
+TEMPO_DISAGREEMENT_RTOL = 0.02
+
+
+class MediaDecodeError(ValueError):
+    """The file exists but could not be read as audio."""
 
 
 def _dec(value: float, *, places: int = 2) -> str:
-    text = f"{float(value):.{places}f}".rstrip("0").rstrip(".")
-    return text or "0"
+    return decimal_str(value, places=places)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -67,23 +84,39 @@ class GridMeasurement:
     evidence: Mapping[str, Any] = field(default_factory=dict)
 
 
+def _measured_tempo(beat_grid_result) -> tuple[str | None, float | None]:
+    """The tempo as a wire decimal, or None when there is no beat structure.
+
+    mixing's ``beat_grid`` reports ``tempo_bpm = 0.0`` when librosa finds no
+    tempo; zero is 'unmeasured', never a value (a zero tempo is
+    unrepresentable in :class:`MetricGrid`, deliberately).
+    """
+    tempo = float(beat_grid_result.tempo_bpm)
+    if tempo <= 0 or not len(beat_grid_result.beat_times):
+        return None, None
+    return _dec(tempo, places=1), tempo
+
+
 def measure_grid(
     media: str,
     *,
     unit: str = DFLT_UNIT,
     subdivisions: int = DFLT_SUBDIVISIONS,
+    tempo_bpm: str | float | None = None,
+    origin: str | float | None = None,
     total_units: float | None = None,
     sample_rate: int = DFLT_SAMPLE_RATE,
 ) -> GridMeasurement:
     """Measure tempo, macro-structure and (estimated) origin from *media*.
 
-    *media* is a local audio (or audio-bearing) file. *total_units*, when
-    known (the sum of a step list's durations), buys a sanity check: a
-    routine that cannot fit inside the detected music region is flagged —
-    the POC's "the doc said 100 bpm, the video says 129" lesson.
+    *media* is a local audio (or audio-bearing) file. *tempo_bpm* and
+    *origin*, when given, are what the caller already knows: they WIN over
+    the measured values (a disagreement is flagged, never silently resolved).
+    *total_units* (the sum of a step list's durations) buys a sanity check: a
+    routine that cannot fit inside the detected music region is flagged.
 
-    Returns a :class:`GridMeasurement`; when no music region is found the
-    grid carries tempo only and ``origin`` stays honestly ``None``.
+    Returns a :class:`GridMeasurement`; whatever could not be measured stays
+    honestly ``None`` on the grid, with a flag naming it.
     """
     try:
         import librosa
@@ -94,62 +127,100 @@ def measure_grid(
         ) from error
 
     path = Path(media)
-    if not path.exists():
+    if not path.is_file():
         raise FileNotFoundError(
-            f"measure_grid needs a local media file; {media!r} does not exist "
+            f"measure_grid needs a local media file; {media!r} is not one "
             "(download first — e.g. with yb — or supply grid= yourself)"
         )
+    known_tempo = None if tempo_bpm is None else _dec(float(tempo_bpm), places=1)
+    known_origin = None if origin is None else _dec(float(origin))
 
-    segments = find_segments(str(path), strategy="speech_music")
+    try:
+        segments = find_segments(str(path), strategy="speech_music")
+    except Exception as error:
+        raise MediaDecodeError(
+            f"could not read {media!r} as audio ({type(error).__name__}) — "
+            "is it an audio/video file? Non-wav formats need ffmpeg installed."
+        ) from error
     evidence: dict[str, Any] = {
         "segments": [
             [round(s.start, 2), round(s.end, 2), s.label or ""] for s in segments
         ]
     }
     music = [s for s in segments if s.label == "music"]
-    if not music:
-        grid_bg = beat_grid(str(path), sample_rate=sample_rate)
-        evidence["tempo_bpm"] = float(grid_bg.tempo_bpm)
-        return GridMeasurement(
-            grid=MetricGrid(
-                unit=unit,
-                subdivisions=subdivisions,
-                tempo_bpm=_dec(grid_bg.tempo_bpm, places=1),
-            ),
-            confidence=NO_MUSIC_CONFIDENCE,
-            flags=(
-                "no-music-region",
-                "origin-unknown: pass grid= with an origin, or boundaries=",
-            ),
-            evidence=evidence,
+    flags: tuple[str, ...] = ()
+
+    if music:
+        region = max(music, key=lambda s: s.end - s.start)
+        try:
+            samples, rate = librosa.load(str(path), sr=sample_rate)
+        except Exception as error:
+            raise MediaDecodeError(
+                f"could not decode {media!r} as audio ({type(error).__name__})"
+            ) from error
+        region_samples = samples[int(region.start * rate) : int(region.end * rate)]
+        bg = beat_grid(region_samples, sample_rate=rate)
+        measured_tempo, tempo_value = _measured_tempo(bg)
+        evidence.update(
+            music_span=[round(region.start, 2), round(region.end, 2)],
+            beat_count=len(bg.beat_times),
+        )
+        if measured_tempo is not None:
+            evidence["tempo_bpm"] = tempo_value
+            measured_origin = _dec(region.start + float(bg.beat_times[0]))
+        else:
+            flags += ("tempo-unmeasured: no beat structure in the music region",)
+            measured_origin = None
+    else:
+        region = None
+        bg = beat_grid(str(path), sample_rate=sample_rate)
+        measured_tempo, tempo_value = _measured_tempo(bg)
+        measured_origin = None
+        if measured_tempo is not None:
+            evidence["tempo_bpm"] = tempo_value
+        else:
+            flags += ("tempo-unmeasured: no beat structure found",)
+        flags += ("no-music-region",)
+
+    # Explicit beats inferred — but a disagreement is a finding, not a secret.
+    final_tempo = known_tempo or measured_tempo
+    if (
+        known_tempo is not None
+        and measured_tempo is not None
+        and abs(float(known_tempo) - float(measured_tempo))
+        > float(measured_tempo) * TEMPO_DISAGREEMENT_RTOL
+    ):
+        flags += (
+            f"tempo-disagreement: you said {known_tempo} bpm, the media "
+            f"measures {measured_tempo} — using yours; drop tempoBpm from "
+            "grid= to use the measured value",
+        )
+    final_origin = known_origin or measured_origin
+    if known_origin is None and measured_origin is not None:
+        flags += (
+            f"origin-estimated: first beat of the music region "
+            f"({measured_origin} s) — override with grid= if the routine "
+            "starts later",
         )
 
-    region = max(music, key=lambda s: s.end - s.start)
-    samples, rate = librosa.load(str(path), sr=sample_rate)
-    region_samples = samples[int(region.start * rate) : int(region.end * rate)]
-    grid_bg = beat_grid(region_samples, sample_rate=rate)
-    first_beat = float(grid_bg.beat_times[0]) if len(grid_bg.beat_times) else 0.0
-    origin = region.start + first_beat
     grid = MetricGrid(
         unit=unit,
         subdivisions=subdivisions,
-        tempo_bpm=_dec(grid_bg.tempo_bpm, places=1),
-        origin=_dec(origin),
+        tempo_bpm=final_tempo,
+        origin=final_origin,
     )
-    evidence.update(
-        tempo_bpm=float(grid_bg.tempo_bpm),
-        music_span=[round(region.start, 2), round(region.end, 2)],
-        beat_count=len(grid_bg.beat_times),
-    )
-    flags = (
-        f"origin-estimated: first beat of the music region ({_dec(origin)} s) "
-        "— override with grid= if the routine starts later",
-    )
-    confidence = DFLT_MEASURED_CONFIDENCE
+    if final_origin is None:
+        flags += ("origin-unknown: pass grid= with an origin, or boundaries=",)
+        confidence = UNMEASURED_CONFIDENCE
+    else:
+        confidence = (
+            KNOWN_ORIGIN_CONFIDENCE if known_origin else DFLT_MEASURED_CONFIDENCE
+        )
+
     spu = seconds_per_unit(grid)
-    if total_units is not None and spu:
+    if total_units and total_units > 0 and spu and final_origin and region:
         routine_s = total_units * spu
-        region_s = region.end - origin
+        region_s = region.end - float(Fraction(final_origin))
         evidence.update(routine_s=round(routine_s, 2), region_s=round(region_s, 2))
         if routine_s > region_s * FIT_TOLERANCE:
             flags += (
@@ -160,23 +231,30 @@ def measure_grid(
         else:
             confidence += FIT_BONUS
     return GridMeasurement(
-        grid=grid, confidence=confidence, flags=flags, evidence=evidence
+        grid=grid, confidence=min(confidence, 0.95), flags=flags, evidence=evidence
     )
 
 
 def _segment_grid_measured(inputs: Mapping[str, Any]) -> Segmentation:
-    """Measure the grid from the media, then place like ``grid-placed``.
+    """Measure what the caller's partial ``grid=`` left unknown, then place
+    like ``grid-placed``.
 
-    A partial ``grid=`` (unit/subdivisions without tempo+origin) supplies
-    what the caller knows; with none at all the dance default is assumed —
-    and flagged, because an assumed unit is a guess, not a measurement.
+    With no grid at all the dance default is assumed — and flagged, because
+    an assumed unit is a guess, not a measurement. Whatever still cannot be
+    known (a beatless recording's origin) yields the honest partial result,
+    never an exception and never an invented placement.
     """
     partial: MetricGrid | None = inputs["grid"]
     unit = partial.unit if partial is not None else DFLT_UNIT
     subdivisions = partial.subdivisions if partial is not None else DFLT_SUBDIVISIONS
     total_units = sum(row["duration"] for row in inputs["steps"])
     measurement = measure_grid(
-        inputs["media"], unit=unit, subdivisions=subdivisions, total_units=total_units
+        inputs["media"],
+        unit=unit,
+        subdivisions=subdivisions,
+        tempo_bpm=partial.tempo_bpm if partial is not None else None,
+        origin=partial.origin if partial is not None else None,
+        total_units=total_units,
     )
     flags = measurement.flags
     if partial is None:

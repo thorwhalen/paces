@@ -134,3 +134,101 @@ def test_measure_grid_tool_is_json_ready(practice_wav):
     json.dumps(payload)
     assert payload["grid"]["tempoBpm"]
     assert payload["evidence"]["music_span"]
+
+
+# ── adversarial-review regressions (PR #13) ────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def silence_wav(tmp_path_factory) -> str:
+    import numpy as np
+
+    path = tmp_path_factory.mktemp("audio") / "silence.wav"
+    sf.write(str(path), np.zeros(int(10 * SAMPLE_RATE), dtype="float32"), SAMPLE_RATE)
+    return str(path)
+
+
+def test_silence_never_crashes_and_never_claims_a_tempo(silence_wav):
+    """F1: beatless media used to reach ZeroDivisionError via tempo '0'."""
+    measurement = measure_grid(silence_wav)
+    assert measurement.grid.tempo_bpm is None  # never '0'
+    assert any("tempo-unmeasured" in flag for flag in measurement.flags)
+    seg = segment(silence_wav, steps=[("a", 2), ("b", 2)])  # the facade contract
+    assert seg.method == "grid-measured"
+    assert seg.steps == ()  # no invented placement
+    assert seg.confidence <= 0.2
+
+
+def test_tiny_and_empty_files_return_honest_results(tmp_path):
+    import numpy as np
+
+    tiny = tmp_path / "tiny.wav"
+    sf.write(str(tiny), np.zeros(int(0.05 * SAMPLE_RATE), dtype="float32"), SAMPLE_RATE)
+    seg = segment(str(tiny), steps=[("a", 2)])
+    assert seg.steps == () and seg.confidence <= 0.2
+
+    empty = tmp_path / "empty.wav"
+    sf.write(str(empty), np.zeros(0, dtype="float32"), SAMPLE_RATE)
+    seg = segment(str(empty), steps=[("a", 2)])  # must not raise
+    assert seg.steps == ()
+
+
+def test_metric_grid_refuses_zero_tempo_and_zero_subdivisions():
+    from paces.model import MetricGrid
+
+    with pytest.raises(Exception, match="positive"):
+        MetricGrid(unit="eight", tempo_bpm="0")
+    with pytest.raises(Exception, match="positive"):
+        MetricGrid(unit="eight", tempo_bpm="-5")
+    with pytest.raises(Exception):
+        MetricGrid(unit="eight", subdivisions=0)
+
+
+def test_partial_grid_tempo_wins_and_disagreement_is_flagged(practice_wav):
+    """F2: the caller's tempo is used, and the media's disagreement named."""
+    seg = segment(
+        practice_wav,
+        steps=[("a", 2), ("b", 2)],
+        grid={"unit": "eight", "subdivisions": 8, "tempoBpm": "200"},
+    )
+    assert seg.method == "grid-measured"
+    assert seg.grid.tempo_bpm == "200"
+    assert any(flag.startswith("tempo-disagreement") for flag in seg.flags)
+
+
+def test_partial_grid_origin_wins_and_is_not_estimated(practice_wav):
+    seg = segment(
+        practice_wav,
+        steps=[("a", 2), ("b", 2)],
+        grid={"unit": "eight", "subdivisions": 8, "origin": "12.5"},
+    )
+    assert seg.method == "grid-measured"
+    assert seg.grid.origin == "12.5"
+    assert not any(flag.startswith("origin-estimated") for flag in seg.flags)
+    assert seg.steps[0].spans[0][0] == pytest.approx(12.5)
+    assert seg.confidence >= 0.7  # the weak link was supplied, not guessed
+
+
+def test_directory_media_is_not_measurable(tmp_path):
+    """F3: a directory passes exists() but is not media."""
+    seg = segment(str(tmp_path), steps=[("a", 2), ("b", 2)])
+    assert "no-signal" in seg.flags
+    with pytest.raises(FileNotFoundError, match="not one"):
+        measure_grid(str(tmp_path))
+
+
+def test_non_audio_file_gets_an_informative_error(tmp_path):
+    from paces.measure import MediaDecodeError
+
+    junk = tmp_path / "not-audio.json"
+    junk.write_text('{"hello": "world"}', encoding="utf-8")
+    with pytest.raises(MediaDecodeError, match="as audio"):
+        measure_grid(str(junk))
+
+
+def test_zero_total_units_earns_no_fit_bonus(practice_wav):
+    from paces.measure import DFLT_MEASURED_CONFIDENCE
+
+    measurement = measure_grid(practice_wav, total_units=0)
+    assert measurement.confidence == DFLT_MEASURED_CONFIDENCE
+    assert "routine_s" not in measurement.evidence

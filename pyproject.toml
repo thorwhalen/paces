@@ -47,6 +47,9 @@ audio = [
     # backtrack to unbuildable numba 0.53/llvmlite 0.36 when the newest
     # numpy outruns numba's caps.
     "numba>=0.59",
+    # pydub (via mixing[audio]) imports the stdlib `audioop`, removed in
+    # Python 3.13; the official backport keeps 3.13+ installs working.
+    "audioop-lts; python_version>='3.13'",
 ]
 dev = [
     "pytest>=7.0",
