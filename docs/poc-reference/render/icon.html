@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#170D20;--haze:#B18FC9;--sun:#FFC02E;--rose:#FF3D7F}
+*{box-sizing:border-box;margin:0}
+html,body{width:512px;height:512px;overflow:hidden}
+body{background:radial-gradient(130% 100% at 50% -12%, #4a2350 0%, transparent 60%), var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+h1{font-family:"Anton",sans-serif;font-weight:400;font-size:132px;line-height:.80;
+  text-transform:uppercase;text-align:center;letter-spacing:.005em;
+  background:linear-gradient(96deg,var(--sun) 5%,var(--rose) 95%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+p{font-family:"DM Mono",monospace;font-size:30px;letter-spacing:.16em;text-transform:uppercase;color:var(--haze)}
+.r{display:flex;gap:7px}
+.r i{width:16px;height:16px;border-radius:4px;display:block}
+</style></head><body>
+  <h1>Que<br>Calor</h1>
+  <p>bloc par bloc</p>
+  <div class="r" id="r"></div>
+<script>
+document.getElementById('r').innerHTML = [0,2,4,6,8].map(i=>
+  `<i style="background:hsl(${(48-i*11+360)%360},92%,62%)"></i>`).join('');
+</script></body></html>

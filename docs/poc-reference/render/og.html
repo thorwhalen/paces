@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#170D20;--ink-3:#33204a;--paper:#FFF2E0;--haze:#B18FC9;--sun:#FFC02E;--rose:#FF3D7F;
+ --display:"Anton",sans-serif;--body:"Karla",sans-serif;--mono:"DM Mono",monospace}
+*{box-sizing:border-box;margin:0}
+html,body{width:1200px;height:630px;overflow:hidden}
+body{
+  background:radial-gradient(120% 90% at 50% -15%, #4a2350 0%, transparent 62%), var(--ink);
+  color:var(--paper);font-family:var(--body);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:0 84px;position:relative;
+}
+.eyebrow{font-family:var(--mono);font-size:19px;letter-spacing:.30em;text-transform:uppercase;
+  color:var(--haze);margin-bottom:22px}
+h1{font-family:var(--display);font-weight:400;font-size:150px;line-height:.84;
+  letter-spacing:.004em;text-transform:uppercase;
+  background:linear-gradient(96deg,var(--sun) 8%,var(--rose) 92%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:30px;font-size:25px;color:var(--haze);letter-spacing:.005em}
+.sub b{color:var(--paper);font-weight:700}
+/* le ruban des 8, signature de la page */
+.ribbon{position:absolute;left:0;right:0;bottom:0;display:flex;gap:5px;padding:0 84px 46px;align-items:flex-end}
+.g{display:flex;gap:3px;flex:var(--n) 1 0}
+.c{flex:1;height:16px;border-radius:3px;background:var(--c)}
+.g:first-child .c{height:28px;box-shadow:0 0 22px var(--c)}
+</style></head><body>
+  <p class="eyebrow">Aide-mémoire</p>
+  <h1>Que&nbsp;Calor,<br>bloc par bloc</h1>
+  <p class="sub">Neuf blocs, 44&nbsp;×&nbsp;8 temps &nbsp;·&nbsp; chorégraphie de <b>Céline Pradeu</b></p>
+  <div class="ribbon" id="r"></div>
+<script>
+const E=[2,6,4,8,4,4,4,4,8], hue=i=>(48-i*11+360)%360;
+document.getElementById('r').innerHTML = E.map((n,i)=>
+  `<div class="g" style="--n:${n};--c:hsl(${hue(i)},92%,62%)">`+
+  Array.from({length:n},()=>'<div class="c"></div>').join('')+`</div>`).join('');
+</script></body></html>

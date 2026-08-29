@@ -1,0 +1,140 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#170D20;--ink-2:#241432;--ink-3:#33204a;--paper:#FFF2E0;--haze:#B18FC9;
+      --sun:#FFC02E;--rose:#FF3D7F;
+      --display:"Anton",sans-serif;--body:"Karla",sans-serif;--mono:"DM Mono",monospace}
+*{box-sizing:border-box;margin:0}
+html,body{width:1400px;height:1000px;overflow:hidden}
+body{background:radial-gradient(115% 75% at 50% -12%, #40204a 0%, transparent 60%), var(--ink);
+     color:var(--paper);font-family:var(--body);position:relative}
+.hd{position:absolute;left:44px;top:34px}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.26em;text-transform:uppercase;color:var(--haze)}
+h1{font-family:var(--display);font-weight:400;font-size:52px;line-height:.9;text-transform:uppercase;
+   margin-top:8px;background:linear-gradient(96deg,var(--sun),var(--rose));
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.hd p{color:var(--haze);font-size:15px;margin-top:10px;max-width:40ch}
+img.card{position:absolute;left:500px;top:170px;width:360px;height:753px;
+   border-radius:16px;box-shadow:0 30px 80px -30px #000}
+svg.wires{position:absolute;inset:0;width:1400px;height:1000px;pointer-events:none}
+.n{position:absolute;width:420px}
+.n .t{font-weight:700;font-size:15.5px;line-height:1.25;margin-bottom:4px}
+.n .d{color:#D9C6E4;font-size:13.5px;line-height:1.4}
+.n .k{font-family:var(--mono);font-size:12.5px;color:var(--sun)}
+.n.L{left:40px;text-align:right}
+.n.R{left:900px}
+.n.hot{background:rgba(255,192,46,.09);border:1px solid rgba(255,192,46,.34);
+   border-radius:12px;padding:12px 14px;width:434px}
+.n.hot.L{left:26px}
+.n.hot .t{color:var(--sun)}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+   text-transform:uppercase;color:var(--haze);border:1px solid var(--ink-3);
+   border-radius:999px;padding:1px 8px;margin-bottom:6px}
+.foot{position:absolute;left:44px;bottom:26px;font-family:var(--mono);font-size:12px;color:var(--haze)}
+</style></head><body>
+<div class="hd">
+  <p class="eyebrow">Que Calor · mode d'emploi</p>
+  <h1>Comment lire<br>une carte</h1>
+  <p>Une carte par bloc — tout ce qui est encadré ou coloré se clique.</p>
+</div>
+<img class="card" src="card4.png" alt="">
+<svg class="wires" id="w"></svg>
+
+<div class="n L" id="nBadge" style="top:214px">
+  <span class="tag">badge</span>
+  <div class="t">D'où vient l'extrait</div>
+  <div class="d"><b>filage</b> = elle le danse à tempo dans l'enchaînement.<br>
+    <b>explication</b> = elle l'isole et le décortique.</div>
+</div>
+
+<div class="n L" id="nTabs" style="top:398px">
+  <span class="tag">onglets</span>
+  <div class="t">Deux extraits pour ce bloc</div>
+  <div class="d">Clique pour basculer&nbsp;: la vignette, la légende et les liens suivent.</div>
+</div>
+
+<div class="n L" id="nSeen" style="top:520px">
+  <span class="tag">légende</span>
+  <div class="t">Ce qu'il faut regarder</div>
+  <div class="d">Décrit ce qui se passe vraiment à l'image, pas la théorie.</div>
+</div>
+
+<div class="n L" id="nSubs" style="top:640px">
+  <span class="tag">découpage</span>
+  <div class="t">Combien de 8 dure chaque intention</div>
+  <div class="d">Ici 4&nbsp;×&nbsp;8 de regard, puis 4&nbsp;×&nbsp;8 d'étoiles.</div>
+</div>
+
+<div class="n L hot" id="nJump" style="top:790px">
+  <span class="tag">ce sont des liens</span>
+  <div class="t">« filage 1:36 » et « explication 5:05 » ouvrent la vidéo</div>
+  <div class="d">Pas des étiquettes&nbsp;: chacun ouvre la vidéo de Céline <b>pile à cet
+    instant</b> — le mouvement à tempo, ou son explication.</div>
+</div>
+
+<div class="n R" id="nClip" style="top:224px">
+  <span class="tag">vignette</span>
+  <div class="t">L'extrait tourne en boucle</div>
+  <div class="d">Il démarre seul quand la carte arrive à l'écran. Un clic dessus
+    amène le compteur sur ce bloc.</div>
+</div>
+
+<div class="n R" id="nFig" style="top:404px">
+  <span class="tag">figurine</span>
+  <div class="t">Le même geste, en schéma</div>
+  <div class="d">Elle danse au tempo réglé en haut, et ses flèches donnent la direction.</div>
+</div>
+
+<div class="n R" id="nDur" style="top:578px">
+  <span class="tag">durée</span>
+  <div class="t">La longueur du bloc</div>
+  <div class="d"><span class="k">8 × 8</span> = huit fois huit temps.</div>
+</div>
+
+<div class="n R" id="nGif" style="top:782px">
+  <span class="tag">gif ↓</span>
+  <div class="t">La boucle en GIF</div>
+  <div class="d">Pour l'envoyer à quelqu'un ou la garder hors ligne.</div>
+</div>
+
+<p class="foot">thorwhalen.com/que_calor_dance · chorégraphie de Céline Pradeu</p>
+<script>
+const CX = 500, CY = 170;                    // where the card sits on the canvas
+const A = {                                  // anchors, measured on the live card
+  nBadge:[ 53,  32,'L'], nTabs:[ 40, 440,'L'], nSeen:[ 26, 489,'L'],
+  nSubs:[ 43, 602,'L'],  nJump:[ 63, 723,'L'],
+  nClip:[284, 120,'R'],  nFig:[308, 380,'R'], nDur:[313, 542,'R'], nGif:[265, 723,'R'],
+};
+const svg = document.getElementById('w');
+const NS = 'http://www.w3.org/2000/svg';
+for (const [id, [ax, ay, side]] of Object.entries(A)) {
+  const el = document.getElementById(id);
+  const r = el.getBoundingClientRect();
+  const hot = el.classList.contains('hot');
+  const x = CX + ax, y = CY + ay;
+  const sx = side === 'L' ? r.right + 10 : r.left - 10;
+  const sy = r.top + r.height / 2;
+  const mx = side === 'L' ? sx + (x - sx) * 0.42 : sx - (sx - x) * 0.42;
+  const col = hot ? '#FFC02E' : '#B18FC9';
+  const path = document.createElementNS(NS, 'polyline');
+  path.setAttribute('points', `${sx},${sy} ${mx},${sy} ${x},${y}`);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', col);
+  path.setAttribute('stroke-width', hot ? 2.2 : 1.5);
+  path.setAttribute('stroke-opacity', hot ? .95 : .65);
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(path);
+  const halo = document.createElementNS(NS, 'circle');
+  halo.setAttribute('cx', x); halo.setAttribute('cy', y);
+  halo.setAttribute('r', hot ? 9 : 7);
+  halo.setAttribute('fill', col); halo.setAttribute('fill-opacity', .18);
+  svg.appendChild(halo);
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('cx', x); dot.setAttribute('cy', y);
+  dot.setAttribute('r', hot ? 4 : 3.2);
+  dot.setAttribute('fill', col);
+  svg.appendChild(dot);
+}
+</script></body></html>

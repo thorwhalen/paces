@@ -1,0 +1,93 @@
+{
+  "_provenance": "Transcribed from `const ROUTINE = [...]` in docs/poc-reference/render/rendered-page.html (the POC's step-structure SSOT). Fields: n (ordinal), eights (domain duration), title, subs (sub-steps with their own eights), figs (renderer asset keys), cue (lyric landmark), hideSubs/shownSubs (presentation overrides). Block 9's 8 hand-written subs are the (course, lever) pair repeated 4x; shownSubs was the hand-collapsed view of that repetition.",
+  "tempo_bpm": "129.2",
+  "origin_s": "51.2",
+  "blocks": [
+    {
+      "n": 1,
+      "eights": 2,
+      "title": "Mise en place",
+      "figs": [{"k": "place"}],
+      "hideSubs": true,
+      "subs": [{"eights": 2, "label": "Se mettre en place"}]
+    },
+    {
+      "n": 2,
+      "eights": 6,
+      "title": "Pas pieds pointe et ronde",
+      "figs": [{"k": "pointe"}],
+      "subs": [
+        {"eights": 5, "label": "Pas pointe et ronde — « marche, pose, marche, ramène »"},
+        {"eights": 1, "label": "Le dernier 8 pour se placer"}
+      ]
+    },
+    {
+      "n": 3,
+      "eights": 4,
+      "title": "Soleil avec les bras",
+      "figs": [{"k": "soleil"}],
+      "subs": [
+        {"eights": 4, "label": "Grandes droites des deux bras — « très net, un peu continu »"}
+      ]
+    },
+    {
+      "n": 4,
+      "eights": 8,
+      "title": "Déhanchés",
+      "figs": [{"k": "tete", "l": "tête"}, {"k": "etoiles", "l": "étoiles"}],
+      "subs": [
+        {"eights": 4, "label": "Déhanchés en bougeant la tête — regard face, puis chaque côté, puis vers le haut : un regard par 8"},
+        {"eights": 4, "label": "Déhanchés en bougeant les bras et les mains (étoiles)"}
+      ]
+    },
+    {
+      "n": 5,
+      "eights": 4,
+      "title": "Moulinets de bras, à partir du coude",
+      "figs": [{"k": "moulinets"}],
+      "subs": [
+        {"eights": 2, "label": "D'un côté"},
+        {"eights": 2, "label": "De l'autre côté"}
+      ]
+    },
+    {
+      "n": 6,
+      "eights": 4,
+      "title": "Genou vers le bas",
+      "figs": [{"k": "genou"}],
+      "cue": "se hace difícil respirar",
+      "subs": [
+        {"eights": 4, "label": "Main sur le genou, puis la main s'essuie le front"}
+      ]
+    },
+    {
+      "n": 7,
+      "eights": 4,
+      "title": "Pas pieds pointe, bras alternés vers le haut",
+      "figs": [{"k": "pointebras"}],
+      "subs": [
+        {"eights": 4, "label": "Pointe au sol, un bras monte puis l'autre"}
+      ]
+    },
+    {
+      "n": 8,
+      "eights": 4,
+      "title": "Taper dans les mains du voisin",
+      "figs": [{"k": "clapA"}, {"k": "clapB"}],
+      "subs": [
+        {"eights": 4, "label": "Taper les mains du voisin, puis se placer vers le fond"}
+      ]
+    },
+    {
+      "n": 9,
+      "eights": 8,
+      "title": "Avancer / reculer sur le refrain",
+      "figs": [{"k": "course"}],
+      "repeat": 4,
+      "cycle": [
+        {"eights": 1, "label": "Avancer, en mode course"},
+        {"eights": 1, "label": "Lever les bras, les descendre et reculer", "cue": "qué calor"}
+      ]
+    }
+  ]
+}

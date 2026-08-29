@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Que Calor — la choré, bloc par bloc</title>
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="bingbot" content="noindex, nofollow">
+<meta name="duckduckbot" content="noindex, nofollow">
+<meta name="slurp" content="noindex, nofollow">
+<meta name="yandex" content="noindex, nofollow">
+<meta name="applebot" content="noindex, nofollow">
+<meta name="ia_archiver" content="noindex, nofollow">
+<meta name="theme-color" content="#170D20">
+<link rel="icon" type="image/png" sizes="192x192" href="media/icon-192.png">
+<link rel="icon" type="image/png" sizes="64x64" href="media/favicon-64.png">
+<link rel="apple-touch-icon" href="media/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="thorwhalen.com">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://thorwhalen.com/que_calor_dance/">
+<meta property="og:title" content="Que Calor — la choré, bloc par bloc">
+<meta property="og:description" content="Neuf blocs, 44 × 8 temps. Le compte au tempo et un extrait vidéo par mouvement. Chorégraphie de Céline Pradeu.">
+<meta property="og:image" content="https://thorwhalen.com/que_calor_dance/media/og.jpg">
+<meta property="og:image:secure_url" content="https://thorwhalen.com/que_calor_dance/media/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Que Calor, bloc par bloc">
+<meta property="og:image" content="https://thorwhalen.com/que_calor_dance/media/og-square.jpg">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="600">
+<meta property="og:image:type" content="image/jpeg">
+<link rel="image_src" href="https://thorwhalen.com/que_calor_dance/media/og.jpg">
+<meta itemprop="name" content="Que Calor — la choré, bloc par bloc">
+<meta itemprop="description" content="Neuf blocs, 44 × 8 temps. Le compte au tempo et un extrait vidéo par mouvement. Chorégraphie de Céline Pradeu.">
+<meta itemprop="image" content="https://thorwhalen.com/que_calor_dance/media/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Que Calor — la choré, bloc par bloc">
+<meta name="twitter:description" content="Neuf blocs, 44 × 8 temps. Le compte au tempo et un extrait vidéo par mouvement.">
+<meta name="twitter:image" content="https://thorwhalen.com/que_calor_dance/media/og.jpg">
+<meta name="description" content="Neuf blocs, 44 × 8 temps. Le compte au tempo et un extrait vidéo par mouvement. Chorégraphie de Céline Pradeu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────
+   Tokens
+   ───────────────────────────────────────────── */
+:root{
+  --ink:#170D20;          /* deep aubergine ground */
+  --ink-2:#241432;        /* raised surface */
+  --ink-3:#33204a;        /* hairline */
+  --paper:#FFF2E0;        /* warm off-white text */
+  --haze:#B18FC9;         /* lilac, secondary text */
+  --sun:#FFC02E;          /* amber, start of the heat ramp */
+  --rose:#FF3D7F;         /* magenta, end of the heat ramp */
+
+  --display:"Anton","Haettenschweiler","Arial Narrow",system-ui,sans-serif;
+  --body:"Karla",ui-sans-serif,system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SFMono-Regular",monospace;
+
+  /* one beat — rewritten by the tempo control so the figures dance in time */
+  --b:.6s;
+  --b2:calc(var(--b)*2); --b4:calc(var(--b)*4); --b8:calc(var(--b)*8);
+
+  /* couleur de bloc par défaut, surchargée bloc par bloc */
+  --c:var(--sun);
+  --c-mid:rgba(255,192,46,.45); --c-soft:rgba(255,192,46,.18); --c-glow:rgba(255,192,46,.55);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(120% 80% at 50% -10%, #3a1b3f 0%, transparent 60%),
+    var(--ink);
+  color:var(--paper);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:4rem;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(1rem,3vw,2rem)}
+
+/* ─────────────────────────────────────────────
+   Masthead
+   ───────────────────────────────────────────── */
+header{padding:clamp(1.6rem,4vw,3rem) 0 1.2rem}
+.eyebrow{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--haze);margin:0 0 .6rem
+}
+h1{
+  font-family:var(--display);font-weight:400;
+  font-size:clamp(2.6rem,9vw,5.5rem);line-height:.86;letter-spacing:.005em;
+  text-transform:uppercase;margin:0;
+  background:linear-gradient(96deg,var(--sun),var(--rose));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.tagline{color:var(--haze);margin:.8rem 0 0;max-width:46ch}
+
+/* ─────────────────────────────────────────────
+   Transport
+   ───────────────────────────────────────────── */
+.transport{
+  position:sticky;top:0;z-index:20;
+  margin-top:1.4rem;
+  background:rgba(23,13,32,.86);
+  backdrop-filter:blur(10px);
+  border:1px solid var(--ink-3);border-radius:14px;
+  padding:.85rem clamp(.8rem,2vw,1.2rem);
+}
+.transport-row{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem 1.2rem}
+
+button{font-family:inherit;color:inherit;cursor:pointer}
+.btn{
+  border:1px solid var(--ink-3);background:var(--ink-2);
+  border-radius:999px;padding:.55rem 1.05rem;
+  font-weight:700;font-size:.9rem;letter-spacing:.01em;
+  transition:background .15s,border-color .15s,transform .1s;
+}
+.btn:hover{background:#311c46;border-color:#4b2f68}
+.btn:active{transform:translateY(1px)}
+.btn-play{background:var(--sun);color:#2a1400;border-color:transparent;min-width:7.2rem}
+.btn-play:hover{background:#ffd063;border-color:transparent}
+.btn-ghost{background:transparent}
+.btn[aria-pressed="false"]{color:var(--haze)}
+:focus-visible{outline:2px solid var(--sun);outline-offset:2px;border-radius:6px}
+
+.count{
+  font-family:var(--display);font-size:3.1rem;line-height:.8;
+  min-width:2ch;text-align:center;color:var(--paper);
+  font-variant-numeric:tabular-nums;
+}
+.count.one{color:var(--sun)}
+.pips{display:flex;gap:5px;align-items:center}
+.pip{width:7px;height:7px;border-radius:50%;background:#452c5e;transition:transform .08s,background .08s}
+.pip.on{background:var(--paper);transform:scale(1.5)}
+.pip.on:first-child{background:var(--sun)}
+
+.now{flex:1 1 12rem;min-width:11rem}
+.now .label{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--haze)}
+.now .title{font-weight:700;line-height:1.2}
+.now .next{color:var(--haze);font-size:.85rem}
+
+.tempo{display:flex;align-items:center;gap:.6rem;flex:0 1 15rem}
+.tempo label{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--haze)}
+input[type=range]{flex:1;min-width:5rem;accent-color:var(--sun)}
+.tempo-val{font-family:var(--mono);font-size:.85rem;min-width:6.6rem;text-align:right;color:var(--paper)}
+
+/* ─────────────────────────────────────────────
+   Signature: the 8-count ribbon — one cell = one 8
+   ───────────────────────────────────────────── */
+.ribbon-wrap{margin-top:.9rem;padding-top:.85rem;border-top:1px solid var(--ink-3)}
+.ribbon{display:flex;align-items:flex-end;gap:6px;width:100%}
+.group{display:flex;flex-direction:column;gap:5px;flex:var(--n) 1 0;min-width:0}
+.cells{display:flex;gap:2px;align-items:flex-end;height:34px}
+.cell{
+  flex:1;min-width:0;height:24px;border-radius:3px;
+  background:var(--c-soft);border:0;padding:0;cursor:pointer;
+  transition:background .12s,box-shadow .12s,height .12s;
+}
+.cell:hover{background:var(--c-mid)}
+.cell.done{background:var(--c-mid)}
+.cell.on{background:var(--c);height:34px;box-shadow:0 0 16px var(--c-glow)}
+.group-label{
+  font-family:var(--mono);font-size:.68rem;color:var(--haze);
+  display:flex;justify-content:space-between;gap:.4rem;white-space:nowrap;overflow:hidden;
+}
+.group-label b{color:var(--c);font-weight:500}
+@media (max-width:760px){.group-label .x{display:none}}
+
+/* ─────────────────────────────────────────────
+   Cards
+   ───────────────────────────────────────────── */
+.grid{
+  display:grid;gap:clamp(.8rem,2vw,1.15rem);margin-top:1.6rem;
+  grid-template-columns:repeat(auto-fill,minmax(272px,1fr));
+}
+.card{
+  position:relative;
+  background:linear-gradient(180deg,var(--ink-2),#1d1129);
+  border:1px solid var(--ink-3);border-radius:16px;
+  padding:.9rem 1.05rem 1.15rem;scroll-margin:6rem 0;
+  transition:border-color .2s,box-shadow .2s;
+  cursor:pointer;
+}
+.card:hover{border-color:var(--c-mid)}
+.card.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 14px 40px -16px var(--c-glow)}
+.card-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.1rem}
+.num{
+  font-family:var(--display);font-size:2.15rem;line-height:.8;color:var(--c);
+}
+.dur{
+  font-family:var(--mono);font-size:.8rem;color:var(--paper);
+  background:var(--c-soft);border:1px solid var(--c-mid);
+  border-radius:999px;padding:.14rem .55rem;margin-left:auto;white-space:nowrap;
+}
+h2{font-size:1.05rem;font-weight:700;margin:.1rem 0 .55rem;line-height:1.25}
+.subs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+.subs li{display:flex;gap:.55rem;font-size:.9rem;color:#EBD9EF}
+.sdur{
+  font-family:var(--mono);font-size:.74rem;color:var(--c);
+  padding-top:.16rem;white-space:nowrap;flex:0 0 auto;min-width:3.1rem;
+}
+.chip{
+  display:inline-block;margin-top:.6rem;font-size:.82rem;
+  border-left:2px solid var(--c);padding:.15rem 0 .15rem .55rem;color:#F6E4C9;
+}
+.chip em{font-style:italic;color:var(--sun)}
+.note{
+  margin:.65rem 0 0;font-size:.82rem;color:var(--haze);
+  border-top:1px dashed var(--ink-3);padding-top:.5rem;
+}
+.note::before{content:"?";font-family:var(--display);color:var(--rose);margin-right:.4rem}
+
+/* stage + figures */
+.stage{height:170px;display:flex;gap:.3rem;align-items:flex-end;justify-content:center;margin-bottom:.2rem}
+.stage svg.fig{height:100%;width:auto;max-width:100%}
+.stage.pair svg.fig{height:132px}
+.stage.duo{gap:0}
+.stage.duo .fig-box:first-child{transform:translateX(18%)}
+.stage.duo .fig-box:last-child{transform:translateX(-18%)}
+.fig-box{display:flex;flex-direction:column;align-items:center;min-width:0}
+.fig-label{font-family:var(--mono);font-size:.66rem;color:var(--haze);margin-top:.1rem}
+svg.fig{color:var(--c);display:block}
+svg.fig *{transform-box:view-box}
+/* les articulations : chaque pièce tourne autour de son propre point */
+.fig .body{transform-origin:80px 186px}   /* les pieds */
+.fig .upper{transform-origin:80px 120px}  /* les hanches */
+.fig .head{transform-origin:80px 64px}    /* la nuque */
+.fig .arm-l,.fig .arm-r{transform-origin:80px 76px}  /* les épaules */
+.fig .fore-l{transform-origin:60px 96px}  /* coude gauche */
+.fig .fore-r{transform-origin:100px 96px} /* coude droit */
+.fig .leg-l,.fig .leg-r{transform-origin:80px 120px}
+.fig .shin-l{transform-origin:66px 152px} /* genou gauche */
+.fig .shin-r{transform-origin:94px 152px} /* genou droit */
+.fig line,.fig circle{stroke:currentColor;stroke-width:5;stroke-linecap:round;fill:none}
+.fig .dot{fill:currentColor;stroke:none}
+.fig .floor{stroke:var(--haze);stroke-width:2;opacity:.3;stroke-dasharray:2 7}
+.fig .hint{stroke:var(--haze);stroke-width:2;opacity:.45;fill:none;stroke-dasharray:3 5}
+.fig .hint.solid{stroke-dasharray:none}
+.fig .spark{opacity:0}
+.fig .spark line{stroke:var(--sun);stroke-width:3}
+.fig .star{transform-box:fill-box;transform-origin:center}
+.fig .star line{stroke:var(--sun);stroke-width:2.5}
+
+/* ─────────────────────────────────────────────
+   Move animations — every duration is a multiple of one beat
+   ───────────────────────────────────────────── */
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes swayHips{0%,100%{transform:translateX(-7px)}50%{transform:translateX(7px)}}
+@keyframes swayUpper{0%,100%{transform:rotate(5deg)}50%{transform:rotate(-5deg)}}
+@keyframes armIdleL{0%,100%{transform:rotate(6deg)}50%{transform:rotate(-4deg)}}
+@keyframes armIdleR{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(4deg)}}
+@keyframes pulse{0%,100%{opacity:.2;transform:scale(.85)}50%{opacity:.9;transform:scale(1.15)}}
+
+/* 1 — mise en place */
+.m-place .body{animation:breathe var(--b4) ease-in-out infinite}
+.m-place .arm-l{animation:armIdleL var(--b4) ease-in-out infinite}
+.m-place .arm-r{animation:armIdleR var(--b4) ease-in-out infinite}
+
+/* 2 — pas pieds pointe et ronde */
+@keyframes pointeR{0%{transform:rotate(0)}12%{transform:rotate(-26deg)}25%{transform:rotate(-12deg)}
+                   37%{transform:rotate(-26deg)}50%,100%{transform:rotate(0)}}
+@keyframes pointeL{0%,50%{transform:rotate(0)}62%{transform:rotate(26deg)}75%{transform:rotate(12deg)}
+                   87%{transform:rotate(26deg)}100%{transform:rotate(0)}}
+@keyframes rondeR{0%,50%,100%{transform:rotate(0)}18%{transform:rotate(-16deg)}31%{transform:rotate(12deg)}}
+@keyframes rondeL{0%,50%,100%{transform:rotate(0)}68%{transform:rotate(16deg)}81%{transform:rotate(-12deg)}}
+.m-pointe .leg-r,.m-pointebras .leg-r{animation:pointeR var(--b4) ease-in-out infinite}
+.m-pointe .leg-l,.m-pointebras .leg-l{animation:pointeL var(--b4) ease-in-out infinite}
+.m-pointe .shin-r{animation:rondeR var(--b4) ease-in-out infinite}
+.m-pointe .shin-l{animation:rondeL var(--b4) ease-in-out infinite}
+.m-pointe .arm-l{animation:armIdleL var(--b2) ease-in-out infinite}
+.m-pointe .arm-r{animation:armIdleR var(--b2) ease-in-out infinite}
+.m-pointe .upper{animation:swayUpper var(--b4) ease-in-out infinite}
+
+/* 3 — soleil avec les bras */
+@keyframes sunL{to{transform:rotate(-360deg)}}
+@keyframes sunR{to{transform:rotate(360deg)}}
+.m-soleil .arm-l{animation:sunL var(--b8) linear infinite}
+.m-soleil .arm-r{animation:sunR var(--b8) linear infinite}
+.m-soleil .fore-l{transform:rotate(-8deg)}
+.m-soleil .fore-r{transform:rotate(8deg)}
+.m-soleil .body{animation:breathe var(--b4) ease-in-out infinite}
+
+/* 4a — déhanchés + tête */
+@keyframes headCycle{
+  0%,18%{transform:rotate(0)}
+  25%,43%{transform:rotate(-22deg)}
+  50%,68%{transform:rotate(22deg)}
+  75%,93%{transform:rotate(0)}
+  100%{transform:rotate(0)}
+}
+@keyframes eyesUp{0%,70%{transform:translateY(0)}78%,95%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+.m-tete .body,.m-etoiles .body{animation:swayHips var(--b2) ease-in-out infinite}
+.m-tete .upper,.m-etoiles .upper{animation:swayUpper var(--b2) ease-in-out infinite}
+.m-tete .head{animation:headCycle var(--b8) ease-in-out infinite}
+.m-tete .eyes{animation:eyesUp var(--b8) ease-in-out infinite}
+.m-tete .arm-l{transform:rotate(14deg)}.m-tete .fore-l{transform:rotate(-38deg)}
+.m-tete .arm-r{transform:rotate(-14deg)}.m-tete .fore-r{transform:rotate(38deg)}
+
+/* 4b — déhanchés + étoiles */
+@keyframes flickL{0%,100%{transform:rotate(-70deg)}50%{transform:rotate(-98deg)}}
+@keyframes flickR{0%,100%{transform:rotate(70deg)}50%{transform:rotate(98deg)}}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.75) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(45deg)}}
+.m-etoiles .arm-l{transform:rotate(110deg)}
+.m-etoiles .arm-r{transform:rotate(-110deg)}
+.m-etoiles .fore-l{animation:flickL var(--b) ease-in-out infinite}
+.m-etoiles .fore-r{animation:flickR var(--b) ease-in-out infinite}
+.m-etoiles .star{animation:twinkle var(--b) ease-in-out infinite}
+
+/* 5 — moulinets à partir du coude */
+@keyframes spinA{0%{transform:rotate(0)}50%,100%{transform:rotate(720deg)}}
+@keyframes spinB{0%,50%{transform:rotate(0)}100%{transform:rotate(720deg)}}
+@keyframes hintA{0%,45%{opacity:.5}50%,100%{opacity:.08}}
+@keyframes hintB{0%,45%{opacity:.08}50%,100%{opacity:.5}}
+.m-moulinets .arm-l{transform:rotate(45deg)}
+.m-moulinets .arm-r{transform:rotate(-45deg)}
+.m-moulinets .fore-l{animation:spinA var(--b8) linear infinite}
+.m-moulinets .fore-r{animation:spinB var(--b8) linear infinite}
+.m-moulinets .hint-l{animation:hintA var(--b8) steps(1) infinite}
+.m-moulinets .hint-r{animation:hintB var(--b8) steps(1) infinite}
+.m-moulinets .body{animation:breathe var(--b2) ease-in-out infinite}
+
+/* 6 — genou vers le bas, puis on s'essuie le front */
+@keyframes dip{0%{transform:translateY(0)}18%,45%{transform:translateY(16px)}60%{transform:translateY(2px)}100%{transform:translateY(0)}}
+@keyframes kneeLegL{0%,100%{transform:rotate(0)}18%,45%{transform:rotate(14deg)}}
+@keyframes kneeLegR{0%,100%{transform:rotate(0)}18%,45%{transform:rotate(-14deg)}}
+@keyframes kneeShinL{0%,100%{transform:rotate(0)}18%,45%{transform:rotate(-16deg)}}
+@keyframes kneeShinR{0%,100%{transform:rotate(0)}18%,45%{transform:rotate(16deg)}}
+@keyframes lean{0%,100%{transform:rotate(0)}18%,45%{transform:rotate(16deg)}}
+@keyframes armToKnee{
+  0%{transform:rotate(0)}18%,45%{transform:rotate(26deg)}
+  58%{transform:rotate(-95deg)}68%{transform:rotate(-85deg)}
+  78%{transform:rotate(-105deg)}88%{transform:rotate(-85deg)}100%{transform:rotate(0)}
+}
+@keyframes foreToKnee{0%,45%{transform:rotate(0)}58%,92%{transform:rotate(-114deg)}100%{transform:rotate(0)}}
+.m-genou .body{animation:dip var(--b8) ease-in-out infinite}
+.m-genou .upper{animation:lean var(--b8) ease-in-out infinite}
+.m-genou .leg-l{animation:kneeLegL var(--b8) ease-in-out infinite}
+.m-genou .leg-r{animation:kneeLegR var(--b8) ease-in-out infinite}
+.m-genou .shin-l{animation:kneeShinL var(--b8) ease-in-out infinite}
+.m-genou .shin-r{animation:kneeShinR var(--b8) ease-in-out infinite}
+.m-genou .arm-r{animation:armToKnee var(--b8) ease-in-out infinite}
+.m-genou .fore-r{animation:foreToKnee var(--b8) ease-in-out infinite}
+.m-genou .arm-l{transform:rotate(18deg)}.m-genou .fore-l{transform:rotate(-44deg)}
+
+/* 7 — pointe + bras alternés vers le haut */
+@keyframes upL{0%{transform:rotate(0)}25%,45%{transform:rotate(135deg)}60%,100%{transform:rotate(0)}}
+@keyframes upR{0%,45%{transform:rotate(0)}70%,90%{transform:rotate(-135deg)}100%{transform:rotate(0)}}
+.m-pointebras .arm-l{animation:upL var(--b4) ease-in-out infinite}
+.m-pointebras .arm-r{animation:upR var(--b4) ease-in-out infinite}
+.m-pointebras .fore-l{transform:rotate(10deg)}
+.m-pointebras .fore-r{transform:rotate(-10deg)}
+
+/* 8 — taper dans les mains du voisin */
+@keyframes clapA{0%{transform:rotate(0)}45%,60%{transform:rotate(-98deg)}100%{transform:rotate(0)}}
+@keyframes clapB{0%{transform:rotate(0)}45%,60%{transform:rotate(98deg)}100%{transform:rotate(0)}}
+@keyframes clapFA{0%{transform:rotate(0)}45%,60%{transform:rotate(24deg)}100%{transform:rotate(0)}}
+@keyframes clapFB{0%{transform:rotate(0)}45%,60%{transform:rotate(-24deg)}100%{transform:rotate(0)}}
+@keyframes flash{0%,42%{opacity:0}48%{opacity:1}70%,100%{opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.m-clapA .body,.m-clapB .body{animation:bob var(--b2) ease-in-out infinite}
+.m-clapA .arm-r{animation:clapA var(--b2) ease-in-out infinite}
+.m-clapA .fore-r{animation:clapFA var(--b2) ease-in-out infinite}
+.m-clapB .arm-l{animation:clapB var(--b2) ease-in-out infinite}
+.m-clapB .fore-l{animation:clapFB var(--b2) ease-in-out infinite}
+.m-clapA .spark,.m-clapB .spark{animation:flash var(--b2) ease-out infinite}
+.m-clapA .arm-l{transform:rotate(12deg)}
+.m-clapB .arm-r{transform:rotate(-12deg)}
+
+/* 9 — avancer / reculer */
+@keyframes travel{
+  0%{transform:translateX(-24px)}
+  38%{transform:translateX(24px)}
+  62%{transform:translateX(24px)}
+  96%,100%{transform:translateX(-24px)}
+}
+@keyframes runL{0%,38%{transform:rotate(28deg)}19%{transform:rotate(-28deg)}
+                62%{transform:rotate(-24deg)}80%{transform:rotate(24deg)}100%{transform:rotate(28deg)}}
+@keyframes runR{0%,38%{transform:rotate(-28deg)}19%{transform:rotate(28deg)}
+                62%{transform:rotate(24deg)}80%{transform:rotate(-24deg)}100%{transform:rotate(-28deg)}}
+@keyframes pumpL{0%{transform:rotate(-30deg)}19%{transform:rotate(40deg)}38%{transform:rotate(-30deg)}
+                 48%,60%{transform:rotate(135deg)}75%{transform:rotate(20deg)}100%{transform:rotate(-30deg)}}
+@keyframes pumpR{0%{transform:rotate(30deg)}19%{transform:rotate(-40deg)}38%{transform:rotate(30deg)}
+                 48%,60%{transform:rotate(-135deg)}75%{transform:rotate(-20deg)}100%{transform:rotate(30deg)}}
+@keyframes arrowFwd{0%,38%{opacity:.6}39%,100%{opacity:.1}}
+@keyframes arrowBack{0%,60%{opacity:.1}61%,100%{opacity:.6}}
+.m-course .body{animation:travel var(--b8) ease-in-out infinite}
+.m-course .leg-l{animation:runL var(--b8) ease-in-out infinite}
+.m-course .leg-r{animation:runR var(--b8) ease-in-out infinite}
+.m-course .arm-l{animation:pumpL var(--b8) ease-in-out infinite}
+.m-course .arm-r{animation:pumpR var(--b8) ease-in-out infinite}
+.m-course .hint-fwd{animation:arrowFwd var(--b8) steps(1) infinite}
+.m-course .hint-back{animation:arrowBack var(--b8) steps(1) infinite}
+
+/* ─────────────────────────────────────────────
+   Footer
+   ───────────────────────────────────────────── */
+footer{margin-top:2.4rem;border-top:1px solid var(--ink-3);padding-top:1.2rem;color:var(--haze);font-size:.9rem}
+footer h3{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--haze);margin:0 0 .6rem}
+.recap{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1.2rem;padding:0;list-style:none}
+.recap li{font-family:var(--mono);font-size:.78rem;border:1px solid var(--ink-3);border-radius:999px;padding:.2rem .6rem}
+.recap li b{color:var(--c);font-weight:500}
+.open li{margin-bottom:.35rem}
+.open{padding-left:1.1rem}
+kbd{font-family:var(--mono);font-size:.75rem;border:1px solid var(--ink-3);border-bottom-width:2px;border-radius:5px;padding:.05rem .35rem;color:var(--paper)}
+
+/* téléphone : compteur compact pour garder les cartes visibles */
+@media (max-width:640px){
+  .transport{padding:.6rem .7rem}
+  .transport-row{gap:.55rem .8rem}
+  .now .next{display:none}
+  .count{font-size:2.2rem}
+  .btn{padding:.45rem .85rem;font-size:.85rem}
+  .btn-play{min-width:6.4rem}
+  .tempo{flex:1 1 100%}
+  .cells{height:26px}
+  .cell{height:18px}
+  .cell.on{height:26px}
+  .stage{height:150px}
+  .stage.pair svg.fig{height:118px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  svg.fig *{animation:none!important}
+  *{scroll-behavior:auto!important}
+}
+
+/* ═══════════════════════════════════════════════
+   Les extraits vidéo — un mouvement par carte
+   ═══════════════════════════════════════════════ */
+.clip{
+  position:relative;aspect-ratio:4/5;border-radius:12px;overflow:hidden;
+  background:#100819;border:1px solid var(--ink-3);margin-bottom:.5rem;
+}
+.clip video{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  opacity:0;transition:opacity .18s;
+}
+.clip video.on{opacity:1;position:relative}
+.clip .badge{
+  position:absolute;left:.4rem;top:.4rem;z-index:2;
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+  background:rgba(16,8,25,.72);color:var(--haze);padding:.16rem .45rem;border-radius:999px;
+  backdrop-filter:blur(4px);
+}
+.clip .fig-inset{
+  position:absolute;right:.35rem;bottom:.35rem;z-index:2;
+  width:54px;height:68px;padding:3px;border-radius:9px;
+  background:rgba(16,8,25,.6);backdrop-filter:blur(5px);
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.clip .fig-inset svg.fig{height:100%;width:auto;opacity:0;position:absolute;bottom:3px}
+.clip .fig-inset svg.fig.on{opacity:.95;position:relative}
+.tabs{display:flex;gap:.3rem;margin:0 0 .5rem;flex-wrap:wrap}
+.tab{
+  border:1px solid var(--ink-3);background:transparent;border-radius:999px;
+  padding:.2rem .6rem;font-size:.72rem;font-family:var(--mono);color:var(--haze);
+}
+.tab.on{background:var(--c-soft);border-color:var(--c-mid);color:var(--paper)}
+.seen{
+  font-size:.86rem;line-height:1.4;color:#EBD9EF;margin:0 0 .7rem;
+  border-left:2px solid var(--c-mid);padding-left:.6rem;
+}
+.jump{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.75rem}
+.jump a{
+  font-family:var(--mono);font-size:.68rem;text-decoration:none;color:var(--haze);
+  border:1px solid var(--ink-3);border-radius:999px;padding:.18rem .5rem;white-space:nowrap;
+}
+.jump a:hover{color:var(--paper);border-color:var(--c-mid);background:var(--c-soft)}
+.jump a.gif{color:var(--c);border-color:var(--c-mid)}
+
+/* le filage complet, sous le compteur */
+.filage{
+  margin-top:1.2rem;border:1px solid var(--ink-3);border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,var(--ink-2),#1d1129);
+}
+.filage summary{
+  cursor:pointer;list-style:none;padding:.85rem 1.1rem;display:flex;align-items:center;gap:.7rem;
+  font-weight:700;
+}
+.filage summary::-webkit-details-marker{display:none}
+.filage summary::before{content:"▶";color:var(--sun);font-size:.8rem}
+.filage[open] summary::before{content:"▼"}
+.filage summary .hint-txt{font-family:var(--mono);font-size:.7rem;color:var(--haze);
+  letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+.filage video{display:block;width:100%;background:#000}
+.howto img{display:block;width:100%;height:auto;background:var(--ink)}
+.howto-note{padding:.7rem 1.1rem 1rem;font-size:.82rem;color:var(--haze)}
+.howto-note a{color:var(--sun)}
+.credit{
+  margin-top:1.4rem;font-size:.82rem;color:var(--haze);
+  border-top:1px solid var(--ink-3);padding-top:.9rem;
+}
+.credit a{color:var(--haze)}
+.credit .yt{font-family:var(--mono);font-size:.78em;opacity:.8}
+.grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+@media (max-width:640px){
+  .clip .fig-inset{width:44px;height:56px}
+}
+
+/* ═══════════════════════════════════════════════
+   Mode lecture : le bandeau se réduit pour ne pas
+   manger la carte vers laquelle on vient de sauter
+   ═══════════════════════════════════════════════ */
+body.playing .transport{padding:.5rem .75rem}
+body.playing #reset,
+body.playing #sound,
+body.playing .tempo,
+body.playing .now .label,
+body.playing .now .next{display:none}
+body.playing .btn-play{min-width:5.2rem;padding:.4rem .85rem;font-size:.84rem}
+body.playing .count{font-size:2.1rem}
+body.playing .transport-row{gap:.45rem .8rem;flex-wrap:nowrap}
+body.playing .now{flex:1 1 auto;min-width:0}
+body.playing .now .title{
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem;
+}
+body.playing .ribbon-wrap{margin-top:.5rem;padding-top:.45rem}
+@media (max-width:640px){
+  body.playing .pips{display:none}
+}
+
+/* la carte visée se pose SOUS le bandeau collant, jamais dessous */
+.card{scroll-margin-top:calc(var(--th, 7rem) + 14px)}
+
+.byline{
+  margin:.65rem 0 0;font-size:.85rem;color:var(--haze);
+}
+.byline b{color:var(--paper);font-weight:700}
+.byline a{color:var(--sun);text-decoration:none;border-bottom:1px solid rgba(255,192,46,.35)}
+.byline a:hover{border-bottom-color:var(--sun)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Aide-mémoire</p>
+    <h1>Que Calor,<br>bloc par bloc</h1>
+    <p class="tagline">Neuf blocs, 44 × 8 temps, ~129 bpm. Lance le compte : le ruban montre où tu en es, et chaque carte rejoue le mouvement en boucle, découpé depuis la vidéo de Céline.</p>
+      <p class="byline">Chorégraphie, danse et vidéo&nbsp;: <b>Céline Pradeu</b> · <a href="https://youtu.be/q_TUyxUhoEw" target="_blank" rel="noopener">voir la vidéo d'origine&nbsp;↗</a></p>
+  </header>
+
+  <section class="transport" aria-label="Compteur">
+    <div class="transport-row">
+      <button class="btn btn-play" id="play" aria-keyshortcuts="Space">Lancer</button>
+      <button class="btn btn-ghost" id="reset">Retour au début</button>
+      <div class="count" id="count" aria-live="off">1</div>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <div class="now">
+        <div class="label">Maintenant</div>
+        <div class="title" id="now-title">—</div>
+        <div class="next" id="now-next">—</div>
+      </div>
+      <div class="tempo">
+        <label for="bpm">Tempo</label>
+        <input type="range" id="bpm" min="60" max="150" step="1" value="129">
+        <span class="tempo-val" id="bpm-val">100 bpm</span>
+      </div>
+      <button class="btn btn-ghost" id="sound" aria-pressed="true">Clic ON</button>
+    </div>
+
+    <div class="ribbon-wrap">
+      <div class="ribbon" id="ribbon"></div>
+    </div>
+  </section>
+
+
+    <details class="filage">
+      <summary>Le filage complet <span class="hint-txt">2 min 46 · avec la musique</span></summary>
+      <video src="media/filage.mp4" poster="media/filage.jpg" controls preload="none" playsinline></video>
+    </details>
+
+    <details class="filage howto">
+      <summary>Comment lire une carte <span class="hint-txt">ce qui se clique</span></summary>
+      <img src="media/howto.jpg" loading="lazy" decoding="async"
+           alt="Une carte annotée : le badge dit si l'extrait vient du filage ou de
+                l'explication, les onglets basculent entre les deux extraits du bloc, la
+                légende décrit ce qu'on voit, le découpage donne le nombre de 8 par
+                intention, et « filage » et « explication » sont des liens qui ouvrent la
+                vidéo d'origine à cet instant.">
+      <p class="howto-note">Version pleine résolution&nbsp;:
+        <a href="media/howto.png" target="_blank" rel="noopener">l'image seule</a>.</p>
+    </details>
+
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    <h3>En une ligne</h3>
+    <ul class="recap" id="recap"></ul>
+    <h3>Ce que la vidéo tranche</h3>
+    <ul class="open">
+      <li><b>Bloc&nbsp;3</b> — tranché&nbsp;: c'est bien un mouvement de bras, pas les déhanchés.
+          Céline dit «&nbsp;faire des droites avec les bras, très net, un peu continu, pour casser
+          le côté rebondi&nbsp;» — sa petite signature.</li>
+      <li><b>Bloc&nbsp;9</b> — tranché&nbsp;: le cycle de 2&nbsp;×&nbsp;8 (avancer, puis bras en
+          l'air et reculer) est bien répété 4&nbsp;fois pour remplir les 8&nbsp;×&nbsp;8.</li>
+      <li><b>Bloc&nbsp;6</b> — le passage genou&nbsp;→&nbsp;front suit les paroles
+          («&nbsp;se hace difícil respirar&nbsp;») et reste facultatif&nbsp;: «&nbsp;si vous le
+          sentez, vous le faites&nbsp;».</li>
+      <li><b>Blocs&nbsp;1 et 2</b> — dans la vidéo l'entrée se fait en diagonale depuis le fond,
+          bras ouverts en seconde sur la 2<sup>e</sup> moitié. Le pas isolé (bloc&nbsp;1) est montré
+          face caméra, ce n'est pas l'orientation de scène.</li>
+    </ul>
+    <p><kbd>Espace</kbd> lance ou met en pause · <kbd>←</kbd> <kbd>→</kbd> reculent ou avancent d'un 8 · clique un bloc pour y sauter.</p>
+
+    <p class="credit">
+      Chorégraphie, danse et vidéo&nbsp;: <b>Céline&nbsp;Pradeu</b> — pour le mariage d'Emmanuelle
+      et&nbsp;Olivier. Les extraits de cette page sont découpés de
+      <a href="https://youtu.be/q_TUyxUhoEw" target="_blank" rel="noopener">sa vidéo</a>
+      (<span class="yt">youtu.be/q_TUyxUhoEw</span>) et servent uniquement d'aide-mémoire
+      personnelle&nbsp;; page non&nbsp;référencée par les moteurs de recherche. Ils sont <b>stylisés</b> — rendu dessin animé,
+      décor aplati et visage anonymisé — pour ne pas rediffuser son image&nbsp;; la vidéo
+      d'origine reste la référence. Musique&nbsp;: <i>Que Calor</i>. Les timings en&nbsp;secondes
+      renvoient à la vidéo d'origine.
+    </p>
+  </footer>
+
+</div>
+
+<script>const MEDIA = {
+ "1": [
+  {
+   "id": "b1",
+   "src": "BD",
+   "start": 231.3,
+   "dur": 5.0,
+   "cap": "Le pas de base : marche, pose, marche, ramène — genoux souples, petit rebond à chaque appui.",
+   "tab": "le pas",
+   "fig": "place",
+   "yt_expl": 231,
+   "yt_run": 51
+  }
+ ],
+ "2": [
+  {
+   "id": "b2",
+   "src": "RT",
+   "start": 68.2,
+   "dur": 4.4,
+   "cap": "Le même pas qui voyage, bras ouverts en seconde : pointe, rebond, la jambe se pose loin devant.",
+   "tab": "l'entrée",
+   "fig": "pointe",
+   "yt_expl": 228,
+   "yt_run": 59
+  }
+ ],
+ "3": [
+  {
+   "id": "b3",
+   "src": "RT",
+   "start": 80.9,
+   "dur": 5.0,
+   "cap": "Deux bras tendus qui balaient l'espace en grandes droites — diagonale haute, passage devant, remontée à la verticale.",
+   "tab": "les droites",
+   "fig": "soleil",
+   "yt_expl": 278,
+   "yt_run": 80
+  }
+ ],
+ "4": [
+  {
+   "id": "b4a",
+   "src": "RT",
+   "start": 103.3,
+   "dur": 5.2,
+   "cap": "Jambes tendues bien écartées, le bassin pulse sur place, bras relâchés — et le regard change à chaque 8 (ici : de côté, face, puis vers le haut).",
+   "tab": "hanches + regard",
+   "fig": "tete",
+   "yt_expl": 305,
+   "yt_run": 96
+  },
+  {
+   "id": "b4b",
+   "src": "RT",
+   "start": 118.4,
+   "dur": 4.2,
+   "cap": "Mêmes hanches, mais les mains montent jointes et s'ouvrent d'un coup en étoile, puis redescendent en croix.",
+   "tab": "+ étoiles",
+   "fig": "etoiles",
+   "yt_expl": 343,
+   "yt_run": 110
+  }
+ ],
+ "5": [
+  {
+   "id": "b5",
+   "src": "BD",
+   "start": 391.8,
+   "dur": 4.1,
+   "cap": "La roue vers l'intérieur : c'est l'avant-bras qui mouline à partir du coude, le poids posé sur l'autre jambe.",
+   "tab": "un côté",
+   "fig": "moulinets",
+   "yt_expl": 367,
+   "yt_run": 125
+  },
+  {
+   "id": "b5b",
+   "src": "BD",
+   "start": 396.4,
+   "dur": 2.9,
+   "cap": "Deux fois huit d'un côté, puis on change : même moulinet avec l'autre bras.",
+   "tab": "on change",
+   "fig": "moulinets",
+   "yt_expl": 396,
+   "yt_run": 132
+  }
+ ],
+ "6": [
+  {
+   "id": "b6",
+   "src": "BD",
+   "start": 403.4,
+   "dur": 4.0,
+   "cap": "Grand plié, jambes très écartées : les genoux rentrent vers l'intérieur en descendant. Un, tac, tac, tac.",
+   "tab": "genou dedans",
+   "fig": "genou",
+   "yt_expl": 399,
+   "yt_run": 140
+  },
+  {
+   "id": "b6b",
+   "src": "BD",
+   "start": 417.2,
+   "dur": 3.6,
+   "cap": "Sur « se hace difícil respirar » : les gestes qui marquent la chaleur. Facultatif — si tu le sens.",
+   "tab": "la chaleur",
+   "fig": "genou",
+   "yt_expl": 415,
+   "yt_run": 150
+  }
+ ],
+ "7": [
+  {
+   "id": "b7",
+   "src": "RT",
+   "start": 161.6,
+   "dur": 4.3,
+   "cap": "Sur place : pied à plat, pointe au sol, on change de jambe — et un bras qui monte près de la tête puis l'autre.",
+   "tab": "pied + bras",
+   "fig": "pointebras",
+   "yt_expl": 435,
+   "yt_run": 157
+  },
+  {
+   "id": "b7b",
+   "src": "BD",
+   "start": 457.0,
+   "dur": 5.0,
+   "cap": "Le lâcher du haut du dos : « vous avez chaud » — les mains à la tête, dans les cheveux, en restant dans le rythme.",
+   "tab": "« j'ai chaud »",
+   "fig": "pointebras",
+   "yt_expl": 452,
+   "yt_run": 164
+  }
+ ],
+ "8": [
+  {
+   "id": "b8",
+   "src": "BD",
+   "start": 472.5,
+   "dur": 4.5,
+   "cap": "On tape dans la main du voisin : bras tendu vers le haut-avant, paume ouverte, on marque 1-2-3-4.",
+   "tab": "le tapé",
+   "fig": "clapA",
+   "yt_expl": 466,
+   "yt_run": 170
+  },
+  {
+   "id": "b8b",
+   "src": "BD",
+   "start": 476.6,
+   "dur": 4.4,
+   "cap": "Puis on change de partenaire — et surtout on RECULE pour préparer le refrain.",
+   "tab": "changer + reculer",
+   "fig": "clapB",
+   "yt_expl": 477,
+   "yt_run": 179
+  }
+ ],
+ "9": [
+  {
+   "id": "b9",
+   "src": "RT",
+   "start": 201.8,
+   "dur": 6.0,
+   "cap": "Un cycle complet : petite course en avant, les deux bras lancés en l'air sur le « qué calor », puis on redescend et on recule.",
+   "tab": "un cycle complet",
+   "fig": "course",
+   "yt_expl": 486,
+   "yt_run": 184
+  },
+  {
+   "id": "b9b",
+   "src": "BD",
+   "start": 511.0,
+   "dur": 6.0,
+   "cap": "Le lancer de bras en gros plan : abdominaux gainés, contrepoids dans les jambes — ça se projette et ça s'arrête.",
+   "tab": "le lancer, de près",
+   "fig": "course",
+   "yt_expl": 515,
+   "yt_run": 193
+  }
+ ]
+};
+
+const YT = "https://youtu.be/q_TUyxUhoEw?t=";
+const mmss = s => `${Math.floor(s/60)}:${String(Math.round(s)%60).padStart(2,"0")}`;
+
+
+/* ═══════════════════════════════════════════════
+   Source unique de vérité : la choré.
+   eights = nombre de 8 temps. subs = découpage interne.
+   ═══════════════════════════════════════════════ */
+const ROUTINE = [
+  { n:1, eights:2, title:"Mise en place",
+    figs:[{k:"place"}], hideSubs:true,
+    subs:[{eights:2, label:"Se mettre en place"}] },
+
+  { n:2, eights:6, title:"Pas pieds pointe et ronde",
+    figs:[{k:"pointe"}],
+    subs:[{eights:5, label:"Pas pointe et ronde — « marche, pose, marche, ramène »"},
+          {eights:1, label:"Le dernier 8 pour se placer"}] },
+
+  { n:3, eights:4, title:"Soleil avec les bras",
+    figs:[{k:"soleil"}],
+    subs:[{eights:4, label:"Grandes droites des deux bras — « très net, un peu continu »"}],
+  },
+
+  { n:4, eights:8, title:"Déhanchés",
+    figs:[{k:"tete", l:"tête"},{k:"etoiles", l:"étoiles"}],
+    subs:[{eights:4, label:"Déhanchés en bougeant la tête — regard face, puis chaque côté, puis vers le haut : un regard par 8"},
+          {eights:4, label:"Déhanchés en bougeant les bras et les mains (étoiles)"}] },
+
+  { n:5, eights:4, title:"Moulinets de bras, à partir du coude",
+    figs:[{k:"moulinets"}],
+    subs:[{eights:2, label:"D'un côté"},
+          {eights:2, label:"De l'autre côté"}] },
+
+  { n:6, eights:4, title:"Genou vers le bas",
+    figs:[{k:"genou"}],
+    subs:[{eights:4, label:"Main sur le genou, puis la main s'essuie le front"}],
+    cue:"se hace difícil respirar" },
+
+  { n:7, eights:4, title:"Pas pieds pointe, bras alternés vers le haut",
+    figs:[{k:"pointebras"}],
+    subs:[{eights:4, label:"Pointe au sol, un bras monte puis l'autre"}] },
+
+  { n:8, eights:4, title:"Taper dans les mains du voisin",
+    figs:[{k:"clapA"},{k:"clapB"}],
+    subs:[{eights:4, label:"Taper les mains du voisin, puis se placer vers le fond"}] },
+
+  { n:9, eights:8, title:"Avancer / reculer sur le refrain",
+    figs:[{k:"course"}],
+    subs:[{eights:1, label:"Avancer, en mode course"},
+          {eights:1, label:"Lever les bras, les descendre et reculer", cue:"qué calor"},
+          {eights:1, label:"Avancer, en mode course"},
+          {eights:1, label:"Lever les bras, les descendre et reculer"},
+          {eights:1, label:"Avancer, en mode course"},
+          {eights:1, label:"Lever les bras, les descendre et reculer"},
+          {eights:1, label:"Avancer, en mode course"},
+          {eights:1, label:"Lever les bras, les descendre et reculer"}],
+    shownSubs:[{eights:1, label:"Avancer, en mode course"},
+               {eights:1, label:"Lever les bras sur le « qué calor » fort, les descendre et reculer"}],
+  }
+];
+
+const TOTAL_EIGHTS = ROUTINE.reduce((a,s)=>a+s.eights,0);
+const TOTAL_BEATS  = TOTAL_EIGHTS * 8;
+
+/* couleur par bloc : rampe de chaleur, ambre → magenta */
+const hueOf = i => (48 - i*11 + 360) % 360;
+function paint(el, i){
+  const h = hueOf(i);
+  el.style.setProperty('--c',      `hsl(${h}, 92%, 62%)`);
+  el.style.setProperty('--c-mid',  `hsla(${h}, 92%, 62%, .45)`);
+  el.style.setProperty('--c-soft', `hsla(${h}, 92%, 62%, .18)`);
+  el.style.setProperty('--c-glow', `hsla(${h}, 92%, 62%, .55)`);
+}
+
+/* table 8 → (bloc, sous-étape) */
+const CELLS = [];
+ROUTINE.forEach((sec, si) => {
+  let k = 0;
+  sec.subs.forEach((sub, bi) => {
+    for (let j = 0; j < sub.eights; j++) {
+      CELLS.push({ sec: si, sub: bi, first: k === 0, eightInSec: k });
+      k++;
+    }
+  });
+});
+
+/* ═══════════════════════════════════════════════
+   Figurines
+   ═══════════════════════════════════════════════ */
+const BODY = `
+<g class="body">
+  <g class="upper">
+    <g class="head">
+      <circle cx="80" cy="52" r="12"/>
+      <g class="eyes"><circle class="dot" cx="75" cy="50" r="1.9"/><circle class="dot" cx="85" cy="50" r="1.9"/></g>
+    </g>
+    <line class="torso" x1="80" y1="64" x2="80" y2="120"/>
+    <g class="arm arm-l">
+      <line x1="80" y1="76" x2="60" y2="96"/>
+      <g class="fore fore-l"><line x1="60" y1="96" x2="48" y2="116"/></g>
+    </g>
+    <g class="arm arm-r">
+      <line x1="80" y1="76" x2="100" y2="96"/>
+      <g class="fore fore-r"><line x1="100" y1="96" x2="112" y2="116"/></g>
+    </g>
+  </g>
+  <g class="legs">
+    <g class="leg leg-l">
+      <line x1="80" y1="120" x2="66" y2="152"/>
+      <g class="shin shin-l"><line x1="66" y1="152" x2="62" y2="182"/><line x1="62" y1="182" x2="50" y2="182"/></g>
+    </g>
+    <g class="leg leg-r">
+      <line x1="80" y1="120" x2="94" y2="152"/>
+      <g class="shin shin-r"><line x1="94" y1="152" x2="98" y2="182"/><line x1="98" y1="182" x2="110" y2="182"/></g>
+    </g>
+  </g>
+</g>`;
+
+const star = (x,y) => `<g class="star"><line x1="${x-7}" y1="${y}" x2="${x+7}" y2="${y}"/>`+
+  `<line x1="${x}" y1="${y-7}" x2="${x}" y2="${y+7}"/></g>`;
+
+/* décors : ce que le trait seul ne dit pas */
+const HINTS = {
+  soleil:  `<circle class="hint" cx="80" cy="76" r="52"/>`,
+  pointe:  `<path class="hint" d="M96 184 q16 -10 30 0"/><path class="hint" d="M64 184 q-16 -10 -30 0"/>`,
+  tete:    `<path class="hint solid" d="M52 134 h-12 m0 0 l5 -5 m-5 5 l5 5"/>`+
+           `<path class="hint solid" d="M108 134 h12 m0 0 l-5 -5 m5 5 l-5 5"/>`,
+  etoiles: ``,
+  moulinets:`<circle class="hint hint-l" cx="52" cy="76" r="20"/><circle class="hint hint-r" cx="108" cy="76" r="20"/>`,
+  genou:   `<path class="hint solid" d="M126 96 v26 m0 0 l-5 -6 m5 6 l5 -6"/>`,
+  pointebras:`<path class="hint solid" d="M124 60 v-26 m0 0 l-5 6 m5 -6 l5 6"/>`,
+  course:  `<path class="hint solid hint-fwd" d="M118 168 h22 m0 0 l-7 -6 m7 6 l-7 6"/>`+
+           `<path class="hint solid hint-back" d="M42 168 h-22 m0 0 l7 -6 m-7 6 l7 6"/>`,
+  clapA:   `<g class="spark"><line x1="124" y1="40" x2="134" y2="33"/><line x1="125" y1="51" x2="137" y2="51"/></g>`,
+  clapB:   `<g class="spark"><line x1="36" y1="40" x2="26" y2="33"/><line x1="35" y1="51" x2="23" y2="51"/></g>`,
+  place:   ``
+};
+const EXTRAS = { etoiles: star(44,52) + star(116,52) };
+
+function figSvg(key, cls){
+  return `<svg class="fig m-${key} ${cls || ''}" viewBox="0 0 160 200" role="img" aria-hidden="true">`
+       + (HINTS[key] || '')
+       + BODY
+       + (EXTRAS[key] || '')
+       + `</svg>`;
+}
+
+/* ═══════════════════════════════════════════════
+   Rendu
+   ═══════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const grid = $('#grid'), ribbon = $('#ribbon'), pipsEl = $('#pips'), recapEl = $('#recap');
+
+/* pips */
+for (let i = 0; i < 8; i++) {
+  const d = document.createElement('span');
+  d.className = 'pip';
+  pipsEl.appendChild(d);
+}
+
+/* ruban */
+let cellIndex = 0;
+ROUTINE.forEach((sec, si) => {
+  const g = document.createElement('div');
+  g.className = 'group';
+  g.style.setProperty('--n', sec.eights);
+  paint(g, si);
+
+  const cells = document.createElement('div');
+  cells.className = 'cells';
+  for (let i = 0; i < sec.eights; i++) {
+    const idx = cellIndex++;
+    const b = document.createElement('button');
+    b.className = 'cell';
+    b.dataset.cell = idx;
+    b.title = `${sec.n} — ${sec.title} · 8 n°${i + 1}`;
+    b.setAttribute('aria-label', b.title);
+    b.addEventListener('click', () => goTo(idx * 8, true));
+    cells.appendChild(b);
+  }
+
+  const lab = document.createElement('div');
+  lab.className = 'group-label';
+  lab.innerHTML = `<b>${sec.n}</b><span class="x">${sec.eights}×8</span>`;
+
+  g.append(cells, lab);
+  ribbon.appendChild(g);
+});
+
+/* cartes */
+ROUTINE.forEach((sec, si) => {
+  const card = document.createElement('article');
+  card.className = 'card';
+  card.dataset.sec = si;
+  card.tabIndex = 0;
+  paint(card, si);
+
+  const list = sec.shownSubs || sec.subs;
+  const clips = MEDIA[sec.n] || [];
+
+  const stage = `<div class="clip">`
+    + `<span class="badge">${clips[0] ? (clips[0].src === 'RT' ? 'filage' : 'explication') : ''}</span>`
+    + clips.map((c, i) => `<video data-i="${i}" class="${i ? '' : 'on'}" src="media/${c.id}.mp4"`
+        + ` poster="media/${c.id}.jpg" muted loop playsinline preload="none"`
+        + ` aria-label="${c.cap.replace(/"/g, '&quot;')}"></video>`).join('')
+    + `<span class="fig-inset">`
+    + clips.map((c, i) => figSvg(c.fig, i ? '' : 'on')).join('')
+    + `</span></div>`
+    + (clips.length > 1
+        ? `<div class="tabs">` + clips.map((c, i) =>
+            `<button class="tab${i ? '' : ' on'}" data-i="${i}">${c.tab}</button>`).join('') + `</div>`
+        : '')
+    + (clips[0] ? `<p class="seen">${clips[0].cap}</p>` : '');
+
+  card.innerHTML = stage
+    + `<div class="card-head"><span class="num">${sec.n}</span>`
+    + `<span class="dur">${sec.eights} × 8</span></div>`
+    + `<h2>${sec.title}</h2>`
+    + (sec.hideSubs ? ''
+        : `<ol class="subs">` + list.map(s =>
+            `<li><span class="sdur">${s.eights} × 8</span><span>${s.label}</span></li>`).join('') + `</ol>`)
+    + (sec.cue ? `<p class="chip">sur <em>« ${sec.cue} »</em></p>` : '')
+    + (sec.note ? `<p class="note">${sec.note}</p>` : '')
+    + (clips[0]
+        ? `<div class="jump">`
+          + `<a href="${YT}${Math.max(0, Math.round(clips[0].yt_run) - 1)}" target="_blank" rel="noopener">filage ${mmss(clips[0].yt_run)}</a>`
+          + `<a href="${YT}${Math.max(0, Math.round(clips[0].yt_expl) - 1)}" target="_blank" rel="noopener">explication ${mmss(clips[0].yt_expl)}</a>`
+          + `<a class="gif" href="media/${clips[0].id}.gif" download>gif ↓</a>`
+          + `</div>`
+        : '');
+
+  // onglets : bascule entre les extraits d'une même carte
+  card.querySelectorAll('.tab').forEach(t => t.addEventListener('click', e => {
+    e.stopPropagation();
+    const i = +t.dataset.i;
+    card.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    card.querySelectorAll('.clip video').forEach(v => {
+      const on = +v.dataset.i === i;
+      v.classList.toggle('on', on);
+      if (on) { v.play().catch(() => {}); } else { v.pause(); }
+    });
+    card.querySelectorAll('.fig-inset svg.fig').forEach((f, k) => f.classList.toggle('on', k === i));
+    const c = clips[i];
+    card.querySelector('.seen').textContent = c.cap;
+    card.querySelector('.badge').textContent = c.src === 'RT' ? 'filage' : 'explication';
+    const j = card.querySelectorAll('.jump a');
+    j[0].href = YT + Math.max(0, Math.round(c.yt_run) - 1);
+    j[0].textContent = 'filage ' + mmss(c.yt_run);
+    j[1].href = YT + Math.max(0, Math.round(c.yt_expl) - 1);
+    j[1].textContent = 'explication ' + mmss(c.yt_expl);
+    j[2].href = 'media/' + c.id + '.gif';
+  }));
+
+  card.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;  // la vignette aussi saute au bloc
+    goTo(startBeatOf(si), true);
+  });
+  card.addEventListener('keydown', e => { if (e.key === 'Enter') goTo(startBeatOf(si), true); });
+  grid.appendChild(card);
+});
+
+/* récap */
+ROUTINE.forEach((sec, si) => {
+  const li = document.createElement('li');
+  paint(li, si);
+  li.innerHTML = `<b>${sec.n}</b> ${sec.eights}×8 · ${sec.title}`;
+  recapEl.appendChild(li);
+});
+
+function startBeatOf(si){
+  let e = 0;
+  for (let i = 0; i < si; i++) e += ROUTINE[i].eights;
+  return e * 8;
+}
+
+/* ═══════════════════════════════════════════════
+   Compteur
+   ═══════════════════════════════════════════════ */
+let beat = 0, playing = false, bpm = 129, sound = true, timer = null, nextAt = 0, lastSec = -1;
+
+const cellEls = () => document.querySelectorAll('.cell');
+const cards   = () => document.querySelectorAll('.card');
+
+function setTempo(v){
+  bpm = v;
+  document.documentElement.style.setProperty('--b', (60 / bpm).toFixed(4) + 's');
+  const secs = Math.round(TOTAL_BEATS * 60 / bpm);
+  $('#bpm-val').textContent = `${bpm} bpm · ${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+}
+
+function render(){
+  const inEight = beat % 8;
+  const cellIdx = Math.floor(beat / 8);
+  const cur = CELLS[cellIdx];
+  const sec = ROUTINE[cur.sec];
+  const sub = sec.subs[cur.sub];
+
+  $('#count').textContent = inEight + 1;
+  $('#count').classList.toggle('one', inEight === 0);
+  [...pipsEl.children].forEach((p, i) => p.classList.toggle('on', i === inEight));
+
+  cellEls().forEach((c, i) => {
+    c.classList.toggle('on', i === cellIdx);
+    c.classList.toggle('done', i < cellIdx);
+  });
+
+  cards().forEach((c, i) => c.classList.toggle('on', i === cur.sec));
+
+  $('#now-title').textContent = `${sec.n} · ${sub.label}`;
+  const nextSec = ROUTINE[(cur.sec + 1) % ROUTINE.length];
+  const left = sec.eights - cur.eightInSec;
+  $('#now-next').textContent = `encore ${left} × 8 — ensuite : ${nextSec.n} · ${nextSec.title}`;
+
+  if (playing && cur.sec !== lastSec) scrollToCard(cur.sec);
+  lastSec = cur.sec;
+}
+
+const transportEl = $('.transport');
+
+/* --th = hauteur réelle du bandeau ; sert de marge de défilement aux cartes */
+function measure(){
+  document.documentElement.style.setProperty('--th', transportEl.offsetHeight + 'px');
+}
+addEventListener('resize', measure);
+if (window.ResizeObserver) new ResizeObserver(measure).observe(transportEl);
+measure();
+
+function scrollToCard(si){
+  const el = cards()[si];
+  const top = el.getBoundingClientRect().top;
+  const th = transportEl.offsetHeight + 14;
+  if (top < th || top > window.innerHeight * 0.55) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+let ac = null;
+function click(){
+  if (!sound) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const cellIdx = Math.floor(beat / 8);
+    const isSecStart = CELLS[cellIdx].first && beat % 8 === 0;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'square';
+    o.frequency.value = isSecStart ? 1400 : (beat % 8 === 0 ? 900 : 620);
+    g.gain.setValueAtTime(isSecStart ? 0.14 : (beat % 8 === 0 ? 0.11 : 0.05), ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + 0.08);
+  } catch (e) { /* audio indisponible : on continue sans clic */ }
+}
+
+function loop(){
+  if (!playing) return;
+  render();
+  click();
+  beat = (beat + 1) % TOTAL_BEATS;
+  nextAt += 60000 / bpm;
+  timer = setTimeout(loop, Math.max(0, nextAt - performance.now()));
+}
+
+function play(){
+  if (playing) return;
+  playing = true;
+  lastSec = -1;
+  nextAt = performance.now();
+  $('#play').textContent = 'Pause';
+  document.body.classList.add('playing');
+  measure();
+  loop();
+}
+function pause(){
+  playing = false;
+  clearTimeout(timer);
+  $('#play').textContent = 'Lancer';
+  document.body.classList.remove('playing');
+  measure();
+}
+function goTo(b, alsoScroll){
+  beat = ((b % TOTAL_BEATS) + TOTAL_BEATS) % TOTAL_BEATS;
+  nextAt = performance.now();
+  render();
+  if (alsoScroll) { lastSec = -1; scrollToCard(CELLS[Math.floor(beat / 8)].sec); lastSec = CELLS[Math.floor(beat / 8)].sec; }
+}
+
+$('#play').addEventListener('click', () => playing ? pause() : play());
+$('#reset').addEventListener('click', () => { goTo(0, true); });
+$('#bpm').addEventListener('input', e => setTempo(+e.target.value));
+$('#sound').addEventListener('click', e => {
+  sound = !sound;
+  e.target.textContent = sound ? 'Clic ON' : 'Clic OFF';
+  e.target.setAttribute('aria-pressed', String(sound));
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, [contenteditable]')) return;
+  if (e.code === 'Space') { if (e.target.tagName === 'BUTTON') return; e.preventDefault(); playing ? pause() : play(); }
+  if (e.code === 'ArrowRight') { e.preventDefault(); goTo(beat + 8 - (beat % 8), true); }
+  if (e.code === 'ArrowLeft')  { e.preventDefault(); goTo(beat - 8 - (beat % 8), true); }
+});
+
+setTempo(129);
+render();
+
+
+/* ═══════════════════════════════════════════════
+   Les vidéos ne tournent que quand on les voit
+   ═══════════════════════════════════════════════ */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!reduce) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const v = e.target;
+      if (e.isIntersecting && v.classList.contains('on')) v.play().catch(() => {});
+      else v.pause();
+    });
+  }, { rootMargin: '80px 0px', threshold: 0.25 });
+  document.querySelectorAll('.clip video').forEach(v => io.observe(v));
+}
+</script>
+</body>
+</html>
