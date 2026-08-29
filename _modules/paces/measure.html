@@ -1,0 +1,445 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.measure &mdash; paces 0.0.3 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=47de8214"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.measure</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.measure</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Measure a :class:`~paces.model.MetricGrid` from the media itself.</span>
+
+<span class="sd">Roadmap issue #2: when no grid is supplied, the media can often supply its</span>
+<span class="sd">own — the fleet's ``mixing`` package owns the primitives (speech/music</span>
+<span class="sd">segmentation, beat tracking) and this module composes them, in the cost order</span>
+<span class="sd">the POC proved out (``docs/01-what-was-built.md §3.1``):</span>
+
+<span class="sd">1. **Macro-structure** — ``find_segments(strategy="speech_music")`` splits</span>
+<span class="sd">   talk from music; the longest music region is where a routine lives.</span>
+<span class="sd">2. **Tempo** — ``beat_grid`` on that region (librosa under the hood).</span>
+<span class="sd">3. **Origin** — the weak link, stated honestly: tempo alone cannot give the</span>
+<span class="sd">   phase. v1 anchors on the first detected beat of the music region, reports</span>
+<span class="sd">   LOW confidence, and flags the estimate for confirmation — per ADR-0003, a</span>
+<span class="sd">   default chosen automatically must be reported with its confidence and</span>
+<span class="sd">   overridable by one keyword (``grid=``).</span>
+
+<span class="sd">Honesty under failure (adversarial review, PR #13): media with no beat</span>
+<span class="sd">structure — silence, ambience, an empty file — yields a grid whose tempo is</span>
+<span class="sd">honestly ``None`` (never ``"0"``: :class:`~paces.model.MetricGrid` refuses</span>
+<span class="sd">non-positive tempi) plus a ``tempo-unmeasured`` flag, and the ``segment()``</span>
+<span class="sd">facade keeps its returns-a-Segmentation-always contract.</span>
+
+<span class="sd">The ``grid-measured`` capability wires this into :func:`~paces.segmenters.</span>
+<span class="sd">segment`: media + a step list with durations, no full grid → measure, then</span>
+<span class="sd">place exactly as ``grid-placed`` would. A *partial* ``grid=`` is honoured as</span>
+<span class="sd">"what the caller knows" — unit and subdivisions always, and a caller-supplied</span>
+<span class="sd">tempo or origin **wins over the measured value** (explicit beats inferred),</span>
+<span class="sd">with a ``tempo-disagreement`` flag when the media measurably disagrees — the</span>
+<span class="sd">POC's doc-said-100-video-says-129 lesson, surfaced as a diff instead of</span>
+<span class="sd">silently resolved either way.</span>
+
+<span class="sd">Everything heavy is imported lazily — ``import paces`` never pulls librosa —</span>
+<span class="sd">and the capability preflights ``mixing``/``librosa`` (the ``[audio]`` extra).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricGrid</span><span class="p">,</span> <span class="n">decimal_str</span><span class="p">,</span> <span class="n">seconds_per_unit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.segmenters</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Capability</span><span class="p">,</span>
+    <span class="n">Segmentation</span><span class="p">,</span>
+    <span class="n">_segment_grid_placed</span><span class="p">,</span>
+    <span class="n">register</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">DFLT_UNIT</span> <span class="o">=</span> <span class="s2">"eight"</span>
+<span class="n">DFLT_SUBDIVISIONS</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">DFLT_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">22050</span>
+
+<span class="c1">#: The origin estimate is the honest weak link: "first beat of the music</span>
+<span class="c1">#: region" is right when the routine starts on bar one, and wrong by an intro.</span>
+<span class="n">DFLT_MEASURED_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1">#: A caller-supplied origin removes the weak link; the tempo half is reliable.</span>
+<span class="n">KNOWN_ORIGIN_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.75</span>
+<span class="c1">#: Earned when the declared routine length fits inside the music region.</span>
+<span class="n">FIT_BONUS</span> <span class="o">=</span> <span class="mf">0.2</span>
+<span class="n">FIT_TOLERANCE</span> <span class="o">=</span> <span class="mf">1.15</span>  <span class="c1"># the routine may overrun the region by 15% before we flag</span>
+<span class="n">UNMEASURED_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.2</span>
+<span class="c1">#: A caller tempo further than this (relative) from the measured one is flagged.</span>
+<span class="n">TEMPO_DISAGREEMENT_RTOL</span> <span class="o">=</span> <span class="mf">0.02</span>
+
+
+<div class="viewcode-block" id="MediaDecodeError">
+<a class="viewcode-back" href="../../module_docs/paces/measure.html#paces.MediaDecodeError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MediaDecodeError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The file exists but could not be read as audio."""</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dec</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">places</span><span class="o">=</span><span class="n">places</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GridMeasurement">
+<a class="viewcode-back" href="../../module_docs/paces/measure.html#paces.GridMeasurement">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GridMeasurement</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A measured grid, how much to trust it, and the evidence why."""</span>
+
+    <span class="n">grid</span><span class="p">:</span> <span class="n">MetricGrid</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">evidence</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_measured_tempo</span><span class="p">(</span><span class="n">beat_grid_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The tempo as a wire decimal, or None when there is no beat structure.</span>
+
+<span class="sd">    mixing's ``beat_grid`` reports ``tempo_bpm = 0.0`` when librosa finds no</span>
+<span class="sd">    tempo; zero is 'unmeasured', never a value (a zero tempo is</span>
+<span class="sd">    unrepresentable in :class:`MetricGrid`, deliberately).</span>
+<span class="sd">    """</span>
+    <span class="n">tempo</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">beat_grid_result</span><span class="o">.</span><span class="n">tempo_bpm</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tempo</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">beat_grid_result</span><span class="o">.</span><span class="n">beat_times</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">_dec</span><span class="p">(</span><span class="n">tempo</span><span class="p">,</span> <span class="n">places</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">tempo</span>
+
+
+<div class="viewcode-block" id="measure_grid">
+<a class="viewcode-back" href="../../module_docs/paces/measure.html#paces.measure_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">measure_grid</span><span class="p">(</span>
+    <span class="n">media</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_UNIT</span><span class="p">,</span>
+    <span class="n">subdivisions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SUBDIVISIONS</span><span class="p">,</span>
+    <span class="n">tempo_bpm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">origin</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">total_units</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridMeasurement</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Measure tempo, macro-structure and (estimated) origin from *media*.</span>
+
+<span class="sd">    *media* is a local audio (or audio-bearing) file. *tempo_bpm* and</span>
+<span class="sd">    *origin*, when given, are what the caller already knows: they WIN over</span>
+<span class="sd">    the measured values (a disagreement is flagged, never silently resolved).</span>
+<span class="sd">    *total_units* (the sum of a step list's durations) buys a sanity check: a</span>
+<span class="sd">    routine that cannot fit inside the detected music region is flagged.</span>
+
+<span class="sd">    Returns a :class:`GridMeasurement`; whatever could not be measured stays</span>
+<span class="sd">    honestly ``None`` on the grid, with a flag naming it.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">librosa</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.audio</span><span class="w"> </span><span class="kn">import</span> <span class="n">beat_grid</span><span class="p">,</span> <span class="n">find_segments</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">"measure_grid needs the [audio] extra — pip install 'paces[audio]'"</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">media</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"measure_grid needs a local media file; </span><span class="si">{</span><span class="n">media</span><span class="si">!r}</span><span class="s2"> is not one "</span>
+            <span class="s2">"(download first — e.g. with yb — or supply grid= yourself)"</span>
+        <span class="p">)</span>
+    <span class="c1"># A caller-supplied string is already a valid wire decimal: pass it</span>
+    <span class="c1"># through untouched so the declared value round-trips verbatim; only</span>
+    <span class="c1"># numbers get formatted.</span>
+    <span class="n">known_tempo</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">tempo_bpm</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tempo_bpm</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">tempo_bpm</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">_dec</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">tempo_bpm</span><span class="p">),</span> <span class="n">places</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">known_origin</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">origin</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">_dec</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">origin</span><span class="p">))</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">segments</span> <span class="o">=</span> <span class="n">find_segments</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">strategy</span><span class="o">=</span><span class="s2">"speech_music"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">MediaDecodeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"could not read </span><span class="si">{</span><span class="n">media</span><span class="si">!r}</span><span class="s2"> as audio (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">) — "</span>
+            <span class="s2">"is it an audio/video file? Non-wav formats need ffmpeg installed."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="n">evidence</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"segments"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">s</span><span class="o">.</span><span class="n">label</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+    <span class="n">music</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="s2">"music"</span><span class="p">]</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">music</span><span class="p">:</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">music</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">sr</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MediaDecodeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"could not decode </span><span class="si">{</span><span class="n">media</span><span class="si">!r}</span><span class="s2"> as audio (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+        <span class="n">region_samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span> <span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">end</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)]</span>
+        <span class="n">bg</span> <span class="o">=</span> <span class="n">beat_grid</span><span class="p">(</span><span class="n">region_samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">rate</span><span class="p">)</span>
+        <span class="n">measured_tempo</span><span class="p">,</span> <span class="n">tempo_value</span> <span class="o">=</span> <span class="n">_measured_tempo</span><span class="p">(</span><span class="n">bg</span><span class="p">)</span>
+        <span class="n">evidence</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">music_span</span><span class="o">=</span><span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="mi">2</span><span class="p">)],</span>
+            <span class="n">beat_count</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">beat_times</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">measured_tempo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">evidence</span><span class="p">[</span><span class="s2">"tempo_bpm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tempo_value</span>
+            <span class="n">measured_origin</span> <span class="o">=</span> <span class="n">_dec</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">beat_times</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">tempo_unmeasured_note</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tempo_unmeasured_note</span> <span class="o">=</span> <span class="s2">"no beat structure in the music region"</span>
+            <span class="n">measured_origin</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">bg</span> <span class="o">=</span> <span class="n">beat_grid</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+        <span class="n">measured_tempo</span><span class="p">,</span> <span class="n">tempo_value</span> <span class="o">=</span> <span class="n">_measured_tempo</span><span class="p">(</span><span class="n">bg</span><span class="p">)</span>
+        <span class="n">measured_origin</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">measured_tempo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">evidence</span><span class="p">[</span><span class="s2">"tempo_bpm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tempo_value</span>
+            <span class="n">tempo_unmeasured_note</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tempo_unmeasured_note</span> <span class="o">=</span> <span class="s2">"no beat structure found"</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="s2">"no-music-region"</span><span class="p">,)</span>
+    <span class="k">if</span> <span class="n">tempo_unmeasured_note</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s2">" — using your tempoBpm"</span> <span class="k">if</span> <span class="n">known_tempo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"tempo-unmeasured: </span><span class="si">{</span><span class="n">tempo_unmeasured_note</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">,)</span>
+
+    <span class="c1"># Explicit beats inferred — but a disagreement is a finding, not a secret.</span>
+    <span class="n">final_tempo</span> <span class="o">=</span> <span class="n">known_tempo</span> <span class="ow">or</span> <span class="n">measured_tempo</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">known_tempo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">measured_tempo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">known_tempo</span><span class="p">)</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">measured_tempo</span><span class="p">))</span>
+        <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">measured_tempo</span><span class="p">)</span> <span class="o">*</span> <span class="n">TEMPO_DISAGREEMENT_RTOL</span>
+    <span class="p">):</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"tempo-disagreement: you said </span><span class="si">{</span><span class="n">known_tempo</span><span class="si">}</span><span class="s2"> bpm, the media "</span>
+            <span class="sa">f</span><span class="s2">"measures </span><span class="si">{</span><span class="n">measured_tempo</span><span class="si">}</span><span class="s2"> — using yours; drop tempoBpm from "</span>
+            <span class="s2">"grid= to use the measured value"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">final_origin</span> <span class="o">=</span> <span class="n">known_origin</span> <span class="ow">or</span> <span class="n">measured_origin</span>
+    <span class="k">if</span> <span class="n">known_origin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">measured_origin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"origin-estimated: first beat of the music region "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">measured_origin</span><span class="si">}</span><span class="s2"> s) — override with grid= if the routine "</span>
+            <span class="s2">"starts later"</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">MetricGrid</span><span class="p">(</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span>
+        <span class="n">subdivisions</span><span class="o">=</span><span class="n">subdivisions</span><span class="p">,</span>
+        <span class="n">tempo_bpm</span><span class="o">=</span><span class="n">final_tempo</span><span class="p">,</span>
+        <span class="n">origin</span><span class="o">=</span><span class="n">final_origin</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">final_origin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="s2">"origin-unknown: pass grid= with an origin, or boundaries="</span><span class="p">,)</span>
+        <span class="n">confidence</span> <span class="o">=</span> <span class="n">UNMEASURED_CONFIDENCE</span>
+    <span class="k">elif</span> <span class="n">region</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># The grid is only complete because the caller supplied the origin,</span>
+        <span class="c1"># and any tempo here was measured from a no-music recording (speech</span>
+        <span class="c1"># rhythm) — a placement can proceed, but not with real confidence.</span>
+        <span class="n">confidence</span> <span class="o">=</span> <span class="n">UNMEASURED_CONFIDENCE</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">confidence</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">KNOWN_ORIGIN_CONFIDENCE</span> <span class="k">if</span> <span class="n">known_origin</span> <span class="k">else</span> <span class="n">DFLT_MEASURED_CONFIDENCE</span>
+        <span class="p">)</span>
+
+    <span class="n">spu</span> <span class="o">=</span> <span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">total_units</span> <span class="ow">and</span> <span class="n">total_units</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">spu</span> <span class="ow">and</span> <span class="n">final_origin</span> <span class="ow">and</span> <span class="n">region</span><span class="p">:</span>
+        <span class="n">routine_s</span> <span class="o">=</span> <span class="n">total_units</span> <span class="o">*</span> <span class="n">spu</span>
+        <span class="n">region_s</span> <span class="o">=</span> <span class="n">region</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">final_origin</span><span class="p">))</span>
+        <span class="n">evidence</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">routine_s</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">routine_s</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">region_s</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">region_s</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">routine_s</span> <span class="o">&gt;</span> <span class="n">region_s</span> <span class="o">*</span> <span class="n">FIT_TOLERANCE</span><span class="p">:</span>
+            <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"duration-mismatch: </span><span class="si">{</span><span class="n">_dec</span><span class="p">(</span><span class="n">total_units</span><span class="p">)</span><span class="si">}</span><span class="s2"> × </span><span class="si">{</span><span class="n">unit</span><span class="si">}</span><span class="s2"> = "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">routine_s</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s but the music region holds </span><span class="si">{</span><span class="n">region_s</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s "</span>
+                <span class="s2">"— the step list or the tempo may be wrong"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">confidence</span> <span class="o">+=</span> <span class="n">FIT_BONUS</span>
+    <span class="k">return</span> <span class="n">GridMeasurement</span><span class="p">(</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">confidence</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">,</span> <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_segment_grid_measured</span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Segmentation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Measure what the caller's partial ``grid=`` left unknown, then place</span>
+<span class="sd">    like ``grid-placed``.</span>
+
+<span class="sd">    With no grid at all the dance default is assumed — and flagged, because</span>
+<span class="sd">    an assumed unit is a guess, not a measurement. Whatever still cannot be</span>
+<span class="sd">    known (a beatless recording's origin) yields the honest partial result,</span>
+<span class="sd">    never an exception and never an invented placement.</span>
+<span class="sd">    """</span>
+    <span class="n">partial</span><span class="p">:</span> <span class="n">MetricGrid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">]</span>
+    <span class="n">unit</span> <span class="o">=</span> <span class="n">partial</span><span class="o">.</span><span class="n">unit</span> <span class="k">if</span> <span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">DFLT_UNIT</span>
+    <span class="n">subdivisions</span> <span class="o">=</span> <span class="n">partial</span><span class="o">.</span><span class="n">subdivisions</span> <span class="k">if</span> <span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">DFLT_SUBDIVISIONS</span>
+    <span class="n">total_units</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">])</span>
+    <span class="n">measurement</span> <span class="o">=</span> <span class="n">measure_grid</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s2">"media"</span><span class="p">],</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span>
+        <span class="n">subdivisions</span><span class="o">=</span><span class="n">subdivisions</span><span class="p">,</span>
+        <span class="n">tempo_bpm</span><span class="o">=</span><span class="n">partial</span><span class="o">.</span><span class="n">tempo_bpm</span> <span class="k">if</span> <span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">origin</span><span class="o">=</span><span class="n">partial</span><span class="o">.</span><span class="n">origin</span> <span class="k">if</span> <span class="n">partial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">total_units</span><span class="o">=</span><span class="n">total_units</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">flags</span> <span class="o">=</span> <span class="n">measurement</span><span class="o">.</span><span class="n">flags</span>
+    <span class="k">if</span> <span class="n">partial</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"assumed-unit: </span><span class="si">{</span><span class="n">DFLT_UNIT</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">DFLT_SUBDIVISIONS</span><span class="si">}</span><span class="s2"> beats) — pass "</span>
+            <span class="s2">"grid={'unit': ..., 'subdivisions': ...} to change"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">measurement</span><span class="o">.</span><span class="n">grid</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">grid</span><span class="o">.</span><span class="n">origin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Segmentation</span><span class="p">(</span><span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="n">measurement</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">)</span>
+    <span class="n">placed</span> <span class="o">=</span> <span class="n">_segment_grid_placed</span><span class="p">({</span><span class="o">**</span><span class="n">inputs</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">Segmentation</span><span class="p">(</span>
+        <span class="n">steps</span><span class="o">=</span><span class="n">placed</span><span class="o">.</span><span class="n">steps</span><span class="p">,</span>
+        <span class="n">boundaries</span><span class="o">=</span><span class="n">placed</span><span class="o">.</span><span class="n">boundaries</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">placed</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
+        <span class="n">confidence</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">placed</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span> <span class="n">measurement</span><span class="o">.</span><span class="n">confidence</span><span class="p">),</span>
+        <span class="n">flags</span><span class="o">=</span><span class="n">placed</span><span class="o">.</span><span class="n">flags</span> <span class="o">+</span> <span class="n">flags</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">GRID_MEASURED</span> <span class="o">=</span> <span class="n">register</span><span class="p">(</span>
+    <span class="n">Capability</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"grid-measured"</span><span class="p">,</span>
+        <span class="n">gives</span><span class="o">=</span><span class="s2">"segmentation"</span><span class="p">,</span>
+        <span class="n">summary</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Measure the metric grid from the media itself (speech/music "</span>
+            <span class="s2">"split + beat tracking, via mixing), then place the step list "</span>
+            <span class="s2">"on it. Origin is estimated and flagged for confirmation."</span>
+        <span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="s2">"paces.measure:_segment_grid_measured"</span><span class="p">,</span>
+        <span class="n">needs</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"media.local"</span><span class="p">,</span> <span class="s2">"steps"</span><span class="p">,</span> <span class="s2">"steps.durations"</span><span class="p">}),</span>
+        <span class="n">requires</span><span class="o">=</span><span class="p">(</span><span class="s2">"mixing"</span><span class="p">,</span> <span class="s2">"librosa"</span><span class="p">),</span>
+        <span class="c1"># Explicit information outranks inference: a full grid (1.2) and</span>
+        <span class="c1"># author chapters (0.75) both beat a measured guess.</span>
+        <span class="n">base</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+        <span class="n">s_per_min</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+        <span class="n">resolution_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

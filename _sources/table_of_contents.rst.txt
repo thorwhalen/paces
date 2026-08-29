@@ -5,6 +5,7 @@
    module_docs/paces
    module_docs/paces/__main__
    module_docs/paces/edits
+   module_docs/paces/measure
    module_docs/paces/model
    module_docs/paces/projection
    module_docs/paces/render

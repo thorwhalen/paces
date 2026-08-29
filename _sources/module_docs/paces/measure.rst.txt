@@ -1,0 +1,4 @@
+paces.measure
+=============
+.. automodule:: paces.measure
+   :members:
