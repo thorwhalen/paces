@@ -75,6 +75,9 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 |---|---|
 | cut media into steps | `segment(media, steps=..., grid=...)` → `Segmentation` |
 | explicit/human boundaries | `segment(media, boundaries=[...], steps=[names])` |
+| use the video's own chapters | `segment(media, metadata=<yt-dlp info.json>)` |
+| measure the grid from the media | `segment(local_media, steps=[(name, counts), ...])` — no grid needed; tempo + structure measured, origin estimated and flagged (`pip install paces[audio]`) |
+| protect edits from regeneration | `apply_edits(doc, patches, by="user:you")` + `merge_regenerated(committed, fresh)` |
 | the committed artifact | `to_document(seg, ...)` → `StepDocument` |
 | a practice page | `render_html(doc)` |
 | wall-clock times from counts | `resolve(doc)` |

@@ -37,6 +37,20 @@ paces = "paces.__main__:main"
 
 [project.optional-dependencies]
 cli = ["argh>=0.30", "argcomplete>=3"]
+audio = [
+    # Grid measurement (issue #2): the fleet's `mixing` owns speech/music
+    # segmentation and beat tracking; [beats] pulls librosa, [audio] pulls
+    # soundfile. Floor 0.0.36: `beat_grid` and `find_segments(strategy=
+    # "speech_music")` ship there.
+    "mixing[beats,audio]>=0.0.36",
+    # librosa resolves numba transitively; without an explicit floor uv can
+    # backtrack to unbuildable numba 0.53/llvmlite 0.36 when the newest
+    # numpy outruns numba's caps.
+    "numba>=0.59",
+    # pydub (via mixing[audio]) imports the stdlib `audioop`, removed in
+    # Python 3.13; the official backport keeps 3.13+ installs working.
+    "audioop-lts; python_version>='3.13'",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -44,6 +58,10 @@ dev = [
     # The CLI smoke test runs `python -m paces ...`; without argh in dev it
     # would fail rather than silently skip — keep it mirrored with [cli].
     "argh>=0.30",
+    # The grid-measurement tests exercise the real mixing/librosa path on
+    # synthesized audio; mirrored with [audio] so they run rather than skip.
+    "mixing[beats,audio]>=0.0.36",
+    "numba>=0.59",
 ]
 docs = [
     "sphinx>=6.0",

@@ -34,6 +34,7 @@ import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 from paces.model import MetricGrid, seconds_per_unit
@@ -271,6 +272,11 @@ def _facts(
     facts = set()
     if media:
         facts.add("media")
+        try:
+            if Path(media).is_file():  # a directory is not measurable media
+                facts.add("media.local")  # intrinsic measurement needs bytes
+        except OSError:
+            pass
     if steps:
         facts.add("steps")
         if all(row["duration"] is not None for row in steps):

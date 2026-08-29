@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 1 | `segmenter=` on `segment()` | auto-select from present facts (`grid-placed` / `explicit`) | the strategies catalogued in `docs/alignment/07` (novelty-k, align-to-steps); `kodokan.segment`; `mixing.audio.find_segments` |
 | 2 | `renderer=` on `tools.render()` | `"html"` practice page (stdlib) | the POC page (metronome+clips) at `docs/poc-reference/render/`; PDF/deck per `docs/03 §2.3` |
-| 3 | `grid=` values on `segment()` | caller-supplied tempo/origin | `mixing.audio.beat_grid` → measure it from media |
+| 3 | `grid=` values on `segment()` | caller-supplied tempo/origin; measured from local media when absent (`grid-measured`: mixing speech/music split + beat_grid, origin estimated + flagged) | better origin fitting (issue #2 follow-ons; `kodokan.estimate_period`) |
 
 Surface for v1: **CLI** (`argh` over `tools._dispatch_funcs`). MCP (`py2mcp`
 string refs), HTTP (`qh`), shipped skills, frontend: questions answered — none

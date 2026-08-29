@@ -27,7 +27,7 @@ from __future__ import annotations
 from fractions import Fraction
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 SCHEMA_VERSION = "0.1.0"
@@ -63,13 +63,27 @@ class MetricGrid(_Base):
 
     Optional by design: a "reps" domain has no grid; a dance routine does —
     and the grid is what drives the metronome and :func:`resolve`.
+
+    A non-positive tempo or subdivision count is unrepresentable, not merely
+    discouraged: a zero tempo makes every duration infinite and every
+    ``seconds_per_unit`` division a crash, so "tempo unknown" is spelled
+    ``tempo_bpm=None``, never ``"0"``.
     """
 
     unit: Slug  # "eight"
-    subdivisions: int = 1  # beats per unit (8 for an 8-count)
+    subdivisions: int = Field(default=1, ge=1)  # beats per unit (8 for an 8-count)
     tempo_bpm: Decimal | None = None  # "129.2"
     origin: Decimal | None = None  # seconds into origin_source where unit 0 starts
     origin_source: Slug | None = None
+
+    @field_validator("tempo_bpm")
+    @classmethod
+    def _tempo_must_be_positive(cls, value: str | None) -> str | None:
+        if value is not None and Fraction(value) <= 0:
+            raise ValueError(
+                "tempo_bpm must be positive; spell 'tempo unknown' as None"
+            )
+        return value
 
 
 # ── sources & spans ─────────────────────────────────────────────────────────
@@ -233,6 +247,19 @@ class StepDocument(_Base):
     credits: str | None = None
     locks: list[Lock] = Field(default_factory=list)  # document-level fields
     attrs: dict[str, Any] = Field(default_factory=dict)
+
+
+def decimal_str(value: float, *, places: int = 3) -> str:
+    """A clean wire decimal from a number ('95.78', never '95.78000000001').
+
+    The one shared serialisation helper for computed values entering the
+    document's no-floats wire format.
+
+    >>> decimal_str(72.60000000000001, places=3)
+    '72.6'
+    """
+    text = f"{float(value):.{places}f}".rstrip("0").rstrip(".")
+    return text or "0"
 
 
 # ── serialisation (the git rules of docs/07 §6.5) ───────────────────────────

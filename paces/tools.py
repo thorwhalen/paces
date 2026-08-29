@@ -250,6 +250,42 @@ def merge(committed, fresh, *, output: str | None = None) -> dict:
     return json.loads(text)
 
 
+def measure_grid(
+    media: str,
+    *,
+    unit: str = "eight",
+    subdivisions: int = 8,
+    total_units: float | None = None,
+    output: str | None = None,
+) -> dict:
+    """Measure a metric grid (tempo, macro-structure, estimated origin) from
+    a local media file. Needs the [audio] extra.
+
+    Returns ``{"grid", "confidence", "flags", "evidence"}`` — origin is an
+    estimate (first beat of the music region) and the flags say so; override
+    with an explicit ``grid=`` on ``segment`` when it is wrong.
+    """
+    from paces.measure import measure_grid as _measure_grid
+
+    measurement = _measure_grid(
+        media, unit=unit, subdivisions=subdivisions, total_units=total_units
+    )
+    payload = {
+        "grid": measurement.grid.model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        ),
+        "confidence": measurement.confidence,
+        "flags": list(measurement.flags),
+        "evidence": dict(measurement.evidence),
+    }
+    if output:
+        Path(output).write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    return payload
+
+
 def list_segmenters() -> dict:
     """The registered segmentation capabilities: name → what it needs/gives."""
     return {
@@ -272,5 +308,6 @@ _dispatch_funcs = [
     merge,
     resolve,
     validate,
+    measure_grid,
     list_segmenters,
 ]

@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from paces.model import (
+    decimal_str,
     Measure,
     Origin,
     Source,
@@ -28,9 +29,7 @@ DECIMAL_PLACES = 3
 
 
 def _dec(value: float, *, places: int = DECIMAL_PLACES) -> str:
-    """A clean decimal string from a float ('95.78', never '95.78000000001')."""
-    text = f"{value:.{places}f}".rstrip("0").rstrip(".")
-    return text or "0"
+    return decimal_str(value, places=places)
 
 
 def _as_source(source, *, default_id: str = "source") -> Source:
