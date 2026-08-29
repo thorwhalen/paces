@@ -1,0 +1,211 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.projection &mdash; paces 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.projection</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.projection</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The projection from analysis result to document: ``to_document``.</span>
+
+<span class="sd">A :class:`~paces.segment.Segmentation` is the *analysis result*; a</span>
+<span class="sd">:class:`~paces.model.StepDocument` is the *artifact* — committed, hand-edited,</span>
+<span class="sd">rendered. Keeping them separate (one function between) is what lets the</span>
+<span class="sd">segmenter re-run without touching hand-edited captions</span>
+<span class="sd">(``docs/alignment/07 §9.1`` decision 6).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Measure</span><span class="p">,</span>
+    <span class="n">Origin</span><span class="p">,</span>
+    <span class="n">Source</span><span class="p">,</span>
+    <span class="n">SourceSpan</span><span class="p">,</span>
+    <span class="n">Step</span><span class="p">,</span>
+    <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="n">seconds_per_unit</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.segmenters</span><span class="w"> </span><span class="kn">import</span> <span class="n">SegStep</span><span class="p">,</span> <span class="n">Segmentation</span>
+
+<span class="c1">#: Decimal places kept when converting computed seconds to wire decimals —</span>
+<span class="c1">#: matches the POC's 0.1 s working resolution with headroom.</span>
+<span class="n">DECIMAL_PLACES</span> <span class="o">=</span> <span class="mi">3</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dec</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DECIMAL_PLACES</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A clean decimal string from a float ('95.78', never '95.78000000001')."""</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">places</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"0"</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span> <span class="ow">or</span> <span class="s2">"0"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">default_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"source"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Source</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">Source</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">source</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Source</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+    <span class="n">uri</span> <span class="o">=</span> <span class="n">source</span> <span class="ow">or</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="n">Source</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">default_id</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"url"</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="n">uri</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="to_document">
+<a class="viewcode-back" href="../../module_docs/paces/projection.html#paces.to_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_document</span><span class="p">(</span>
+    <span class="n">seg</span><span class="p">:</span> <span class="n">Segmentation</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">doc_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"guide"</span><span class="p">,</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">domain</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"generic"</span><span class="p">,</span>
+    <span class="n">lang</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"en"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StepDocument</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Project a segmentation into a fresh step document.</span>
+
+<span class="sd">    *source* is the media the spans refer into: a URI string, a</span>
+<span class="sd">    :class:`~paces.model.Source`, or a mapping. Hand edits belong on the</span>
+<span class="sd">    returned document, never back on the segmentation.</span>
+<span class="sd">    """</span>
+    <span class="n">src</span> <span class="o">=</span> <span class="n">_as_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">spu</span> <span class="o">=</span> <span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span> <span class="k">if</span> <span class="n">seg</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_duration_of</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">SegStep</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Measure</span><span class="p">:</span>
+        <span class="n">units</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">evidence</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration_units"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">seg</span><span class="o">.</span><span class="n">unit</span> <span class="o">!=</span> <span class="s2">"seconds"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Measure</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">units</span><span class="p">)),</span> <span class="n">unit</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+        <span class="n">length_s</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">spu</span> <span class="ow">and</span> <span class="n">seg</span><span class="o">.</span><span class="n">unit</span> <span class="o">!=</span> <span class="s2">"seconds"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Measure</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">length_s</span> <span class="o">/</span> <span class="n">spu</span><span class="p">),</span> <span class="n">unit</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Measure</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">length_s</span><span class="p">),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"second"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_convert</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">SegStep</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Step</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Step</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">duration</span><span class="o">=</span><span class="n">_duration_of</span><span class="p">(</span><span class="n">step</span><span class="p">),</span>
+            <span class="n">spans</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SourceSpan</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">end</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span>
+            <span class="p">],</span>
+            <span class="n">steps</span><span class="o">=</span><span class="p">[</span><span class="n">_convert</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">children</span><span class="p">],</span>
+            <span class="n">origin</span><span class="o">=</span><span class="n">Origin</span><span class="p">(</span>
+                <span class="n">generated_by</span><span class="o">=</span><span class="sa">f</span><span class="s2">"segmenter:</span><span class="si">{</span><span class="n">seg</span><span class="o">.</span><span class="n">method</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">step</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">confidence</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">StepDocument</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">doc_id</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span> <span class="ow">or</span> <span class="n">doc_id</span><span class="p">,</span>
+        <span class="n">lang</span><span class="o">=</span><span class="n">lang</span><span class="p">,</span>
+        <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+        <span class="n">metric</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
+        <span class="n">sources</span><span class="o">=</span><span class="p">[</span><span class="n">src</span><span class="p">],</span>
+        <span class="n">steps</span><span class="o">=</span><span class="p">[</span><span class="n">_convert</span><span class="p">(</span><span class="n">step</span><span class="p">)</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">seg</span><span class="o">.</span><span class="n">steps</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

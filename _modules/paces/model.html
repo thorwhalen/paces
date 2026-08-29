@@ -1,0 +1,516 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.model &mdash; paces 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.model</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.model</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The paces intermediate representation: the ``StepDocument``.</span>
+
+<span class="sd">This is the contract between *analysis* (segment media into steps) and</span>
+<span class="sd">*rendering* (emit a practice page, a PDF, a deck). Renderers depend on this</span>
+<span class="sd">document and never on the analyser — the parse → AST → render split the whole</span>
+<span class="sd">package is organised around (``docs/03-design-brief.md §1``).</span>
+
+<span class="sd">Design decisions, each argued in ``docs/07-annotation-model.md``:</span>
+
+<span class="sd">- **A step has SEVERAL source spans.** The at-tempo run-through and the slow</span>
+<span class="sd">  explanation are the same step seen twice; ``Step.spans`` is a list and a</span>
+<span class="sd">  one-span model is wrong on day one.</span>
+<span class="sd">- **Duration is domain-specific.** A dance counts 8-counts, a workout counts</span>
+<span class="sd">  reps; ``Measure(value, unit)`` stores the unit the learner actually counts,</span>
+<span class="sd">  and wall-clock seconds are *derived* via the optional ``MetricGrid``.</span>
+<span class="sd">- **No floats on the wire.** Times are decimal strings (``"231.3"``) — exact,</span>
+<span class="sd">  diffable as one token. Absolute positions are computed by :func:`resolve`,</span>
+<span class="sd">  never stored.</span>
+<span class="sd">- **camelCase on the wire, snake_case in Python** (the walkthru convention).</span>
+<span class="sd">- **Uncertainty is content.** The POC's ``note`` fields are promoted to</span>
+<span class="sd">  :class:`OpenQuestion`; human decisions regeneration must not overwrite are</span>
+<span class="sd">  :class:`Lock` records.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic.alias_generators</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_camel</span>
+
+<span class="n">SCHEMA_VERSION</span> <span class="o">=</span> <span class="s2">"0.1.0"</span>
+
+<span class="c1">#: Git-readable stable identifier — deliberately NOT a uuid4.</span>
+<span class="n">Slug</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="sa">r</span><span class="s2">"^[a-z0-9][a-z0-9._-]*$"</span><span class="p">)]</span>
+
+<span class="c1">#: Exact decimal number as a string ("231.3") — no float representation drift.</span>
+<span class="n">Decimal</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="sa">r</span><span class="s2">"^-?\d+(\.\d+)?$"</span><span class="p">)]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Base</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Shared model config: camelCase wire, strict fields."""</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span>
+        <span class="n">alias_generator</span><span class="o">=</span><span class="n">to_camel</span><span class="p">,</span> <span class="n">populate_by_name</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># ── identity &amp; units ────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="Measure">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Measure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Measure</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A duration in the DOMAIN's own unit — never seconds unless the domain's</span>
+<span class="sd">    unit is seconds."""</span>
+
+    <span class="n">value</span><span class="p">:</span> <span class="n">Decimal</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># "eight" | "bar" | "rep" | "second" | "minute" | ...</span></div>
+
+
+
+<div class="viewcode-block" id="MetricGrid">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.MetricGrid">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MetricGrid</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""How the domain unit relates to wall-clock time, when it does at all.</span>
+
+<span class="sd">    Optional by design: a "reps" domain has no grid; a dance routine does —</span>
+<span class="sd">    and the grid is what drives the metronome and :func:`resolve`.</span>
+<span class="sd">    """</span>
+
+    <span class="n">unit</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># "eight"</span>
+    <span class="n">subdivisions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># beats per unit (8 for an 8-count)</span>
+    <span class="n">tempo_bpm</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># "129.2"</span>
+    <span class="n">origin</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># seconds into origin_source where unit 0 starts</span>
+    <span class="n">origin_source</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<span class="c1"># ── sources &amp; spans ─────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="Source">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Source">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Source</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One input the document's spans refer into (a video, a notes doc, ...)."""</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"video"</span><span class="p">,</span> <span class="s2">"audio"</span><span class="p">,</span> <span class="s2">"image"</span><span class="p">,</span> <span class="s2">"document"</span><span class="p">,</span> <span class="s2">"url"</span><span class="p">]</span>
+    <span class="n">uri</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">asset_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># content hash of a local copy, if any</span>
+    <span class="n">duration_s</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">attribution</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">rights</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># rights are content in this domain (docs/07 §3)</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SourceSpan">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.SourceSpan">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SourceSpan</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""ONE step's presence in ONE source, in ONE role. A step has a LIST of</span>
+<span class="sd">    these — several roles is the norm, not the exception.</span>
+
+<span class="sd">    ``end=None`` means "starts here, extent not recorded" (a deep link is a</span>
+<span class="sd">    point of entry, not an interval; recording an end it does not know would</span>
+<span class="sd">    be invention, not data).</span>
+<span class="sd">    """</span>
+
+    <span class="n">source</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">role</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">=</span> <span class="s2">"performance"</span>  <span class="c1"># open vocab: performance|instruction|closeup|...</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">Decimal</span>
+    <span class="n">end</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">excerpt</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Decimal</span><span class="p">,</span> <span class="n">Decimal</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># loopable sub-window</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># prose about THIS span, not the step</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── derived artifacts ───────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="ArtifactRef">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.ArtifactRef">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ArtifactRef</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""WHAT a derived file is, never HOW it was made — the recipe lives in the</span>
+<span class="sd">    evidence layer, keyed by ``asset_id``."""</span>
+
+    <span class="n">role</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># clip | gif | poster | thumbnail | waveform | audio</span>
+    <span class="n">uri</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># relative to the document — deploy-portable</span>
+    <span class="n">asset_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># 64-hex SHA-256, the durable identity</span>
+    <span class="n">mime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">duration_s</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">derived_from</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># which SourceSpan.role it came from</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── cues: their own track, anchored by step id ──────────────────────────────</span>
+
+
+<div class="viewcode-block" id="Anchor">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Anchor">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Anchor</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Where a cue attaches: a step, plus an optional relative offset in the</span>
+<span class="sd">    domain unit. NEVER an absolute time."""</span>
+
+    <span class="n">step</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">offset</span><span class="p">:</span> <span class="n">Measure</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="Cue">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Cue">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Cue</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A landmark the learner can hear or watch for (a lyric, a count, ...)."""</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># lyric | count | audio-landmark | caption | warning</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">anchor</span><span class="p">:</span> <span class="n">Anchor</span>
+    <span class="n">duration</span><span class="p">:</span> <span class="n">Measure</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">at_s</span><span class="p">:</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># optional resolved time in that source</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── provenance &amp; edit protection ────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="Lock">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Lock">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Lock</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A human (or approved-AI) decision that regeneration MUST NOT overwrite."""</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># JSON pointer relative to the node: "/name", "/spans/1/caption"</span>
+    <span class="n">by</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># "user:thor" | "agent:&lt;model&gt;@&lt;hash&gt;"</span>
+    <span class="n">at</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># ISO-8601 UTC, second resolution</span>
+    <span class="n">was</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># the pre-edit value — makes the edit reversible</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="Origin">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Origin">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Origin</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Back-reference into the evidence layer: why this node says what it says,</span>
+<span class="sd">    and what a regeneration may replace."""</span>
+
+    <span class="n">annotation_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">value_digest</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">generated_by</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># "segmenter:grid-placed" | "user:thor"</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="OpenQuestion">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.OpenQuestion">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">OpenQuestion</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The POC's ``note`` fields, promoted: uncertainty and its resolution are</span>
+<span class="sd">    first-class content, not scratch."""</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"open"</span><span class="p">,</span> <span class="s2">"settled"</span><span class="p">,</span> <span class="s2">"dropped"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"open"</span>
+    <span class="n">resolution</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">evidence</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SourceSpan</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── the step ────────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="Step">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.Step">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Step</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One named piece of the routine — the unit a learner practises.</span>
+
+<span class="sd">    A step is a step: sub-steps are ``Step``s in ``steps``. ``repeat`` says the</span>
+<span class="sd">    children cycle N times (the POC's block 9 is ``repeat=4`` over two</span>
+<span class="sd">    sub-steps — structure, where the original hand-wrote a display override).</span>
+<span class="sd">    """</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># stable across re-runs, human-meaningful ("b4")</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">duration</span><span class="p">:</span> <span class="n">Measure</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">spans</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SourceSpan</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">artifacts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ArtifactRef</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">"Step"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">repeat</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">optional</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">variant_of</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Slug</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">questions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OpenQuestion</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">origin</span><span class="p">:</span> <span class="n">Origin</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">locks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Lock</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── the document ────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="StepDocument">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.StepDocument">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">StepDocument</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The committed, hand-editable, git-diffable step document — the AST."""</span>
+
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"StepDocument"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"StepDocument"</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">SCHEMA_VERSION</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Slug</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">lang</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"en"</span>  <span class="c1"># BCP-47</span>
+    <span class="n">domain</span><span class="p">:</span> <span class="n">Slug</span> <span class="o">=</span> <span class="s2">"generic"</span>  <span class="c1"># "dance" | "recipe" | "workout" | ...</span>
+    <span class="n">metric</span><span class="p">:</span> <span class="n">MetricGrid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Source</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># ORDER IS SEMANTIC</span>
+    <span class="n">cues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Cue</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">questions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OpenQuestion</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">credits</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── serialisation (the git rules of docs/07 §6.5) ───────────────────────────</span>
+
+
+<div class="viewcode-block" id="dumps_document">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.dumps_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">dumps_document</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Serialise a document to its canonical wire form.</span>
+
+<span class="sd">    camelCase keys in declaration order, 2-space indent, UTF-8 readable</span>
+<span class="sd">    (``ensure_ascii=False`` equivalent), trailing newline.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="loads_document">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.loads_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">loads_document</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StepDocument</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Parse a document from its wire form (accepts camelCase or snake_case)."""</span>
+    <span class="k">return</span> <span class="n">StepDocument</span><span class="o">.</span><span class="n">model_validate_json</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── resolution: absolute positions are computed, never stored ───────────────</span>
+
+
+<div class="viewcode-block" id="seconds_per_unit">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.seconds_per_unit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">seconds_per_unit</span><span class="p">(</span><span class="n">grid</span><span class="p">:</span> <span class="n">MetricGrid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Seconds one domain unit lasts under *grid*, or None without a tempo.</span>
+
+<span class="sd">    &gt;&gt;&gt; seconds_per_unit(MetricGrid(unit='eight', subdivisions=8, tempo_bpm='129.2'))</span>
+<span class="sd">    3.7151702786377707</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">subdivisions</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">/</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="resolve">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.resolve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Compute absolute metric offsets (and wall-clock times, when the grid</span>
+<span class="sd">    allows) for every step. Pure; the analogue of walkthru's</span>
+<span class="sd">    ``resolve_timeline``.</span>
+
+<span class="sd">    Returns a JSON-able dict: ``{"unit", "seconds_per_unit", "origin_s",</span>
+<span class="sd">    "total_units", "steps": [{"id", "name", "offset", "duration", "start_s",</span>
+<span class="sd">    "end_s", "repeat", "children": [...]}, ...]}``. Times are floats — this is</span>
+<span class="sd">    a computed view, not the stored document.</span>
+<span class="sd">    """</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metric</span>
+    <span class="n">spu</span> <span class="o">=</span> <span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">origin</span><span class="p">))</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">and</span> <span class="n">grid</span><span class="o">.</span><span class="n">origin</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wall</span><span class="p">(</span><span class="n">offset_units</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">spu</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">origin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">origin</span> <span class="o">+</span> <span class="n">offset_units</span> <span class="o">*</span> <span class="n">spu</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">],</span> <span class="n">at</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="n">dur</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+            <span class="n">children</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_resolve_steps</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">,</span> <span class="n">at</span><span class="p">)</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">"id"</span><span class="p">:</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="s2">"name"</span><span class="p">:</span> <span class="n">step</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s2">"offset"</span><span class="p">:</span> <span class="n">at</span><span class="p">,</span>
+                    <span class="s2">"duration"</span><span class="p">:</span> <span class="n">dur</span><span class="p">,</span>
+                    <span class="s2">"start_s"</span><span class="p">:</span> <span class="n">_wall</span><span class="p">(</span><span class="n">at</span><span class="p">),</span>
+                    <span class="s2">"end_s"</span><span class="p">:</span> <span class="n">_wall</span><span class="p">(</span><span class="n">at</span> <span class="o">+</span> <span class="n">dur</span><span class="p">),</span>
+                    <span class="s2">"repeat"</span><span class="p">:</span> <span class="n">step</span><span class="o">.</span><span class="n">repeat</span><span class="p">,</span>
+                    <span class="s2">"children"</span><span class="p">:</span> <span class="n">children</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="n">at</span> <span class="o">+=</span> <span class="n">dur</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">,</span> <span class="n">at</span>
+
+    <span class="n">rows</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">_resolve_steps</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"unit"</span><span class="p">:</span> <span class="n">grid</span><span class="o">.</span><span class="n">unit</span> <span class="k">if</span> <span class="n">grid</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"seconds_per_unit"</span><span class="p">:</span> <span class="n">spu</span><span class="p">,</span>
+        <span class="s2">"origin_s"</span><span class="p">:</span> <span class="n">origin</span><span class="p">,</span>
+        <span class="s2">"total_units"</span><span class="p">:</span> <span class="n">total</span><span class="p">,</span>
+        <span class="s2">"steps"</span><span class="p">:</span> <span class="n">rows</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="validate_document">
+<a class="viewcode-back" href="../../module_docs/paces/model.html#paces.validate_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_document</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Semantic checks beyond the schema. Returns human-readable issues</span>
+<span class="sd">    (empty list = clean); never raises.</span>
+
+<span class="sd">    Checks: children durations account for the parent's (``repeat`` included),</span>
+<span class="sd">    span sources exist, cue anchors point at real steps.</span>
+<span class="sd">    """</span>
+    <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">source_ids</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">}</span>
+    <span class="n">step_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_walk</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">step_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">span</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source_ids</span><span class="p">:</span>
+                <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/spans/</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: unknown source </span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+            <span class="n">child_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+            <span class="n">expected</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">optional_present</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">optional</span> <span class="ow">or</span> <span class="n">c</span><span class="o">.</span><span class="n">variant_of</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">repeat</span> <span class="o">*</span> <span class="n">child_sum</span> <span class="o">!=</span> <span class="n">expected</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">optional_present</span><span class="p">:</span>
+                <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: children sum to </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">repeat</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">child_sum</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"!= duration </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+            <span class="n">_walk</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/steps/</span><span class="si">{</span><span class="n">child</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="n">_walk</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"/steps/</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">cue</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">cues</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cue</span><span class="o">.</span><span class="n">anchor</span><span class="o">.</span><span class="n">step</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">step_ids</span><span class="p">:</span>
+            <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"/cues/</span><span class="si">{</span><span class="n">cue</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: anchor step </span><span class="si">{</span><span class="n">cue</span><span class="o">.</span><span class="n">anchor</span><span class="o">.</span><span class="n">step</span><span class="si">!r}</span><span class="s2"> not found"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">issues</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

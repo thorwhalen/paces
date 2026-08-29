@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.tools &mdash; paces 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.tools</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.tools</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Agent-callable tool surface over ``paces`` — plain functions with JSON-able</span>
+<span class="sd">arguments returning JSON-ready values, deliberately CLI/MCP/HTTP-agnostic.</span>
+
+<span class="sd">This module is the SSOT for "what paces can do": every surface (the ``argh``</span>
+<span class="sd">CLI in ``__main__.py`` today; ``py2mcp``/``qh`` wrappers tomorrow) dispatches</span>
+<span class="sd">over ``_dispatch_funcs`` and nothing else. Arguments that carry structure</span>
+<span class="sd">(steps, grids, documents) accept a Python object, a JSON string, or a path to</span>
+<span class="sd">a JSON file, so the same function serves the library, the shell, and an agent.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">projection</span><span class="p">,</span>
+    <span class="n">render</span> <span class="k">as</span> <span class="n">render_module</span><span class="p">,</span>
+    <span class="n">segmenters</span> <span class="k">as</span> <span class="n">segment_module</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_structured</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"argument"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A mapping/list as-is; a str as a file path (if it exists) or JSON."""</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> must be a JSON value or a path to a JSON file; "</span>
+            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">value</span><span class="p">[:</span><span class="mi">80</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">model</span><span class="o">.</span><span class="n">StepDocument</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">StepDocument</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">document</span>
+    <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">StepDocument</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">_structured</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"document"</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_segmentation_to_dict</span><span class="p">(</span><span class="n">seg</span><span class="p">:</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">Segmentation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_step</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">SegStep</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"id"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">"spans"</span><span class="p">:</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">span</span><span class="p">)</span> <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">spans</span><span class="p">],</span>
+            <span class="s2">"confidence"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
+            <span class="s2">"children"</span><span class="p">:</span> <span class="p">[</span><span class="n">_step</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">children</span><span class="p">],</span>
+            <span class="s2">"source"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
+            <span class="s2">"evidence"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">evidence</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"steps"</span><span class="p">:</span> <span class="p">[</span><span class="n">_step</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">seg</span><span class="o">.</span><span class="n">steps</span><span class="p">],</span>
+        <span class="s2">"boundaries"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">boundaries</span><span class="p">),</span>
+        <span class="s2">"unit"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+        <span class="s2">"grid"</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">seg</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">seg</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">),</span>
+        <span class="s2">"confidence"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
+        <span class="s2">"method"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="s2">"flags"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">flags</span><span class="p">),</span>
+        <span class="s2">"elapsed_s"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">elapsed_s</span><span class="p">,</span>
+        <span class="s2">"spent_usd"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">spent_usd</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_segmentation_from_dict</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">Segmentation</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">Segmentation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">payload</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">_structured</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"segmentation"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_step</span><span class="p">(</span><span class="n">row</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">SegStep</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">SegStep</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="n">spans</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">span</span><span class="p">)</span> <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"spans"</span><span class="p">,</span> <span class="p">())),</span>
+            <span class="n">confidence</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"confidence"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+            <span class="n">children</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_step</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"children"</span><span class="p">,</span> <span class="p">())),</span>
+            <span class="n">source</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="n">evidence</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"evidence"</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"grid"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">Segmentation</span><span class="p">(</span>
+        <span class="n">steps</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">_step</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">())),</span>
+        <span class="n">boundaries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"boundaries"</span><span class="p">,</span> <span class="p">())),</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"unit"</span><span class="p">,</span> <span class="s2">"seconds"</span><span class="p">),</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">MetricGrid</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span> <span class="k">if</span> <span class="n">grid</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">confidence</span><span class="o">=</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"confidence"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">method</span><span class="o">=</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"method"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">flags</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"flags"</span><span class="p">,</span> <span class="p">())),</span>
+        <span class="n">elapsed_s</span><span class="o">=</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"elapsed_s"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">spent_usd</span><span class="o">=</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"spent_usd"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># ── the verbs ───────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="segment">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.segment">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">segment</span><span class="p">(</span>
+    <span class="n">media</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">boundaries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">segmenter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cut media into steps using whatever else is present (ADR-0003).</span>
+
+<span class="sd">    ``steps``, ``boundaries`` and ``grid`` accept JSON values, JSON strings,</span>
+<span class="sd">    or paths to JSON files. Returns the segmentation as a JSON-ready dict</span>
+<span class="sd">    (also written to ``output=`` when given) — honest about naming</span>
+<span class="sd">    (``flags: ['naming-abstained']``) and about refusal</span>
+<span class="sd">    (``flags: ['no-signal', 'try: ...']``); never a fabricated step list.</span>
+<span class="sd">    """</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">segment</span><span class="p">(</span>
+        <span class="n">media</span><span class="p">,</span>
+        <span class="n">segmenter</span><span class="o">=</span><span class="n">segmenter</span><span class="p">,</span>
+        <span class="n">steps</span><span class="o">=</span><span class="n">_structured</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"steps"</span><span class="p">),</span>
+        <span class="n">boundaries</span><span class="o">=</span><span class="n">_structured</span><span class="p">(</span><span class="n">boundaries</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"boundaries"</span><span class="p">),</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">_structured</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"grid"</span><span class="p">),</span>
+        <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">_segmentation_to_dict</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">payload</span></div>
+
+
+
+<div class="viewcode-block" id="to_document">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.to_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_document</span><span class="p">(</span>
+    <span class="n">segmentation</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">doc_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"guide"</span><span class="p">,</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">domain</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"generic"</span><span class="p">,</span>
+    <span class="n">lang</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"en"</span><span class="p">,</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Project a segmentation into a step document (the committed artifact).</span>
+
+<span class="sd">    ``source`` is the media URI the spans refer into. With ``output=``, the</span>
+<span class="sd">    canonical wire form is also written to that path.</span>
+<span class="sd">    """</span>
+    <span class="c1"># A source is usually a plain URI; a JSON object (inline or in a file)</span>
+    <span class="c1"># gives the full Source record (title, attribution, rights, ...).</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"{"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">source</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".json"</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">_structured</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"source"</span><span class="p">)</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">projection</span><span class="o">.</span><span class="n">to_document</span><span class="p">(</span>
+        <span class="n">_segmentation_from_dict</span><span class="p">(</span><span class="n">segmentation</span><span class="p">),</span>
+        <span class="n">doc_id</span><span class="o">=</span><span class="n">doc_id</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+        <span class="n">lang</span><span class="o">=</span><span class="n">lang</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">dumps_document</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="render">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.render">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">renderer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"html"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Render a step document into learning material.</span>
+
+<span class="sd">    ``renderer='html'`` (v1's one implementation) produces the self-contained</span>
+<span class="sd">    practice page. Returns the output path when ``output=`` is given,</span>
+<span class="sd">    otherwise the rendered text itself.</span>
+<span class="sd">    """</span>
+    <span class="n">renderers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"html"</span><span class="p">:</span> <span class="n">render_module</span><span class="o">.</span><span class="n">render_html</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">renderer</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">renderers</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"unknown renderer </span><span class="si">{</span><span class="n">renderer</span><span class="si">!r}</span><span class="s2">; available: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">renderers</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">renderers</span><span class="p">[</span><span class="n">renderer</span><span class="p">](</span><span class="n">_as_document</span><span class="p">(</span><span class="n">document</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span>
+    <span class="k">return</span> <span class="n">text</span></div>
+
+
+
+<div class="viewcode-block" id="resolve">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.resolve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="n">document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Compute absolute offsets and wall-clock times for a document's steps."""</span>
+    <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">_as_document</span><span class="p">(</span><span class="n">document</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="validate">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.validate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate</span><span class="p">(</span><span class="n">document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Schema + semantic check of a step document; returns ``{"issues": [...]}``."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"issues"</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">validate_document</span><span class="p">(</span><span class="n">_as_document</span><span class="p">(</span><span class="n">document</span><span class="p">))}</span></div>
+
+
+
+<div class="viewcode-block" id="list_segmenters">
+<a class="viewcode-back" href="../../module_docs/paces/tools.html#paces.tools.list_segmenters">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">list_segmenters</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The registered segmentation capabilities: name → what it needs/gives."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"summary"</span><span class="p">:</span> <span class="n">cap</span><span class="o">.</span><span class="n">summary</span><span class="p">,</span>
+            <span class="s2">"gives"</span><span class="p">:</span> <span class="n">cap</span><span class="o">.</span><span class="n">gives</span><span class="p">,</span>
+            <span class="s2">"needs"</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cap</span><span class="o">.</span><span class="n">needs</span><span class="p">),</span>
+            <span class="s2">"requires"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">cap</span><span class="o">.</span><span class="n">requires</span><span class="p">),</span>
+            <span class="s2">"licence"</span><span class="p">:</span> <span class="n">cap</span><span class="o">.</span><span class="n">licence</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">segment_module</span><span class="o">.</span><span class="n">capabilities</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="n">_dispatch_funcs</span> <span class="o">=</span> <span class="p">[</span><span class="n">segment</span><span class="p">,</span> <span class="n">to_document</span><span class="p">,</span> <span class="n">render</span><span class="p">,</span> <span class="n">resolve</span><span class="p">,</span> <span class="n">validate</span><span class="p">,</span> <span class="n">list_segmenters</span><span class="p">]</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

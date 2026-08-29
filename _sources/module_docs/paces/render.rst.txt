@@ -1,0 +1,4 @@
+paces.render
+============
+.. automodule:: paces.render
+   :members:

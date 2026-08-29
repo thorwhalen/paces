@@ -1,0 +1,415 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.model &mdash; paces 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="paces.projection" href="projection.html" />
+    <link rel="prev" title="paces.__main__" href="__main__.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">paces.model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Anchor"><code class="docutils literal notranslate"><span class="pre">Anchor</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Anchor.model_config"><code class="docutils literal notranslate"><span class="pre">Anchor.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.ArtifactRef"><code class="docutils literal notranslate"><span class="pre">ArtifactRef</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.ArtifactRef.model_config"><code class="docutils literal notranslate"><span class="pre">ArtifactRef.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Cue"><code class="docutils literal notranslate"><span class="pre">Cue</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Cue.model_config"><code class="docutils literal notranslate"><span class="pre">Cue.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Decimal"><code class="docutils literal notranslate"><span class="pre">Decimal</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Lock"><code class="docutils literal notranslate"><span class="pre">Lock</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Lock.model_config"><code class="docutils literal notranslate"><span class="pre">Lock.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Measure"><code class="docutils literal notranslate"><span class="pre">Measure</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Measure.model_config"><code class="docutils literal notranslate"><span class="pre">Measure.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.MetricGrid"><code class="docutils literal notranslate"><span class="pre">MetricGrid</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.MetricGrid.model_config"><code class="docutils literal notranslate"><span class="pre">MetricGrid.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.OpenQuestion"><code class="docutils literal notranslate"><span class="pre">OpenQuestion</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.OpenQuestion.model_config"><code class="docutils literal notranslate"><span class="pre">OpenQuestion.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Origin"><code class="docutils literal notranslate"><span class="pre">Origin</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Origin.model_config"><code class="docutils literal notranslate"><span class="pre">Origin.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Slug"><code class="docutils literal notranslate"><span class="pre">Slug</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Source"><code class="docutils literal notranslate"><span class="pre">Source</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Source.model_config"><code class="docutils literal notranslate"><span class="pre">Source.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.SourceSpan"><code class="docutils literal notranslate"><span class="pre">SourceSpan</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.SourceSpan.model_config"><code class="docutils literal notranslate"><span class="pre">SourceSpan.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.Step"><code class="docutils literal notranslate"><span class="pre">Step</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.Step.model_config"><code class="docutils literal notranslate"><span class="pre">Step.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.StepDocument"><code class="docutils literal notranslate"><span class="pre">StepDocument</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.model.StepDocument.model_config"><code class="docutils literal notranslate"><span class="pre">StepDocument.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.dumps_document"><code class="docutils literal notranslate"><span class="pre">dumps_document()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.loads_document"><code class="docutils literal notranslate"><span class="pre">loads_document()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.seconds_per_unit"><code class="docutils literal notranslate"><span class="pre">seconds_per_unit()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.model.validate_document"><code class="docutils literal notranslate"><span class="pre">validate_document()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">paces.model</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/module_docs/paces/model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-paces.model">
+<span id="paces-model"></span><h1>paces.model<a class="headerlink" href="#module-paces.model" title="Link to this heading"></a></h1>
+<p>The paces intermediate representation: the <code class="docutils literal notranslate"><span class="pre">StepDocument</span></code>.</p>
+<p>This is the contract between <em>analysis</em> (segment media into steps) and
+<em>rendering</em> (emit a practice page, a PDF, a deck). Renderers depend on this
+document and never on the analyser — the parse → AST → render split the whole
+package is organised around (<code class="docutils literal notranslate"><span class="pre">docs/03-design-brief.md</span> <span class="pre">§1</span></code>).</p>
+<p>Design decisions, each argued in <code class="docutils literal notranslate"><span class="pre">docs/07-annotation-model.md</span></code>:</p>
+<ul class="simple">
+<li><p><strong>A step has SEVERAL source spans.</strong> The at-tempo run-through and the slow
+explanation are the same step seen twice; <code class="docutils literal notranslate"><span class="pre">Step.spans</span></code> is a list and a
+one-span model is wrong on day one.</p></li>
+<li><p><strong>Duration is domain-specific.</strong> A dance counts 8-counts, a workout counts
+reps; <code class="docutils literal notranslate"><span class="pre">Measure(value,</span> <span class="pre">unit)</span></code> stores the unit the learner actually counts,
+and wall-clock seconds are <em>derived</em> via the optional <code class="docutils literal notranslate"><span class="pre">MetricGrid</span></code>.</p></li>
+<li><p><strong>No floats on the wire.</strong> Times are decimal strings (<code class="docutils literal notranslate"><span class="pre">&quot;231.3&quot;</span></code>) — exact,
+diffable as one token. Absolute positions are computed by <a class="reference internal" href="#paces.model.resolve" title="paces.model.resolve"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve()</span></code></a>,
+never stored.</p></li>
+<li><p><strong>camelCase on the wire, snake_case in Python</strong> (the walkthru convention).</p></li>
+<li><p><strong>Uncertainty is content.</strong> The POC’s <code class="docutils literal notranslate"><span class="pre">note</span></code> fields are promoted to
+<a class="reference internal" href="#paces.model.OpenQuestion" title="paces.model.OpenQuestion"><code class="xref py py-class docutils literal notranslate"><span class="pre">OpenQuestion</span></code></a>; human decisions regeneration must not overwrite are
+<a class="reference internal" href="#paces.model.Lock" title="paces.model.Lock"><code class="xref py py-class docutils literal notranslate"><span class="pre">Lock</span></code></a> records.</p></li>
+</ul>
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Anchor">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Anchor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^[a-z0-9][a-z0-9._-]*$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.model.Measure" title="paces.model.Measure"><span class="pre">Measure</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Anchor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Anchor" title="Link to this definition"></a></dt>
+<dd><p>Where a cue attaches: a step, plus an optional relative offset in the
+domain unit. NEVER an absolute time.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Anchor.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Anchor.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.ArtifactRef">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">ArtifactRef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">role:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">uri:</span> <span class="pre">str,</span> <span class="pre">assetId:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">mime:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">width:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">height:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">durationS:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">derivedFrom:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#ArtifactRef"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.ArtifactRef" title="Link to this definition"></a></dt>
+<dd><p>WHAT a derived file is, never HOW it was made — the recipe lives in the
+evidence layer, keyed by <code class="docutils literal notranslate"><span class="pre">asset_id</span></code>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.ArtifactRef.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.ArtifactRef.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Cue">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Cue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">id:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">kind:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">text:</span> <span class="pre">str,</span> <span class="pre">anchor:</span> <span class="pre">~paces.model.Anchor,</span> <span class="pre">duration:</span> <span class="pre">~paces.model.Measure</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">source:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">atS:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Cue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Cue" title="Link to this definition"></a></dt>
+<dd><p>A landmark the learner can hear or watch for (a lyric, a count, …).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Cue.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Cue.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.model.Decimal">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Decimal</span></span><a class="headerlink" href="#paces.model.Decimal" title="Link to this definition"></a></dt>
+<dd><p>Exact decimal number as a string (“231.3”) — no float representation drift.</p>
+<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Annotated</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, FieldInfo(annotation=NoneType, required=True, metadata=[_PydanticGeneralMetadata(pattern=’^-?\d+(\.\d+)?$’)])]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Lock">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Lock</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">was</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Lock"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Lock" title="Link to this definition"></a></dt>
+<dd><p>A human (or approved-AI) decision that regeneration MUST NOT overwrite.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Lock.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Lock.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Measure">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Measure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^-?\\d+(\\.\\d+)?$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^[a-z0-9][a-z0-9._-]*$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Measure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Measure" title="Link to this definition"></a></dt>
+<dd><p>A duration in the DOMAIN’s own unit — never seconds unless the domain’s
+unit is seconds.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Measure.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Measure.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.MetricGrid">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">MetricGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^[a-z0-9][a-z0-9._-]*$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subdivisions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tempoBpm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">annotation</span></span><span class="o"><span class="pre">=</span></span><span class="pre">NoneType</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">required</span></span><span class="o"><span class="pre">=</span></span><span class="k"><span class="pre">True</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="p"><span class="pre">[</span></span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^-?\\d+(\\.\\d+)?$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">annotation</span></span><span class="o"><span class="pre">=</span></span><span class="pre">NoneType</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">required</span></span><span class="o"><span class="pre">=</span></span><span class="k"><span class="pre">True</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="p"><span class="pre">[</span></span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^-?\\d+(\\.\\d+)?$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">originSource</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">annotation</span></span><span class="o"><span class="pre">=</span></span><span class="pre">NoneType</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">required</span></span><span class="o"><span class="pre">=</span></span><span class="k"><span class="pre">True</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="p"><span class="pre">[</span></span><span class="pre">_PydanticGeneralMetadata</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">pattern</span></span><span class="o"><span class="pre">=</span></span><span class="s"><span class="pre">'^[a-z0-9][a-z0-9._-]*$'</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#MetricGrid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.MetricGrid" title="Link to this definition"></a></dt>
+<dd><p>How the domain unit relates to wall-clock time, when it does at all.</p>
+<p>Optional by design: a “reps” domain has no grid; a dance routine does —
+and the grid is what drives the metronome and <a class="reference internal" href="#paces.model.resolve" title="paces.model.resolve"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve()</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.MetricGrid.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.MetricGrid.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.OpenQuestion">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">OpenQuestion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">id:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">text:</span> <span class="pre">str,</span> <span class="pre">status:</span> <span class="pre">~typing.Literal['open',</span> <span class="pre">'settled',</span> <span class="pre">'dropped']</span> <span class="pre">=</span> <span class="pre">'open',</span> <span class="pre">resolution:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">evidence:</span> <span class="pre">list[~paces.model.SourceSpan]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#OpenQuestion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.OpenQuestion" title="Link to this definition"></a></dt>
+<dd><p>The POC’s <code class="docutils literal notranslate"><span class="pre">note</span></code> fields, promoted: uncertainty and its resolution are
+first-class content, not scratch.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.OpenQuestion.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.OpenQuestion.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Origin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Origin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotationId</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valueDigest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generatedBy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confidence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Origin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Origin" title="Link to this definition"></a></dt>
+<dd><p>Back-reference into the evidence layer: why this node says what it says,
+and what a regeneration may replace.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Origin.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Origin.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.model.Slug">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Slug</span></span><a class="headerlink" href="#paces.model.Slug" title="Link to this definition"></a></dt>
+<dd><p>Git-readable stable identifier — deliberately NOT a uuid4.</p>
+<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Annotated</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, FieldInfo(annotation=NoneType, required=True, metadata=[_PydanticGeneralMetadata(pattern=’^[a-z0-9][a-z0-9._-]*$’)])]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Source">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">id:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">kind:</span> <span class="pre">~typing.Literal['video',</span> <span class="pre">'audio',</span> <span class="pre">'image',</span> <span class="pre">'document',</span> <span class="pre">'url'],</span> <span class="pre">uri:</span> <span class="pre">str,</span> <span class="pre">assetId:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">durationS:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">title:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attribution:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">rights:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Source" title="Link to this definition"></a></dt>
+<dd><p>One input the document’s spans refer into (a video, a notes doc, …).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Source.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Source.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.SourceSpan">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">SourceSpan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">source:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">role:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')]</span> <span class="pre">=</span> <span class="pre">'performance',</span> <span class="pre">start:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')],</span> <span class="pre">end:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">excerpt:</span> <span class="pre">tuple[~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])],</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">label:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">caption:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">confidence:</span> <span class="pre">float</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#SourceSpan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.SourceSpan" title="Link to this definition"></a></dt>
+<dd><p>ONE step’s presence in ONE source, in ONE role. A step has a LIST of
+these — several roles is the norm, not the exception.</p>
+<p><code class="docutils literal notranslate"><span class="pre">end=None</span></code> means “starts here, extent not recorded” (a deep link is a
+point of entry, not an interval; recording an end it does not know would
+be invention, not data).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.SourceSpan.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.SourceSpan.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.Step">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">Step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">id:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">name:</span> <span class="pre">str,</span> <span class="pre">duration:</span> <span class="pre">~paces.model.Measure,</span> <span class="pre">description:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">spans:</span> <span class="pre">list[~paces.model.SourceSpan]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">artifacts:</span> <span class="pre">list[~paces.model.ArtifactRef]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">steps:</span> <span class="pre">list[~paces.model.Step]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">repeat:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1,</span> <span class="pre">optional:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">variantOf:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">tags:</span> <span class="pre">list[~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')])]]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">questions:</span> <span class="pre">list[~paces.model.OpenQuestion]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">origin:</span> <span class="pre">~paces.model.Origin</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">locks:</span> <span class="pre">list[~paces.model.Lock]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#Step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.Step" title="Link to this definition"></a></dt>
+<dd><p>One named piece of the routine — the unit a learner practises.</p>
+<p>A step is a step: sub-steps are <code class="docutils literal notranslate"><span class="pre">Step``s</span> <span class="pre">in</span> <span class="pre">``steps</span></code>. <code class="docutils literal notranslate"><span class="pre">repeat</span></code> says the
+children cycle N times (the POC’s block 9 is <code class="docutils literal notranslate"><span class="pre">repeat=4</span></code> over two
+sub-steps — structure, where the original hand-wrote a display override).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.Step.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.Step.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.model.StepDocument">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">StepDocument</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">kind:</span> <span class="pre">~typing.Literal['StepDocument']</span> <span class="pre">=</span> <span class="pre">'StepDocument',</span> <span class="pre">schemaVersion:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'0.1.0',</span> <span class="pre">id:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">title:</span> <span class="pre">str,</span> <span class="pre">lang:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'en',</span> <span class="pre">domain:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')]</span> <span class="pre">=</span> <span class="pre">'generic',</span> <span class="pre">metric:</span> <span class="pre">~paces.model.MetricGrid</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">sources:</span> <span class="pre">list[~paces.model.Source]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">steps:</span> <span class="pre">list[~paces.model.Step]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">cues:</span> <span class="pre">list[~paces.model.Cue]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">questions:</span> <span class="pre">list[~paces.model.OpenQuestion]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">credits:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#StepDocument"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.StepDocument" title="Link to this definition"></a></dt>
+<dd><p>The committed, hand-editable, git-diffable step document — the AST.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.model.StepDocument.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.StepDocument.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.model.dumps_document">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">dumps_document</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../../_modules/paces/model.html#dumps_document"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.dumps_document" title="Link to this definition"></a></dt>
+<dd><p>Serialise a document to its canonical wire form.</p>
+<p>camelCase keys in declaration order, 2-space indent, UTF-8 readable
+(<code class="docutils literal notranslate"><span class="pre">ensure_ascii=False</span></code> equivalent), trailing newline.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.model.loads_document">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">loads_document</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></span><a class="reference internal" href="../../_modules/paces/model.html#loads_document"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.loads_document" title="Link to this definition"></a></dt>
+<dd><p>Parse a document from its wire form (accepts camelCase or snake_case).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.model.resolve">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/model.html#resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.resolve" title="Link to this definition"></a></dt>
+<dd><p>Compute absolute metric offsets (and wall-clock times, when the grid
+allows) for every step. Pure; the analogue of walkthru’s
+<code class="docutils literal notranslate"><span class="pre">resolve_timeline</span></code>.</p>
+<p>Returns a JSON-able dict: <code class="docutils literal notranslate"><span class="pre">{&quot;unit&quot;,</span> <span class="pre">&quot;seconds_per_unit&quot;,</span> <span class="pre">&quot;origin_s&quot;,</span>
+<span class="pre">&quot;total_units&quot;,</span> <span class="pre">&quot;steps&quot;:</span> <span class="pre">[{&quot;id&quot;,</span> <span class="pre">&quot;name&quot;,</span> <span class="pre">&quot;offset&quot;,</span> <span class="pre">&quot;duration&quot;,</span> <span class="pre">&quot;start_s&quot;,</span>
+<span class="pre">&quot;end_s&quot;,</span> <span class="pre">&quot;repeat&quot;,</span> <span class="pre">&quot;children&quot;:</span> <span class="pre">[...]},</span> <span class="pre">...]}</span></code>. Times are floats — this is
+a computed view, not the stored document.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.model.seconds_per_unit">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">seconds_per_unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.model.MetricGrid" title="paces.model.MetricGrid"><span class="pre">MetricGrid</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/paces/model.html#seconds_per_unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.seconds_per_unit" title="Link to this definition"></a></dt>
+<dd><p>Seconds one domain unit lasts under <em>grid</em>, or None without a tempo.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">MetricGrid</span><span class="p">(</span><span class="n">unit</span><span class="o">=</span><span class="s1">'eight'</span><span class="p">,</span> <span class="n">subdivisions</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">tempo_bpm</span><span class="o">=</span><span class="s1">'129.2'</span><span class="p">))</span>
+<span class="go">3.7151702786377707</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.model.validate_document">
+<span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">validate_document</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/paces/model.html#validate_document"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.validate_document" title="Link to this definition"></a></dt>
+<dd><p>Semantic checks beyond the schema. Returns human-readable issues
+(empty list = clean); never raises.</p>
+<p>Checks: children durations account for the parent’s (<code class="docutils literal notranslate"><span class="pre">repeat</span></code> included),
+span sources exist, cue anchors point at real steps.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="__main__.html" class="btn btn-neutral float-left" title="paces.__main__" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="projection.html" class="btn btn-neutral float-right" title="paces.projection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

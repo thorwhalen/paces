@@ -1,0 +1,408 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.render &mdash; paces 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.render</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.render</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Render a :class:`~paces.model.StepDocument` into learning material.</span>
+
+<span class="sd">The renderer depends on the document and :func:`~paces.model.resolve` — never</span>
+<span class="sd">on the analyser. v1 ships one renderer: a self-contained HTML practice page</span>
+<span class="sd">(steps, counts, captions, deep links into the sources, and — when the document</span>
+<span class="sd">has a metric grid — a count-along transport that paces you through the</span>
+<span class="sd">routine, which is the behaviour the package is named after).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">html</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Source</span><span class="p">,</span> <span class="n">SourceSpan</span><span class="p">,</span> <span class="n">Step</span><span class="p">,</span> <span class="n">StepDocument</span><span class="p">,</span> <span class="n">resolve</span>
+
+<span class="c1">#: Span roles shown as deep links, in display order.</span>
+<span class="n">ROLE_LABELS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"performance"</span><span class="p">:</span> <span class="s2">"run-through"</span><span class="p">,</span>
+    <span class="s2">"instruction"</span><span class="p">:</span> <span class="s2">"breakdown"</span><span class="p">,</span>
+    <span class="s2">"closeup"</span><span class="p">:</span> <span class="s2">"close-up"</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mmss</span><span class="p">(</span><span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">seconds</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">total</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">total</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_deep_link</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">Source</span><span class="p">,</span> <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">uri</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">uri</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">uri</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"http://"</span><span class="p">,</span> <span class="s2">"https://"</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="s2">"youtu"</span> <span class="ow">in</span> <span class="n">uri</span><span class="p">:</span>
+        <span class="n">joiner</span> <span class="o">=</span> <span class="s2">"&amp;"</span> <span class="k">if</span> <span class="s2">"?"</span> <span class="ow">in</span> <span class="n">uri</span> <span class="k">else</span> <span class="s2">"?"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">uri</span><span class="si">}{</span><span class="n">joiner</span><span class="si">}</span><span class="s2">t=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">start_s</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="n">uri</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_span_links</span><span class="p">(</span><span class="n">spans</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SourceSpan</span><span class="p">],</span> <span class="n">sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Source</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
+        <span class="n">start_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">))</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="n">ROLE_LABELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">_mmss</span><span class="p">(</span><span class="n">start_s</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">_deep_link</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">start_s</span><span class="p">)</span> <span class="k">if</span> <span class="n">source</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">'&lt;a class="span" href="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s1">" target="_blank" '</span>
+                <span class="sa">f</span><span class="s1">'rel="noopener"&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/a&gt;'</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">'&lt;span class="span"&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/span&gt;'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_captions</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">caption</span><span class="p">:</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"&lt;b&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">label</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/b&gt; — "</span> <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">label</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">'&lt;p class="cap"&gt;</span><span class="si">{</span><span class="n">label</span><span class="si">}{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">caption</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/p&gt;'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_step_card</span><span class="p">(</span>
+    <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">ordinal</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Source</span><span class="p">],</span>
+    <span class="n">cues_by_step</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">unit</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">unit</span>
+    <span class="n">badges</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">optional</span><span class="p">:</span>
+        <span class="n">badges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'&lt;span class="badge"&gt;optional&lt;/span&gt;'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">variant_of</span><span class="p">:</span>
+        <span class="n">badges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">'&lt;span class="badge"&gt;variant of </span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">variant_of</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/span&gt;'</span>
+        <span class="p">)</span>
+    <span class="n">repeat</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" × </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">repeat</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">repeat</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="n">subs</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+            <span class="n">child_bits</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="sa">f</span><span class="s2">"&lt;b&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/b&gt;"</span><span class="p">,</span>
+                <span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">spans</span><span class="p">:</span>
+                <span class="n">child_bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_span_links</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">spans</span><span class="p">,</span> <span class="n">sources</span><span class="p">))</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="n">_captions</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"&lt;li&gt;</span><span class="si">{</span><span class="s1">' — '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">child_bits</span><span class="p">)</span><span class="si">}{</span><span class="n">extra</span><span class="si">}</span><span class="s2">&lt;/li&gt;"</span><span class="p">)</span>
+        <span class="n">subs</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'&lt;ol class="subs"&gt;</span><span class="si">{</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">items</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/ol&gt;'</span>
+    <span class="n">cues</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s1">'&lt;p class="cue"&gt;♪ </span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">cue</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/p&gt;'</span>
+        <span class="k">for</span> <span class="n">cue</span> <span class="ow">in</span> <span class="n">cues_by_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s1">'&lt;p class="desc"&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">description</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/p&gt;'</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">description</span>
+        <span class="k">else</span> <span class="s2">""</span>
+    <span class="p">)</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="n">_span_links</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">,</span> <span class="n">sources</span><span class="p">)</span>
+    <span class="n">links_paragraph</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'&lt;p class="links"&gt;</span><span class="si">{</span><span class="n">links</span><span class="si">}</span><span class="s1">&lt;/p&gt;'</span> <span class="k">if</span> <span class="n">links</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">  &lt;section class="card" id="step-</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="si">}</span><span class="s2">"&gt;</span>
+<span class="s2">    &lt;header&gt;</span>
+<span class="s2">      &lt;span class="n"&gt;</span><span class="si">{</span><span class="n">ordinal</span><span class="si">}</span><span class="s2">&lt;/span&gt;</span>
+<span class="s2">      &lt;h2&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/h2&gt;</span>
+<span class="s2">      &lt;span class="dur"&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span><span class="si">}{</span><span class="n">repeat</span><span class="si">}</span><span class="s2">&lt;/span&gt;</span>
+<span class="s2">      </span><span class="si">{</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">badges</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">    &lt;/header&gt;</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">description</span><span class="si">}</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">links_paragraph</span><span class="si">}</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">_captions</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">subs</span><span class="si">}</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">cues</span><span class="si">}</span>
+<span class="s2">  &lt;/section&gt;"""</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_transport</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The count-along transport — only when the grid can pace us."""</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metric</span>
+    <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+    <span class="n">timeline</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">"id"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+            <span class="s2">"offset"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s2">"offset"</span><span class="p">],</span>
+            <span class="s2">"duration"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">resolved</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">]</span>
+    <span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"bpm"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span><span class="p">)),</span>
+        <span class="s2">"subdivisions"</span><span class="p">:</span> <span class="n">grid</span><span class="o">.</span><span class="n">subdivisions</span><span class="p">,</span>
+        <span class="s2">"unit"</span><span class="p">:</span> <span class="n">grid</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+        <span class="s2">"totalUnits"</span><span class="p">:</span> <span class="n">resolved</span><span class="p">[</span><span class="s2">"total_units"</span><span class="p">],</span>
+        <span class="s2">"steps"</span><span class="p">:</span> <span class="n">timeline</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">  &lt;div class="transport"&gt;</span>
+<span class="s2">    &lt;button id="play"&gt;▶ count me in&lt;/button&gt;</span>
+<span class="s2">    &lt;span id="pos"&gt;–&lt;/span&gt;</span>
+<span class="s2">    &lt;span id="now"&gt;&lt;/span&gt;</span>
+<span class="s2">  &lt;/div&gt;</span>
+<span class="s2">  &lt;script&gt;</span>
+<span class="s2">  const G = </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">config</span><span class="p">,</span><span class="w"> </span><span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="si">}</span><span class="s2">;</span>
+<span class="s2">  let running = false, startedAt = 0, raf = 0;</span>
+<span class="s2">  const beatSeconds = 60 / G.bpm;</span>
+<span class="s2">  const audio = new (window.AudioContext || window.webkitAudioContext)();</span>
+<span class="s2">  let lastBeat = -1;</span>
+<span class="s2">  function click(accent) </span><span class="se">{{</span>
+<span class="s2">    const osc = audio.createOscillator(), gain = audio.createGain();</span>
+<span class="s2">    osc.frequency.value = accent ? 1200 : 800;</span>
+<span class="s2">    gain.gain.setValueAtTime(0.12, audio.currentTime);</span>
+<span class="s2">    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.06);</span>
+<span class="s2">    osc.connect(gain).connect(audio.destination);</span>
+<span class="s2">    osc.start(); osc.stop(audio.currentTime + 0.07);</span>
+<span class="s2">  </span><span class="se">}}</span>
+<span class="s2">  function tick() </span><span class="se">{{</span>
+<span class="s2">    if (!running) return;</span>
+<span class="s2">    const elapsed = (performance.now() - startedAt) / 1000;</span>
+<span class="s2">    const beat = Math.floor(elapsed / beatSeconds);</span>
+<span class="s2">    const unitPos = elapsed / (beatSeconds * G.subdivisions);</span>
+<span class="s2">    if (beat !== lastBeat) </span><span class="se">{{</span><span class="s2"> click(beat % G.subdivisions === 0); lastBeat = beat; </span><span class="se">}}</span>
+<span class="s2">    if (unitPos &gt;= G.totalUnits) </span><span class="se">{{</span><span class="s2"> stop(); return; </span><span class="se">}}</span>
+<span class="s2">    const step = G.steps.findLast(s =&gt; unitPos &gt;= s.offset) || G.steps[0];</span>
+<span class="s2">    document.getElementById('pos').textContent =</span>
+<span class="s2">      `$</span><span class="se">{{</span><span class="s2">G.unit</span><span class="se">}}</span><span class="s2"> $</span><span class="se">{{</span><span class="s2">Math.floor(unitPos) + 1</span><span class="se">}}</span><span class="s2"> / $</span><span class="se">{{</span><span class="s2">G.totalUnits</span><span class="se">}}</span><span class="s2">`;</span>
+<span class="s2">    document.getElementById('now').textContent = step ? step.name : '';</span>
+<span class="s2">    document.querySelectorAll('.card').forEach(c =&gt; c.classList.remove('live'));</span>
+<span class="s2">    if (step) </span><span class="se">{{</span>
+<span class="s2">      const card = document.getElementById('step-' + step.id);</span>
+<span class="s2">      if (card) card.classList.add('live');</span>
+<span class="s2">    </span><span class="se">}}</span>
+<span class="s2">    raf = requestAnimationFrame(tick);</span>
+<span class="s2">  </span><span class="se">}}</span>
+<span class="s2">  function stop() </span><span class="se">{{</span>
+<span class="s2">    running = false; cancelAnimationFrame(raf); lastBeat = -1;</span>
+<span class="s2">    document.getElementById('play').textContent = '▶ count me in';</span>
+<span class="s2">  </span><span class="se">}}</span>
+<span class="s2">  document.getElementById('play').addEventListener('click', () =&gt; </span><span class="se">{{</span>
+<span class="s2">    if (running) </span><span class="se">{{</span><span class="s2"> stop(); return; </span><span class="se">}}</span>
+<span class="s2">    audio.resume(); running = true; startedAt = performance.now();</span>
+<span class="s2">    document.getElementById('play').textContent = '⏸ stop';</span>
+<span class="s2">    tick();</span>
+<span class="s2">  </span><span class="se">}}</span><span class="s2">);</span>
+<span class="s2">  &lt;/script&gt;"""</span>
+
+
+<span class="n">_CSS</span> <span class="o">=</span> <span class="s2">"""</span>
+<span class="s2">  :root { --ink:#1c1a22; --paper:#faf8f4; --accent:#7c3aed; --soft:#e8e2f5; }</span>
+<span class="s2">  * { box-sizing: border-box; }</span>
+<span class="s2">  body { margin:0; padding:2rem 1rem 4rem; background:var(--paper); color:var(--ink);</span>
+<span class="s2">         font:16px/1.55 system-ui, sans-serif; }</span>
+<span class="s2">  main { max-width: 46rem; margin: 0 auto; }</span>
+<span class="s2">  h1 { font-size:1.9rem; margin:0 0 .3rem; }</span>
+<span class="s2">  .meta { color:#666; margin:0 0 1.4rem; }</span>
+<span class="s2">  .transport { display:flex; gap:1rem; align-items:center; margin:0 0 1.6rem;</span>
+<span class="s2">               padding:.7rem 1rem; background:var(--soft); border-radius:.7rem; }</span>
+<span class="s2">  .transport button { font:inherit; padding:.4rem .9rem; border:0; border-radius:.5rem;</span>
+<span class="s2">                      background:var(--accent); color:#fff; cursor:pointer; }</span>
+<span class="s2">  #now { font-weight:600; }</span>
+<span class="s2">  .card { background:#fff; border:1px solid #e5e1d8; border-radius:.8rem;</span>
+<span class="s2">          padding:1rem 1.2rem; margin:0 0 1rem; }</span>
+<span class="s2">  .card.live { outline:3px solid var(--accent); }</span>
+<span class="s2">  .card header { display:flex; gap:.7rem; align-items:baseline; flex-wrap:wrap; }</span>
+<span class="s2">  .card h2 { font-size:1.15rem; margin:0; }</span>
+<span class="s2">  .n { background:var(--accent); color:#fff; border-radius:50%; width:1.6rem;</span>
+<span class="s2">       height:1.6rem; display:inline-flex; align-items:center; justify-content:center;</span>
+<span class="s2">       font-size:.9rem; flex:none; }</span>
+<span class="s2">  .dur { color:#666; font-size:.9rem; }</span>
+<span class="s2">  .badge { background:var(--soft); border-radius:.4rem; padding:.05rem .45rem;</span>
+<span class="s2">           font-size:.78rem; }</span>
+<span class="s2">  .links { margin:.4rem 0 .2rem; }</span>
+<span class="s2">  .span { margin-right:.8rem; font-size:.9rem; }</span>
+<span class="s2">  .cap, .desc { margin:.3rem 0; }</span>
+<span class="s2">  .cue { color:var(--accent); font-style:italic; margin:.3rem 0 0; }</span>
+<span class="s2">  .subs { margin:.5rem 0 0; padding-left:1.3rem; }</span>
+<span class="s2">  .subs li { margin:.25rem 0; }</span>
+<span class="s2">  .questions { margin-top:2rem; }</span>
+<span class="s2">  .questions h2 { font-size:1.1rem; }</span>
+<span class="s2">  footer { margin-top:2.5rem; color:#666; font-size:.85rem; }</span>
+<span class="s2">"""</span>
+
+
+<div class="viewcode-block" id="render_html">
+<a class="viewcode-back" href="../../module_docs/paces/render.html#paces.render_html">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">render_html</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The practice page: steps, counts, deep links, captions, and (with a</span>
+<span class="sd">    grid) the count-along transport. Self-contained; media-free by design —</span>
+<span class="sd">    derived clips arrive via ``ArtifactRef`` when the media layer exists."""</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="p">{</span><span class="n">source</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">source</span> <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">}</span>
+    <span class="n">cues_by_step</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">cue</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">cues</span><span class="p">:</span>
+        <span class="n">cues_by_step</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">cue</span><span class="o">.</span><span class="n">anchor</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cue</span><span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metric</span>
+    <span class="n">meta_bits</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">doc</span><span class="p">)[</span><span class="s2">"total_units"</span><span class="p">]</span>
+        <span class="n">meta_bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">total</span><span class="p">)</span><span class="si">}</span><span class="s2"> × </span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span><span class="p">:</span>
+            <span class="n">meta_bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"~</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">tempo_bpm</span><span class="si">}</span><span class="s2"> bpm"</span><span class="p">)</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="s2">" · "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">meta_bits</span><span class="p">)</span>
+
+    <span class="n">cards</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">_step_card</span><span class="p">(</span>
+            <span class="n">step</span><span class="p">,</span> <span class="n">ordinal</span><span class="o">=</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">,</span> <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span> <span class="n">cues_by_step</span><span class="o">=</span><span class="n">cues_by_step</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">questions</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">questions</span><span class="p">:</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">question</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">questions</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" — &lt;i&gt;</span><span class="si">{</span><span class="n">question</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2">&lt;/i&gt;"</span> <span class="k">if</span> <span class="n">question</span><span class="o">.</span><span class="n">resolution</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"&lt;li&gt;&lt;b&gt;[</span><span class="si">{</span><span class="n">question</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">]&lt;/b&gt; "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">question</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="si">}{</span><span class="n">status</span><span class="si">}</span><span class="s2">&lt;/li&gt;"</span>
+            <span class="p">)</span>
+        <span class="n">questions</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">'&lt;div class="questions"&gt;&lt;h2&gt;Open questions&lt;/h2&gt;'</span>
+            <span class="sa">f</span><span class="s2">"&lt;ul&gt;</span><span class="si">{</span><span class="s1">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">items</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/ul&gt;&lt;/div&gt;"</span>
+        <span class="p">)</span>
+
+    <span class="n">credits</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"&lt;footer&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">credits</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/footer&gt;"</span> <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">credits</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"""&lt;!doctype html&gt;</span>
+<span class="s2">&lt;html lang="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">lang</span><span class="p">)</span><span class="si">}</span><span class="s2">"&gt;</span>
+<span class="s2">&lt;head&gt;</span>
+<span class="s2">&lt;meta charset="utf-8"&gt;</span>
+<span class="s2">&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;</span>
+<span class="s2">&lt;title&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">title</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/title&gt;</span>
+<span class="s2">&lt;style&gt;</span><span class="si">{</span><span class="n">_CSS</span><span class="si">}</span><span class="s2">&lt;/style&gt;</span>
+<span class="s2">&lt;/head&gt;</span>
+<span class="s2">&lt;body&gt;</span>
+<span class="s2">&lt;main&gt;</span>
+<span class="s2">  &lt;h1&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">title</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/h1&gt;</span>
+<span class="s2">  &lt;p class="meta"&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/p&gt;</span>
+<span class="si">{</span><span class="n">_transport</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span><span class="si">}</span>
+<span class="si">{</span><span class="n">cards</span><span class="si">}</span>
+<span class="si">{</span><span class="n">questions</span><span class="si">}</span>
+<span class="si">{</span><span class="n">credits</span><span class="si">}</span>
+<span class="s2">&lt;/main&gt;</span>
+<span class="s2">&lt;/body&gt;</span>
+<span class="s2">&lt;/html&gt;</span>
+<span class="s2">"""</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
