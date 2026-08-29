@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.segmenters &mdash; paces 0.0.1 documentation</title>
+  <title>paces.segmenters &mdash; paces 0.0.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../_static/documentation_options.js?v=e3a6060d"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -48,6 +48,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
@@ -99,6 +100,10 @@
 <span class="sd">  or spans supplied directly, named when names were supplied, honestly unnamed</span>
 <span class="sd">  when not.</span>
 
+<span class="sd">Plus ``chapters`` (external, explicit): author-supplied chapter metadata — a</span>
+<span class="sd">yt-dlp info dict or ffprobe's ``-show_chapters`` output — is a complete named</span>
+<span class="sd">segmentation for ~0 cost, and most tutorial content on the web carries it.</span>
+
 <span class="sd">Honesty rules (``docs/alignment/07 §9.5``): a segmenter may never return a</span>
 <span class="sd">step count it has no evidence for. Four legitimate return states — confident /</span>
 <span class="sd">found-unnamed / proposed-uncertain / refused — all expressed by the type, none</span>
@@ -108,6 +113,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -121,6 +127,7 @@
 <span class="c1"># what these grade is trust in the inputs, not in any inference.</span>
 <span class="n">DFLT_EXPLICIT_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.95</span>  <span class="c1"># a human said so</span>
 <span class="n">DFLT_GRID_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.9</span>  <span class="c1"># exact given the grid; the grid itself may drift</span>
+<span class="n">DFLT_CHAPTERS_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.9</span>  <span class="c1"># the author said so, in metadata</span>
 
 
 <div class="viewcode-block" id="SegStep">
@@ -184,6 +191,8 @@
     <span class="n">summary</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">target</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># "module:func", resolved lazily</span>
     <span class="n">needs</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>  <span class="c1"># facts; hard filter</span>
+    <span class="n">reads</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>  <span class="c1"># facts used opportunistically when present</span>
+    <span class="n">boosts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>  <span class="c1"># fact -&gt; rank bonus</span>
     <span class="n">requires</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>  <span class="c1"># importable modules; preflighted</span>
     <span class="n">licence</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"MIT"</span>
     <span class="n">base</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># prior preference; breaks ties</span>
@@ -285,6 +294,66 @@
     <span class="k">return</span> <span class="n">MetricGrid</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">grid</span><span class="p">))</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_chapters</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="n">Sequence</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Chapter records from the shapes chapters actually arrive in.</span>
+
+<span class="sd">    Accepts a yt-dlp info dict (``{"chapters": [{"start_time", "end_time",</span>
+<span class="sd">    "title"}, ...]}``), ffprobe's ``-show_chapters`` output (times as strings,</span>
+<span class="sd">    title under ``tags``), a plain ``{"chapters": [...]}``, or a bare list of</span>
+<span class="sd">    chapter mappings. Emits uniform ``{"title", "start", "end"}`` rows,</span>
+<span class="sd">    sorted by start. Degenerate chapters (unreadable, negative, or</span>
+<span class="sd">    non-positive-length times) are refused with the defect named — inventing</span>
+<span class="sd">    structure from garbage would violate ADR-0003's honesty rules.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"chapters"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="k">else</span> <span class="n">metadata</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">raw</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chapter</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chapter</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: expected a mapping — got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">start_raw</span> <span class="o">=</span> <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start_time"</span><span class="p">,</span> <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">))</span>
+        <span class="n">end_raw</span> <span class="o">=</span> <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"end_time"</span><span class="p">,</span> <span class="n">chapter</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"end"</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">start_raw</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">end_raw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: needs start_time/end_time (or start/end); "</span>
+                <span class="sa">f</span><span class="s2">"got keys </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">((</span><span class="n">start_raw</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">),</span> <span class="p">(</span><span class="n">end_raw</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a number of seconds; got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span>
+                <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">start_raw</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">end_raw</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: unreadable times </span><span class="si">{</span><span class="n">start_raw</span><span class="si">!r}</span><span class="s2"> / </span><span class="si">{</span><span class="n">end_raw</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">end</span><span class="p">)):</span>
+            <span class="c1"># NaN also defeats the end &lt;= start comparison below (always</span>
+            <span class="c1"># False), so this must come first.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: non-finite times </span><span class="si">{</span><span class="n">start_raw</span><span class="si">!r}</span><span class="s2"> / </span><span class="si">{</span><span class="n">end_raw</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: negative start (</span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;=</span> <span class="n">start</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"chapters[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: end (</span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s2">) must be after start (</span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="n">start</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">end</span><span class="p">})</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">rows</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_facts</span><span class="p">(</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">media</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
@@ -292,6 +361,7 @@
     <span class="n">boundaries</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">grid</span><span class="p">:</span> <span class="n">MetricGrid</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">chapters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""The free half of the fact vocabulary (docs/alignment/07 §9.3): what is</span>
 <span class="sd">    present among the inputs. Probed (intrinsic) facts arrive with the first</span>
@@ -311,6 +381,8 @@
         <span class="n">facts</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"grid"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">facts</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"k"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">chapters</span><span class="p">:</span>
+        <span class="n">facts</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"meta.chapters"</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">facts</span><span class="p">)</span>
 
 
@@ -326,6 +398,7 @@
     <span class="n">steps</span><span class="p">:</span> <span class="n">Sequence</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">boundaries</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">grid</span><span class="p">:</span> <span class="n">MetricGrid</span> <span class="o">|</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="n">Sequence</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">catalog</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Capability</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Segmentation</span><span class="p">:</span>
@@ -346,12 +419,21 @@
     <span class="n">catalog</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">catalog</span><span class="p">)</span> <span class="k">if</span> <span class="n">catalog</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_CAPABILITIES</span><span class="p">)</span>
     <span class="n">step_rows</span> <span class="o">=</span> <span class="n">_normalize_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="n">_normalize_grid</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
-    <span class="n">facts</span> <span class="o">=</span> <span class="n">_facts</span><span class="p">(</span><span class="n">media</span><span class="o">=</span><span class="n">media</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="n">step_rows</span><span class="p">,</span> <span class="n">boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+    <span class="n">chapters</span> <span class="o">=</span> <span class="n">_normalize_chapters</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="n">facts</span> <span class="o">=</span> <span class="n">_facts</span><span class="p">(</span>
+        <span class="n">media</span><span class="o">=</span><span class="n">media</span><span class="p">,</span>
+        <span class="n">steps</span><span class="o">=</span><span class="n">step_rows</span><span class="p">,</span>
+        <span class="n">boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
+        <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+        <span class="n">chapters</span><span class="o">=</span><span class="n">chapters</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"media"</span><span class="p">:</span> <span class="n">media</span><span class="p">,</span>
         <span class="s2">"steps"</span><span class="p">:</span> <span class="n">step_rows</span><span class="p">,</span>
         <span class="s2">"boundaries"</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">boundaries</span><span class="p">)</span> <span class="k">if</span> <span class="n">boundaries</span> <span class="k">else</span> <span class="p">(),</span>
         <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">,</span>
+        <span class="s2">"chapters"</span><span class="p">:</span> <span class="n">chapters</span><span class="p">,</span>
         <span class="s2">"k"</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span>
     <span class="p">}</span>
 
@@ -384,11 +466,17 @@
                 <span class="n">flags</span><span class="o">=</span><span class="p">(</span>
                     <span class="s2">"no-signal"</span><span class="p">,</span>
                     <span class="s2">"try: steps=[(name, duration), ...] with grid=, "</span>
-                    <span class="s2">"or boundaries=[t0, t1, ...]"</span><span class="p">,</span>
+                    <span class="s2">"boundaries=[t0, t1, ...], or metadata= with chapters"</span><span class="p">,</span>
                 <span class="p">),</span>
                 <span class="n">elapsed_s</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="n">capability</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">cap</span><span class="p">:</span> <span class="n">cap</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_score</span><span class="p">(</span><span class="n">cap</span><span class="p">:</span> <span class="n">Capability</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cap</span><span class="o">.</span><span class="n">base</span> <span class="o">+</span> <span class="nb">sum</span><span class="p">(</span>
+                <span class="n">bonus</span> <span class="k">for</span> <span class="n">fact</span><span class="p">,</span> <span class="n">bonus</span> <span class="ow">in</span> <span class="n">cap</span><span class="o">.</span><span class="n">boosts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">fact</span> <span class="ow">in</span> <span class="n">facts</span>
+            <span class="p">)</span>
+
+        <span class="n">capability</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">cap</span><span class="p">:</span> <span class="p">(</span><span class="n">_score</span><span class="p">(</span><span class="n">cap</span><span class="p">),</span> <span class="n">cap</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
     <span class="n">missing_modules</span> <span class="o">=</span> <span class="n">_preflight</span><span class="p">(</span><span class="n">capability</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">missing_modules</span><span class="p">:</span>
@@ -397,14 +485,41 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_modules</span><span class="p">)</span><span class="si">}</span><span class="s2"> — pip install them first"</span>
         <span class="p">)</span>
     <span class="n">result</span><span class="p">:</span> <span class="n">Segmentation</span> <span class="o">=</span> <span class="n">_resolve_target</span><span class="p">(</span><span class="n">capability</span><span class="p">)(</span><span class="n">inputs</span><span class="p">)</span>
+
+    <span class="c1"># Honesty: an explicitly supplied input the chosen segmenter neither</span>
+    <span class="c1"># needs nor reads was silently discarded — say so instead of implying it</span>
+    <span class="c1"># was consumed.</span>
+    <span class="n">ignorable</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"steps"</span><span class="p">:</span> <span class="s2">"steps"</span><span class="p">,</span>
+        <span class="s2">"boundaries"</span><span class="p">:</span> <span class="s2">"boundaries"</span><span class="p">,</span>
+        <span class="s2">"meta.chapters"</span><span class="p">:</span> <span class="s2">"metadata (chapters)"</span><span class="p">,</span>
+        <span class="s2">"k"</span><span class="p">:</span> <span class="s2">"k"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">used</span> <span class="o">=</span> <span class="n">capability</span><span class="o">.</span><span class="n">needs</span> <span class="o">|</span> <span class="n">capability</span><span class="o">.</span><span class="n">reads</span>
+    <span class="n">ignored</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">label</span> <span class="k">for</span> <span class="n">fact</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">ignorable</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">fact</span> <span class="ow">in</span> <span class="n">facts</span> <span class="ow">and</span> <span class="n">fact</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">used</span>
+    <span class="p">)</span>
+    <span class="n">extra_flags</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"ignored: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ignored</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,)</span> <span class="k">if</span> <span class="n">ignored</span> <span class="k">else</span> <span class="p">()</span>
+
+    <span class="c1"># A grid describes the media's own clock; any segmentation over that</span>
+    <span class="c1"># media may carry it (and its unit) even when placement didn't use it —</span>
+    <span class="c1"># this is what lets the projection express durations in domain units.</span>
+    <span class="n">out_grid</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">grid</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">grid</span>
+    <span class="n">out_unit</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">unit</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">out_unit</span> <span class="o">==</span> <span class="s2">"seconds"</span>
+        <span class="ow">and</span> <span class="n">out_grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">out_grid</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">out_unit</span> <span class="o">=</span> <span class="n">out_grid</span><span class="o">.</span><span class="n">unit</span>
     <span class="k">return</span> <span class="n">Segmentation</span><span class="p">(</span>
         <span class="n">steps</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">steps</span><span class="p">,</span>
         <span class="n">boundaries</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">boundaries</span><span class="p">,</span>
-        <span class="n">unit</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
-        <span class="n">grid</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">out_unit</span><span class="p">,</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">out_grid</span><span class="p">,</span>
         <span class="n">confidence</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">confidence</span><span class="p">,</span>
         <span class="n">method</span><span class="o">=</span><span class="n">capability</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-        <span class="n">flags</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">flags</span><span class="p">,</span>
+        <span class="n">flags</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">flags</span> <span class="o">+</span> <span class="n">extra_flags</span><span class="p">,</span>
         <span class="n">elapsed_s</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">,</span>
         <span class="n">spent_usd</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">spent_usd</span><span class="p">,</span>
     <span class="p">)</span></div>
@@ -512,6 +627,67 @@
     <span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_segment_chapters</span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Segmentation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Adopt the author's own chapter list — names AND times, for ~0 cost.</span>
+
+<span class="sd">    External-explicit like ``explicit``, but the coordinates come from the</span>
+<span class="sd">    media's metadata rather than a human in this run. A caller-supplied step</span>
+<span class="sd">    list of matching length overrides the chapter titles (the human's</span>
+<span class="sd">    explicit input outranks the author's metadata); untitled chapters stay</span>
+<span class="sd">    honestly unnamed.</span>
+<span class="sd">    """</span>
+    <span class="n">chapters</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"chapters"</span><span class="p">]</span>  <span class="c1"># normalised, validated, sorted by start</span>
+    <span class="n">step_rows</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">]</span>
+    <span class="n">user_names</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">step_rows</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_rows</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">chapters</span><span class="p">)</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="k">if</span> <span class="n">step_rows</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">user_names</span><span class="p">:</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"step-count-mismatch: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">step_rows</span><span class="p">)</span><span class="si">}</span><span class="s2"> steps vs "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">chapters</span><span class="p">)</span><span class="si">}</span><span class="s2"> chapters (using chapter titles)"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_unique_id</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">slug</span> <span class="o">=</span> <span class="n">_slugify</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="k">if</span> <span class="n">title</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"chapter-</span><span class="si">{</span><span class="n">index</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">seen</span><span class="p">[</span><span class="n">slug</span><span class="p">]</span> <span class="o">=</span> <span class="n">seen</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">slug</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">slug</span> <span class="k">if</span> <span class="n">seen</span><span class="p">[</span><span class="n">slug</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">seen</span><span class="p">[</span><span class="n">slug</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_step</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">chapter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SegStep</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">user_names</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">step_rows</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">step_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+            <span class="n">evidence</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"chapter_title"</span><span class="p">:</span> <span class="n">chapter</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">step_id</span> <span class="o">=</span> <span class="n">chapter</span><span class="p">[</span><span class="s2">"title"</span><span class="p">],</span> <span class="n">_unique_id</span><span class="p">(</span><span class="n">chapter</span><span class="p">[</span><span class="s2">"title"</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
+            <span class="n">evidence</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="n">SegStep</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">step_id</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">spans</span><span class="o">=</span><span class="p">((</span><span class="n">chapter</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">chapter</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]),),</span>
+            <span class="n">confidence</span><span class="o">=</span><span class="n">DFLT_CHAPTERS_CONFIDENCE</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="s2">"chapters"</span><span class="p">,</span>
+            <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">steps</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_step</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">chapter</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chapter</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chapters</span><span class="p">))</span>
+    <span class="c1"># Starts AND ends: a gap between chapters is real structure, and an</span>
+    <span class="c1"># unsorted source must not cost us the true final boundary.</span>
+    <span class="n">boundaries</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="nb">sorted</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">chapter</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="k">for</span> <span class="n">chapter</span> <span class="ow">in</span> <span class="n">chapters</span><span class="p">}</span>
+            <span class="o">|</span> <span class="p">{</span><span class="n">chapter</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="k">for</span> <span class="n">chapter</span> <span class="ow">in</span> <span class="n">chapters</span><span class="p">}</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">):</span>
+        <span class="n">flags</span> <span class="o">+=</span> <span class="p">(</span><span class="s2">"naming-abstained"</span><span class="p">,)</span>
+    <span class="k">return</span> <span class="n">Segmentation</span><span class="p">(</span>
+        <span class="n">steps</span><span class="o">=</span><span class="n">steps</span><span class="p">,</span>
+        <span class="n">boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+        <span class="n">confidence</span><span class="o">=</span><span class="n">DFLT_CHAPTERS_CONFIDENCE</span><span class="p">,</span>
+        <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
 <span class="n">GRID_PLACED</span> <span class="o">=</span> <span class="n">register</span><span class="p">(</span>
     <span class="n">Capability</span><span class="p">(</span>
         <span class="n">name</span><span class="o">=</span><span class="s2">"grid-placed"</span><span class="p">,</span>
@@ -522,7 +698,7 @@
         <span class="p">),</span>
         <span class="n">target</span><span class="o">=</span><span class="s2">"paces.segmenters:_segment_grid_placed"</span><span class="p">,</span>
         <span class="n">needs</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"steps"</span><span class="p">,</span> <span class="s2">"steps.durations"</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">}),</span>
-        <span class="n">base</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">base</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span>  <span class="c1"># a caller who spelled out steps+grid meant them: top rank</span>
         <span class="n">resolution_s</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="p">)</span>
@@ -533,12 +709,33 @@
         <span class="n">gives</span><span class="o">=</span><span class="s2">"segmentation"</span><span class="p">,</span>
         <span class="n">summary</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Adopt boundaries supplied explicitly — by a human ('ask the "</span>
-            <span class="s2">"user' is first-class), a chapter file, or a previous run."</span>
+            <span class="s2">"user' is first-class) or a previous run."</span>
         <span class="p">),</span>
         <span class="n">target</span><span class="o">=</span><span class="s2">"paces.segmenters:_segment_explicit"</span><span class="p">,</span>
         <span class="n">needs</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"boundaries"</span><span class="p">}),</span>
+        <span class="n">reads</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"steps"</span><span class="p">}),</span>  <span class="c1"># names zip on when the count matches</span>
+        <span class="c1"># Bare boundaries rank below chapters (which carry names), but a</span>
+        <span class="c1"># human who supplied boundaries AND a step list gave the full</span>
+        <span class="c1"># explicit picture — e.g. to CORRECT bad chapters — and outranks them.</span>
+        <span class="n">boosts</span><span class="o">=</span><span class="p">{</span><span class="s2">"steps"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
         <span class="n">base</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
         <span class="n">resolution_s</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">CHAPTERS</span> <span class="o">=</span> <span class="n">register</span><span class="p">(</span>
+    <span class="n">Capability</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"chapters"</span><span class="p">,</span>
+        <span class="n">gives</span><span class="o">=</span><span class="s2">"segmentation"</span><span class="p">,</span>
+        <span class="n">summary</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Adopt the media's own chapter metadata (yt-dlp info dict or "</span>
+            <span class="s2">"ffprobe -show_chapters): author-supplied names and times."</span>
+        <span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="s2">"paces.segmenters:_segment_chapters"</span><span class="p">,</span>
+        <span class="n">needs</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"meta.chapters"</span><span class="p">}),</span>
+        <span class="n">reads</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">"steps"</span><span class="p">}),</span>  <span class="c1"># a matching user step list renames them</span>
+        <span class="n">base</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>  <span class="c1"># names beat bare boundaries; a user's steps+grid beat both</span>
+        <span class="n">resolution_s</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="p">)</span>
 </pre></div>

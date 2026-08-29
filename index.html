@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to paces’s documentation! &mdash; paces 0.0.1 documentation</title>
+  <title>Welcome to paces’s documentation! &mdash; paces 0.0.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/documentation_options.js?v=e3a6060d"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -50,6 +50,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_docs/paces/edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/projection.html">paces.projection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/render.html">paces.render</a></li>
@@ -102,9 +103,11 @@
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.SourceSpan"><code class="docutils literal notranslate"><span class="pre">SourceSpan</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.Step"><code class="docutils literal notranslate"><span class="pre">Step</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.StepDocument"><code class="docutils literal notranslate"><span class="pre">StepDocument</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.apply_edits"><code class="docutils literal notranslate"><span class="pre">apply_edits()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.capabilities"><code class="docutils literal notranslate"><span class="pre">capabilities()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.dumps_document"><code class="docutils literal notranslate"><span class="pre">dumps_document()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.loads_document"><code class="docutils literal notranslate"><span class="pre">loads_document()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.merge_regenerated"><code class="docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.register"><code class="docutils literal notranslate"><span class="pre">register()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.render_html"><code class="docutils literal notranslate"><span class="pre">render_html()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces.html#paces.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
@@ -116,6 +119,12 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/__main__.html">paces.__main__</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces/__main__.html#paces.__main__.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="module_docs/paces/edits.html">paces.edits</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces/edits.html#paces.edits.SUPPORTED_OPS"><code class="docutils literal notranslate"><span class="pre">SUPPORTED_OPS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces/edits.html#paces.edits.apply_edits"><code class="docutils literal notranslate"><span class="pre">apply_edits()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces/edits.html#paces.edits.merge_regenerated"><code class="docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/model.html">paces.model</a><ul>
@@ -160,7 +169,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/tools.html">paces.tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.edit"><code class="docutils literal notranslate"><span class="pre">edit()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.list_segmenters"><code class="docutils literal notranslate"><span class="pre">list_segmenters()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.merge"><code class="docutils literal notranslate"><span class="pre">merge()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="module_docs/paces/tools.html#paces.tools.segment"><code class="docutils literal notranslate"><span class="pre">segment()</span></code></a></li>
@@ -178,7 +189,7 @@
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 <li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
-<p>Release: 0.0.1</p>
+<p>Release: 0.0.2</p>
 <p>Last change: Aug 29, 2026</p>
 </section>
 

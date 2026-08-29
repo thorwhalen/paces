@@ -1,0 +1,216 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.edits &mdash; paces 0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=e3a6060d"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="paces.model" href="model.html" />
+    <link rel="prev" title="paces.__main__" href="__main__.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">paces.edits</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.edits.SUPPORTED_OPS"><code class="docutils literal notranslate"><span class="pre">SUPPORTED_OPS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.edits.apply_edits"><code class="docutils literal notranslate"><span class="pre">apply_edits()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.edits.merge_regenerated"><code class="docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">paces.edits</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/module_docs/paces/edits.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-paces.edits">
+<span id="paces-edits"></span><h1>paces.edits<a class="headerlink" href="#module-paces.edits" title="Link to this heading"></a></h1>
+<p>Document-layer edit protection: typed patches write Locks; regeneration
+merges without eating edits.</p>
+<p>The POC’s single most expensive failure was regeneration destroying hand
+edits (<code class="docutils literal notranslate"><span class="pre">docs/07-annotation-model.md</span> <span class="pre">§1.3</span></code>). The remedy has two halves, both
+here and both store-independent (<code class="docutils literal notranslate"><span class="pre">docs/07</span> <span class="pre">§6.4</span></code> steps 4–6):</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#paces.edits.apply_edits" title="paces.edits.apply_edits"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_edits()</span></code></a> — edits are <strong>typed patches</strong>
+(<code class="docutils literal notranslate"><span class="pre">{&quot;op&quot;:</span> <span class="pre">&quot;set&quot;,</span> <span class="pre">&quot;path&quot;:</span> <span class="pre">&quot;/steps/b4/name&quot;,</span> <span class="pre">&quot;value&quot;:</span> <span class="pre">...}</span></code>), validated
+before application, and every edit writes a <a class="reference internal" href="model.html#paces.model.Lock" title="paces.model.Lock"><code class="xref py py-class docutils literal notranslate"><span class="pre">Lock</span></code></a> with
+the pre-edit value, so every edit is reversible and every protected path is
+explicit.</p></li>
+<li><p><a class="reference internal" href="#paces.edits.merge_regenerated" title="paces.edits.merge_regenerated"><code class="xref py py-func docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a> — a fresh analysis projection merged against the
+committed document: locked paths keep the committed value, everything else
+takes the fresh value, and committed-only steps that carry protection
+survive.</p></li>
+</ul>
+<p>Path rules (each earned by an adversarial review, PR #11):</p>
+<ul class="simple">
+<li><p>List items are addressed <strong>by id first</strong> (<code class="docutils literal notranslate"><span class="pre">/steps/b4/name</span></code>); an ASCII
+digit segment is an index only when no item carries that id. Ids are
+stabler across regenerations — always prefer them.</p></li>
+<li><p>Field segments accept the wire’s camelCase or Python’s snake_case; recorded
+<code class="docutils literal notranslate"><span class="pre">Lock.path</span></code>s are canonicalised to snake_case and to id-form where an
+unambiguous id exists.</p></li>
+<li><p>On merge, a lock is re-applied by <strong>matching list items structurally</strong>
+(id; a span’s exact <code class="docutils literal notranslate"><span class="pre">(source,</span> <span class="pre">role,</span> <span class="pre">start)</span></code>, falling back to
+<code class="docutils literal notranslate"><span class="pre">(source,</span> <span class="pre">role)</span></code> only for singleton groups; an artifact’s <code class="docutils literal notranslate"><span class="pre">uri</span></code>) —
+never by bare position, not even within a group, because regeneration
+reorders lists and a positional write would land on the wrong item. When
+no confident match exists, nothing is written and the lock survives as
+the record. Scalar list items (tags) have no identity besides their
+value, so an edited scalar cannot be re-found after regeneration — the
+edit does not survive; only its lock record does.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attrs</span></code> bags merge committed-over-fresh per key: they are user/renderer
+data that analysis does not produce, so regeneration never wins there.</p></li>
+</ul>
+<p>Not yet recorded anywhere: the fresh values a merge <em>rejects</em>
+(<code class="docutils literal notranslate"><span class="pre">Origin.value_digest</span></code> and the op-log arrive with the evidence layer,
+issue #4).</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.edits.SUPPORTED_OPS">
+<span class="sig-prename descclassname"><span class="pre">paces.edits.</span></span><span class="sig-name descname"><span class="pre">SUPPORTED_OPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('set',)</span></span><a class="headerlink" href="#paces.edits.SUPPORTED_OPS" title="Link to this definition"></a></dt>
+<dd><p>The ops v1 supports. <code class="docutils literal notranslate"><span class="pre">append</span></code>/<code class="docutils literal notranslate"><span class="pre">delete</span></code> arrive at the third real need
+(they require tombstone semantics in the merge — see issue #5).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.edits.apply_edits">
+<span class="sig-prename descclassname"><span class="pre">paces.edits.</span></span><span class="sig-name descname"><span class="pre">apply_edits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">edits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></span><a class="reference internal" href="../../_modules/paces/edits.html#apply_edits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.edits.apply_edits" title="Link to this definition"></a></dt>
+<dd><p>Apply typed patches to a document, recording a Lock per edit.</p>
+<p>Each edit is <code class="docutils literal notranslate"><span class="pre">{&quot;op&quot;:</span> <span class="pre">&quot;set&quot;,</span> <span class="pre">&quot;path&quot;:</span> <span class="pre">...,</span> <span class="pre">&quot;value&quot;:</span> <span class="pre">...}</span></code> (a single edit
+may be passed bare). All edits are validated together — an invalid edit
+means NO edit is applied. Editing an already-locked path replaces the
+lock (<code class="docutils literal notranslate"><span class="pre">was</span></code> becomes the value this edit overwrote, keeping the last
+edit reversible).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Measure</span><span class="p">,</span> <span class="n">Step</span><span class="p">,</span> <span class="n">StepDocument</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">doc</span> <span class="o">=</span> <span class="n">StepDocument</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s1">'g'</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">'G'</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
+<span class="gp">... </span>    <span class="n">Step</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s1">'a'</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">'old'</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="n">Measure</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="s1">'2'</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">'eight'</span><span class="p">))])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">edited</span> <span class="o">=</span> <span class="n">apply_edits</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="p">[{</span><span class="s1">'op'</span><span class="p">:</span> <span class="s1">'set'</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">:</span> <span class="s1">'/steps/a/name'</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="s1">'value'</span><span class="p">:</span> <span class="s1">'new'</span><span class="p">}],</span> <span class="n">by</span><span class="o">=</span><span class="s1">'user:thor'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">edited</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">edited</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">locks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">was</span>
+<span class="go">('new', 'old')</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.edits.merge_regenerated">
+<span class="sig-prename descclassname"><span class="pre">paces.edits.</span></span><span class="sig-name descname"><span class="pre">merge_regenerated</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">committed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></span><a class="reference internal" href="../../_modules/paces/edits.html#merge_regenerated"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.edits.merge_regenerated" title="Link to this definition"></a></dt>
+<dd><p>Merge a fresh analysis projection against the committed document.</p>
+<p>The rules, in order of authority:</p>
+<ol class="arabic simple">
+<li><p><strong>Locked paths keep the committed value</strong> — on the document and on
+every step matched by id, recursively — re-applied by structural
+match, never by bare position (a reorder must not land a locked value
+on the wrong item).</p></li>
+<li><p>Everything else takes the fresh value (regeneration is allowed to
+improve what nobody protected) — except <code class="docutils literal notranslate"><span class="pre">attrs</span></code>, where committed
+wins per key.</p></li>
+<li><p>Committed-only steps survive when protected (locks in their subtree or
+a <code class="docutils literal notranslate"><span class="pre">user:</span></code> origin); unprotected ones are superseded analysis output.</p></li>
+<li><p>Cues, questions and sources are unioned by id (fresh wins on shared
+ids) — analysis rarely regenerates them, and dropping committed
+content silently is the failure this module exists to prevent.</p></li>
+</ol>
+<p>Edits made through <a class="reference internal" href="#paces.edits.apply_edits" title="paces.edits.apply_edits"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_edits()</span></code></a> are always locked, so “hand edit”
+and “protected” coincide by construction; edits made by hand-editing the
+JSON without locks are, deliberately, not protected.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="__main__.html" class="btn btn-neutral float-left" title="paces.__main__" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="model.html" class="btn btn-neutral float-right" title="paces.model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

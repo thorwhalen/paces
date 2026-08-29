@@ -1,0 +1,571 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.edits &mdash; paces 0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=e3a6060d"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.edits</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.edits</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Document-layer edit protection: typed patches write Locks; regeneration</span>
+<span class="sd">merges without eating edits.</span>
+
+<span class="sd">The POC's single most expensive failure was regeneration destroying hand</span>
+<span class="sd">edits (``docs/07-annotation-model.md §1.3``). The remedy has two halves, both</span>
+<span class="sd">here and both store-independent (``docs/07 §6.4`` steps 4–6):</span>
+
+<span class="sd">- :func:`apply_edits` — edits are **typed patches**</span>
+<span class="sd">  (``{"op": "set", "path": "/steps/b4/name", "value": ...}``), validated</span>
+<span class="sd">  before application, and every edit writes a :class:`~paces.model.Lock` with</span>
+<span class="sd">  the pre-edit value, so every edit is reversible and every protected path is</span>
+<span class="sd">  explicit.</span>
+<span class="sd">- :func:`merge_regenerated` — a fresh analysis projection merged against the</span>
+<span class="sd">  committed document: locked paths keep the committed value, everything else</span>
+<span class="sd">  takes the fresh value, and committed-only steps that carry protection</span>
+<span class="sd">  survive.</span>
+
+<span class="sd">Path rules (each earned by an adversarial review, PR #11):</span>
+
+<span class="sd">- List items are addressed **by id first** (``/steps/b4/name``); an ASCII</span>
+<span class="sd">  digit segment is an index only when no item carries that id. Ids are</span>
+<span class="sd">  stabler across regenerations — always prefer them.</span>
+<span class="sd">- Field segments accept the wire's camelCase or Python's snake_case; recorded</span>
+<span class="sd">  ``Lock.path``\\ s are canonicalised to snake_case and to id-form where an</span>
+<span class="sd">  unambiguous id exists.</span>
+<span class="sd">- On merge, a lock is re-applied by **matching list items structurally**</span>
+<span class="sd">  (id; a span's exact ``(source, role, start)``, falling back to</span>
+<span class="sd">  ``(source, role)`` only for singleton groups; an artifact's ``uri``) —</span>
+<span class="sd">  never by bare position, not even within a group, because regeneration</span>
+<span class="sd">  reorders lists and a positional write would land on the wrong item. When</span>
+<span class="sd">  no confident match exists, nothing is written and the lock survives as</span>
+<span class="sd">  the record. Scalar list items (tags) have no identity besides their</span>
+<span class="sd">  value, so an edited scalar cannot be re-found after regeneration — the</span>
+<span class="sd">  edit does not survive; only its lock record does.</span>
+<span class="sd">- ``attrs`` bags merge committed-over-fresh per key: they are user/renderer</span>
+<span class="sd">  data that analysis does not produce, so regeneration never wins there.</span>
+
+<span class="sd">Not yet recorded anywhere: the fresh values a merge *rejects*</span>
+<span class="sd">(``Origin.value_digest`` and the op-log arrive with the evidence layer,</span>
+<span class="sd">issue #4).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">StepDocument</span>
+
+<span class="c1">#: The ops v1 supports. ``append``/``delete`` arrive at the third real need</span>
+<span class="c1">#: (they require tombstone semantics in the merge — see issue #5).</span>
+<span class="n">SUPPORTED_OPS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"set"</span><span class="p">,)</span>
+
+<span class="n">_CAMEL_BOUNDARY</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?&lt;!^)(?=[A-Z])"</span><span class="p">)</span>
+
+<span class="c1">#: Structural identity keys for list items that carry no ``id``.</span>
+<span class="n">_SPAN_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"source"</span><span class="p">,</span> <span class="s2">"role"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_now_iso</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_snake</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_CAMEL_BOUNDARY</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_split_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span> <span class="o">==</span> <span class="s2">"/"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"path must be a JSON-pointer-style path like '/steps/b4/name'; "</span>
+            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_index</span><span class="p">(</span><span class="n">segment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">segment</span><span class="o">.</span><span class="n">isascii</span><span class="p">()</span> <span class="ow">and</span> <span class="n">segment</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_index_of</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">segment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">at</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Resolve a list segment: an item id first; an ASCII digit index second.</span>
+
+<span class="sd">    Id-first because ids are the stable address — and because a segmenter can</span>
+<span class="sd">    legitimately mint all-digit ids (chapters titled "1", "2", ...), which</span>
+<span class="sd">    index-first would silently misroute.</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">segment</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">i</span>
+    <span class="k">if</span> <span class="n">_is_index</span><span class="p">(</span><span class="n">segment</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">index</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">: index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> out of range (len </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)]</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">: no item with id </span><span class="si">{</span><span class="n">segment</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_key_of</span><span class="p">(</span><span class="n">container</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">segment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">at</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Resolve a field segment; accepts wire camelCase, returns snake_case."""</span>
+    <span class="k">if</span> <span class="n">segment</span> <span class="ow">in</span> <span class="n">container</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">segment</span>
+    <span class="n">snake</span> <span class="o">=</span> <span class="n">_snake</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">snake</span> <span class="ow">in</span> <span class="n">container</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">snake</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">: no field </span><span class="si">{</span><span class="n">segment</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">container</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_parent</span><span class="p">(</span><span class="n">root</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The parent container of the leaf, and the resolved leaf key."""</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">root</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">segment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">_index_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">_key_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">: cannot descend into </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">leaf</span> <span class="o">=</span> <span class="n">segments</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">_index_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">leaf</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">_key_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">leaf</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: cannot set into </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_canonical_segments</span><span class="p">(</span><span class="n">root</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The stablest spelling of a path: snake_case fields; list items by id</span>
+<span class="sd">    when one exists unambiguously in that list, by index otherwise."""</span>
+    <span class="n">node</span><span class="p">,</span> <span class="n">out</span> <span class="o">=</span> <span class="n">root</span><span class="p">,</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">segment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">_index_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="n">item_id</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">node</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)]</span>
+            <span class="n">unambiguous</span> <span class="o">=</span> <span class="n">item_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ids</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">item_id</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item_id</span><span class="p">)</span> <span class="k">if</span> <span class="n">unambiguous</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">item</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_key_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">: cannot descend into </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lock_site</span><span class="p">(</span><span class="n">dump</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The node that records the lock, and the lock path relative to it.</span>
+
+<span class="sd">    Structural, not heuristic: only paths of the form</span>
+<span class="sd">    ``steps/&lt;item&gt;(/steps/&lt;item&gt;)*/&lt;field&gt;...`` are owned by the innermost</span>
+<span class="sd">    step; everything else — ``attrs`` contents included, whatever shape the</span>
+<span class="sd">    user's data takes — locks on the document itself.</span>
+<span class="sd">    """</span>
+    <span class="n">site</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span class="n">dump</span><span class="p">,</span> <span class="n">dump</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">segments</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"steps"</span><span class="p">:</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">]</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">items</span><span class="p">[</span><span class="n">_index_of</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">segments</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)]</span>
+        <span class="n">site</span><span class="p">,</span> <span class="n">depth</span> <span class="o">=</span> <span class="n">node</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">site</span><span class="p">,</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[</span><span class="n">depth</span><span class="p">:])</span>
+
+
+<div class="viewcode-block" id="apply_edits">
+<a class="viewcode-back" href="../../module_docs/paces/edits.html#paces.apply_edits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_edits</span><span class="p">(</span>
+    <span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="n">edits</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">by</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">at</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StepDocument</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Apply typed patches to a document, recording a Lock per edit.</span>
+
+<span class="sd">    Each edit is ``{"op": "set", "path": ..., "value": ...}`` (a single edit</span>
+<span class="sd">    may be passed bare). All edits are validated together — an invalid edit</span>
+<span class="sd">    means NO edit is applied. Editing an already-locked path replaces the</span>
+<span class="sd">    lock (``was`` becomes the value this edit overwrote, keeping the last</span>
+<span class="sd">    edit reversible).</span>
+
+<span class="sd">    &gt;&gt;&gt; from paces.model import Measure, Step, StepDocument</span>
+<span class="sd">    &gt;&gt;&gt; doc = StepDocument(id='g', title='G', steps=[</span>
+<span class="sd">    ...     Step(id='a', name='old', duration=Measure(value='2', unit='eight'))])</span>
+<span class="sd">    &gt;&gt;&gt; edited = apply_edits(doc, [{'op': 'set', 'path': '/steps/a/name',</span>
+<span class="sd">    ...                             'value': 'new'}], by='user:thor')</span>
+<span class="sd">    &gt;&gt;&gt; edited.steps[0].name, edited.steps[0].locks[0].was</span>
+<span class="sd">    ('new', 'old')</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edits</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="n">edits</span> <span class="o">=</span> <span class="p">[</span><span class="n">edits</span><span class="p">]</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">at</span> <span class="ow">or</span> <span class="n">_now_iso</span><span class="p">()</span>
+    <span class="n">dump</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">edit</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edits</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edit</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"edits[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: expected a mapping like "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="se">{{</span><span class="s2">'op': 'set', 'path': ..., 'value': ...</span><span class="se">}}</span><span class="s2">; "</span>
+                <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">edit</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">edit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"op"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_OPS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"edits[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: unsupported op </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2"> (v1 supports: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SUPPORTED_OPS</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+        <span class="n">raw_path</span> <span class="o">=</span> <span class="n">edit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">segments</span> <span class="o">=</span> <span class="n">_canonical_segments</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">_split_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">),</span> <span class="n">path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">)</span>
+        <span class="n">container</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">_resolve_parent</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">)</span>
+        <span class="c1"># The lock site must resolve BEFORE the mutation: an edit may change</span>
+        <span class="c1"># the very value a segment addresses (renaming a step's id).</span>
+        <span class="n">site</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">_lock_site</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">segments</span><span class="p">)</span>
+        <span class="n">was</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">container</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="n">container</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">edit</span><span class="p">[</span><span class="s2">"value"</span><span class="p">])</span>
+        <span class="n">locks</span> <span class="o">=</span> <span class="n">site</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"locks"</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">locks</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">lock</span> <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">locks</span> <span class="k">if</span> <span class="n">lock</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">relative</span><span class="p">]</span>
+        <span class="n">locks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Lock</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="n">by</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">was</span><span class="o">=</span><span class="n">was</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">"python"</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">StepDocument</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">dump</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── merge: locked values win, matched structurally ──────────────────────────</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_match_index</span><span class="p">(</span><span class="n">citems</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">cidx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">fitems</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The fresh index corresponding to committed item *cidx* — never bare</span>
+<span class="sd">    position on a reorderable list. ``None`` means no confident match."""</span>
+    <span class="n">citem</span> <span class="o">=</span> <span class="n">citems</span><span class="p">[</span><span class="n">cidx</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">citem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="n">cid</span> <span class="o">=</span> <span class="n">citem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">fitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitems</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fitem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">cid</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">j</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">_SPAN_KEYS</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">citem</span><span class="p">):</span>  <span class="c1"># a SourceSpan</span>
+            <span class="c1"># Anchor on the exact (source, role, start) triple first — a</span>
+            <span class="c1"># reorder keeps starts, so this survives insertion AND intra-group</span>
+            <span class="c1"># shuffling. Only when that fails, fall back to (source, role),</span>
+            <span class="c1"># and ONLY when that group is a singleton on both sides: an</span>
+            <span class="c1"># ordinal within a group is bare position wearing a costume</span>
+            <span class="c1"># (adversarial re-review of PR #11). Anything else declines.</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_triple</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source"</span><span class="p">),</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"role"</span><span class="p">),</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">))</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">_pair</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source"</span><span class="p">),</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"role"</span><span class="p">))</span>
+
+            <span class="n">triple_hits</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">j</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">fitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitems</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_triple</span><span class="p">(</span><span class="n">fitem</span><span class="p">)</span> <span class="o">==</span> <span class="n">_triple</span><span class="p">(</span><span class="n">citem</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">triple_hits</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">triple_hits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">committed_group</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">citems</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_pair</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">_pair</span><span class="p">(</span><span class="n">citem</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">fresh_group</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">j</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">fitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitems</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_pair</span><span class="p">(</span><span class="n">fitem</span><span class="p">)</span> <span class="o">==</span> <span class="n">_pair</span><span class="p">(</span><span class="n">citem</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">committed_group</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">fresh_group</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">fresh_group</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">"uri"</span> <span class="ow">in</span> <span class="n">citem</span><span class="p">:</span>  <span class="c1"># an ArtifactRef: the uri is its identity</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">fitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitems</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fitem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uri"</span><span class="p">)</span> <span class="o">==</span> <span class="n">citem</span><span class="p">[</span><span class="s2">"uri"</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="n">j</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">fitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitems</span><span class="p">):</span>  <span class="c1"># scalar: first equal value</span>
+        <span class="k">if</span> <span class="n">fitem</span> <span class="o">==</span> <span class="n">citem</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">j</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_apply_lock</span><span class="p">(</span><span class="n">fresh</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">committed</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Re-apply the committed value at *path* onto *fresh*.</span>
+
+<span class="sd">    Walks both structures in parallel, matching list items structurally.</span>
+<span class="sd">    Returns False — writing nothing — when the path cannot be confidently</span>
+<span class="sd">    resolved in the fresh structure; the lock then survives as the record.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">segments</span> <span class="o">=</span> <span class="n">_split_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">cnode</span><span class="p">,</span> <span class="n">fnode</span> <span class="o">=</span> <span class="n">committed</span><span class="p">,</span> <span class="n">fresh</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">segment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">at</span> <span class="o">=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fnode</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="n">cidx</span> <span class="o">=</span> <span class="n">_index_of</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)</span>
+                <span class="n">fidx</span> <span class="o">=</span> <span class="n">_match_index</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">cidx</span><span class="p">,</span> <span class="n">fnode</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">fidx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="n">cnode</span><span class="p">,</span> <span class="n">fnode</span> <span class="o">=</span> <span class="n">cnode</span><span class="p">[</span><span class="n">cidx</span><span class="p">],</span> <span class="n">fnode</span><span class="p">[</span><span class="n">fidx</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">_key_of</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fnode</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fnode</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="n">cnode</span><span class="p">,</span> <span class="n">fnode</span> <span class="o">=</span> <span class="n">cnode</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">fnode</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">leaf</span> <span class="o">=</span> <span class="n">segments</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fnode</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="n">cidx</span> <span class="o">=</span> <span class="n">_index_of</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">leaf</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">fidx</span> <span class="o">=</span> <span class="n">_match_index</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">cidx</span><span class="p">,</span> <span class="n">fnode</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fidx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="n">fnode</span><span class="p">[</span><span class="n">fidx</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">cnode</span><span class="p">[</span><span class="n">cidx</span><span class="p">])</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_key_of</span><span class="p">(</span><span class="n">cnode</span><span class="p">,</span> <span class="n">leaf</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fnode</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fnode</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="n">fnode</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">cnode</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_value_at</span><span class="p">(</span><span class="n">dump</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="n">segments</span> <span class="o">=</span> <span class="n">_split_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">container</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">_resolve_parent</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">dump</span><span class="p">),</span> <span class="n">segments</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">container</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_protected</span><span class="p">(</span><span class="n">step_dump</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="n">step_dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"origin"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">generated_by</span> <span class="o">=</span> <span class="n">origin</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"generated_by"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">step_dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"locks"</span><span class="p">))</span> <span class="ow">or</span> <span class="n">generated_by</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"user:"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merged_attrs</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">fresh</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""attrs are user/renderer data analysis does not produce: committed wins</span>
+<span class="sd">    per key, fresh-only keys are kept."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">fresh</span><span class="p">)),</span> <span class="o">**</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">committed</span><span class="p">))}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_steps</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">fresh</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+    <span class="n">committed_by_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">committed</span><span class="p">:</span>  <span class="c1"># first occurrence wins, matching apply_edits</span>
+        <span class="n">committed_by_id</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span> <span class="n">step</span><span class="p">)</span>
+    <span class="n">fresh_ids</span> <span class="o">=</span> <span class="p">{</span><span class="n">step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">fresh</span><span class="p">}</span>
+    <span class="n">merged</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fresh_step</span> <span class="ow">in</span> <span class="n">fresh</span><span class="p">:</span>
+        <span class="n">committed_step</span> <span class="o">=</span> <span class="n">committed_by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">committed_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">))</span>
+            <span class="k">continue</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_steps</span><span class="p">(</span>
+            <span class="n">committed_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">fresh_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"attrs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merged_attrs</span><span class="p">(</span>
+            <span class="n">committed_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">fresh_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"locks"</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">committed_step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"locks"</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">out</span><span class="p">[</span><span class="s2">"locks"</span><span class="p">]:</span>
+            <span class="n">_apply_lock</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">committed_step</span><span class="p">,</span> <span class="n">lock</span><span class="p">[</span><span class="s2">"path"</span><span class="p">])</span>
+        <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="c1"># Committed-only steps survive when they carry protection (locks anywhere</span>
+    <span class="c1"># in their subtree, or a user origin); analysis leftovers are superseded.</span>
+    <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">committed_step</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">committed</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">committed_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">fresh_ids</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">subtree_protected</span> <span class="o">=</span> <span class="n">_is_protected</span><span class="p">(</span><span class="n">committed_step</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">_is_protected</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">_walk_dumps</span><span class="p">(</span><span class="n">committed_step</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">subtree_protected</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">insert_at</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">earlier</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">committed</span><span class="p">[:</span><span class="n">position</span><span class="p">]):</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">_find_index</span><span class="p">(</span><span class="n">merged</span><span class="p">,</span> <span class="n">earlier</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">insert_at</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">insert_at</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">position</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+        <span class="n">merged</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">insert_at</span><span class="p">,</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">committed_step</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">merged</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_walk_dumps</span><span class="p">(</span><span class="n">step_dump</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">step_dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="k">yield</span> <span class="n">child</span>
+        <span class="k">yield from</span> <span class="n">_walk_dumps</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_index</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">step_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="o">==</span> <span class="n">step_id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">i</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_union_by_id</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">fresh</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Fresh entries win for shared ids; committed-only entries are kept."""</span>
+    <span class="n">fresh_ids</span> <span class="o">=</span> <span class="p">{</span><span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">fresh</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">fresh</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span>
+        <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">committed</span> <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fresh_ids</span>
+    <span class="p">]</span>
+
+
+<div class="viewcode-block" id="merge_regenerated">
+<a class="viewcode-back" href="../../module_docs/paces/edits.html#paces.merge_regenerated">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">merge_regenerated</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span> <span class="n">fresh</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StepDocument</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Merge a fresh analysis projection against the committed document.</span>
+
+<span class="sd">    The rules, in order of authority:</span>
+
+<span class="sd">    1. **Locked paths keep the committed value** — on the document and on</span>
+<span class="sd">       every step matched by id, recursively — re-applied by structural</span>
+<span class="sd">       match, never by bare position (a reorder must not land a locked value</span>
+<span class="sd">       on the wrong item).</span>
+<span class="sd">    2. Everything else takes the fresh value (regeneration is allowed to</span>
+<span class="sd">       improve what nobody protected) — except ``attrs``, where committed</span>
+<span class="sd">       wins per key.</span>
+<span class="sd">    3. Committed-only steps survive when protected (locks in their subtree or</span>
+<span class="sd">       a ``user:`` origin); unprotected ones are superseded analysis output.</span>
+<span class="sd">    4. Cues, questions and sources are unioned by id (fresh wins on shared</span>
+<span class="sd">       ids) — analysis rarely regenerates them, and dropping committed</span>
+<span class="sd">       content silently is the failure this module exists to prevent.</span>
+
+<span class="sd">    Edits made through :func:`apply_edits` are always locked, so "hand edit"</span>
+<span class="sd">    and "protected" coincide by construction; edits made by hand-editing the</span>
+<span class="sd">    JSON without locks are, deliberately, not protected.</span>
+<span class="sd">    """</span>
+    <span class="n">committed_dump</span> <span class="o">=</span> <span class="n">committed</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">fresh</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_steps</span><span class="p">(</span><span class="n">committed_dump</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="s2">"steps"</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"cues"</span><span class="p">,</span> <span class="s2">"questions"</span><span class="p">,</span> <span class="s2">"sources"</span><span class="p">):</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_union_by_id</span><span class="p">(</span><span class="n">committed_dump</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"attrs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merged_attrs</span><span class="p">(</span><span class="n">committed_dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">,</span> <span class="p">{}))</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"locks"</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">committed_dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"locks"</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">out</span><span class="p">[</span><span class="s2">"locks"</span><span class="p">]:</span>
+        <span class="n">_apply_lock</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">committed_dump</span><span class="p">,</span> <span class="n">lock</span><span class="p">[</span><span class="s2">"path"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">StepDocument</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+paces.edits
+===========
+.. automodule:: paces.edits
+   :members:

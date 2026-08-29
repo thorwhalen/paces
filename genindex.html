@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; paces 0.0.1 documentation</title>
+  <title>Index &mdash; paces 0.0.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/documentation_options.js?v=e3a6060d"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -48,6 +48,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_docs/paces/edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/projection.html">paces.projection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/render.html">paces.render</a></li>
@@ -85,6 +86,7 @@
  <a href="#A"><strong>A</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#O"><strong>O</strong></a>
@@ -102,6 +104,12 @@
 
       <ul>
         <li><a href="module_docs/paces/model.html#paces.model.Anchor">(class in paces.model)</a>
+</li>
+      </ul></li>
+      <li><a href="module_docs/paces.html#paces.apply_edits">apply_edits() (in module paces)</a>
+
+      <ul>
+        <li><a href="module_docs/paces/edits.html#paces.edits.apply_edits">(in module paces.edits)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -159,6 +167,14 @@
   </ul></td>
 </tr></table>
 
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces/tools.html#paces.tools.edit">edit() (in module paces.tools)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -190,6 +206,14 @@
 
       <ul>
         <li><a href="module_docs/paces/model.html#paces.model.Measure">(class in paces.model)</a>
+</li>
+      </ul></li>
+      <li><a href="module_docs/paces/tools.html#paces.tools.merge">merge() (in module paces.tools)</a>
+</li>
+      <li><a href="module_docs/paces.html#paces.merge_regenerated">merge_regenerated() (in module paces)</a>
+
+      <ul>
+        <li><a href="module_docs/paces/edits.html#paces.edits.merge_regenerated">(in module paces.edits)</a>
 </li>
       </ul></li>
       <li><a href="module_docs/paces.html#paces.MetricGrid">MetricGrid (class in paces)</a>
@@ -258,6 +282,8 @@
 </li>
         <li><a href="module_docs/paces/__main__.html#module-paces.__main__">paces.__main__</a>
 </li>
+        <li><a href="module_docs/paces/edits.html#module-paces.edits">paces.edits</a>
+</li>
         <li><a href="module_docs/paces/model.html#module-paces.model">paces.model</a>
 </li>
         <li><a href="module_docs/paces/projection.html#module-paces.projection">paces.projection</a>
@@ -310,12 +336,21 @@
 </li>
       </ul></li>
       <li>
+    paces.edits
+
+      <ul>
+        <li><a href="module_docs/paces/edits.html#module-paces.edits">module</a>
+</li>
+      </ul></li>
+      <li>
     paces.model
 
       <ul>
         <li><a href="module_docs/paces/model.html#module-paces.model">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     paces.projection
 
@@ -323,8 +358,6 @@
         <li><a href="module_docs/paces/projection.html#module-paces.projection">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     paces.render
 
@@ -438,6 +471,8 @@
         <li><a href="module_docs/paces/model.html#paces.model.StepDocument">(class in paces.model)</a>
 </li>
       </ul></li>
+      <li><a href="module_docs/paces/edits.html#paces.edits.SUPPORTED_OPS">SUPPORTED_OPS (in module paces.edits)</a>
+</li>
   </ul></td>
 </tr></table>
 
