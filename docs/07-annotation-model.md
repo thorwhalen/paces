@@ -107,7 +107,7 @@ Nine entries. `sum(eights) == 44`, `44*8 == 352` beats — matches the page copy
 
 ## 2. `lacing` — the annotation substrate (VERIFIED, use it)
 
-`/Users/thorwhalen/Dropbox/py/proj/t/lacing`, branch `main`, **v0.0.34**, MIT,
+`$PP/t/lacing`, branch `main`, **v0.0.34**, MIT,
 deps `pydantic>=2.6, intervaltree>=3.1, argh, dol`. I imported it and ran it:
 
 ```python

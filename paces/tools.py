@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 from paces import (
+    edits as edits_module,
     model,
     projection,
     render as render_module,
@@ -111,15 +112,18 @@ def segment(
     steps=None,
     boundaries=None,
     grid=None,
+    metadata=None,
     segmenter: str | None = None,
     k: int | None = None,
     output: str | None = None,
 ) -> dict:
     """Cut media into steps using whatever else is present (ADR-0003).
 
-    ``steps``, ``boundaries`` and ``grid`` accept JSON values, JSON strings,
-    or paths to JSON files. Returns the segmentation as a JSON-ready dict
-    (also written to ``output=`` when given) — honest about naming
+    ``steps``, ``boundaries``, ``grid`` and ``metadata`` accept JSON values,
+    JSON strings, or paths to JSON files — ``metadata`` notably takes a
+    yt-dlp ``.info.json`` (its ``chapters`` become a named segmentation).
+    Returns the segmentation as a JSON-ready dict (also written to
+    ``output=`` when given) — honest about naming
     (``flags: ['naming-abstained']``) and about refusal
     (``flags: ['no-signal', 'try: ...']``); never a fabricated step list.
     """
@@ -129,6 +133,7 @@ def segment(
         steps=_structured(steps, what="steps"),
         boundaries=_structured(boundaries, what="boundaries"),
         grid=_structured(grid, what="grid"),
+        metadata=_structured(metadata, what="metadata"),
         k=k,
     )
     payload = _segmentation_to_dict(result)
@@ -204,6 +209,47 @@ def validate(document) -> dict:
     return {"issues": model.validate_document(_as_document(document))}
 
 
+def edit(
+    document,
+    edits,
+    *,
+    by: str,
+    reason: str | None = None,
+    output: str | None = None,
+) -> dict:
+    """Apply typed patches to a document; every edit writes a Lock.
+
+    ``edits`` is a list of ``{"op": "set", "path": "/steps/b4/name",
+    "value": ...}`` (JSON value, string, or file path). ``by`` identifies the
+    editor ("user:thor", "agent:<model>"). Locked paths survive
+    regeneration (see ``merge``).
+    """
+    doc = edits_module.apply_edits(
+        _as_document(document),
+        _structured(edits, what="edits"),
+        by=by,
+        reason=reason,
+    )
+    text = model.dumps_document(doc)
+    if output:
+        Path(output).write_text(text, encoding="utf-8")
+    return json.loads(text)
+
+
+def merge(committed, fresh, *, output: str | None = None) -> dict:
+    """Merge a fresh analysis projection against the committed document.
+
+    Locked paths keep the committed value; everything else takes the fresh
+    value; protected committed-only steps survive. This is how re-running
+    analysis never eats a hand edit.
+    """
+    doc = edits_module.merge_regenerated(_as_document(committed), _as_document(fresh))
+    text = model.dumps_document(doc)
+    if output:
+        Path(output).write_text(text, encoding="utf-8")
+    return json.loads(text)
+
+
 def list_segmenters() -> dict:
     """The registered segmentation capabilities: name → what it needs/gives."""
     return {
@@ -218,4 +264,13 @@ def list_segmenters() -> dict:
     }
 
 
-_dispatch_funcs = [segment, to_document, render, resolve, validate, list_segmenters]
+_dispatch_funcs = [
+    segment,
+    to_document,
+    render,
+    edit,
+    merge,
+    resolve,
+    validate,
+    list_segmenters,
+]

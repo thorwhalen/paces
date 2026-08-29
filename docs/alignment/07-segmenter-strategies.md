@@ -52,7 +52,7 @@ record rather than proposing a parallel one, and that reuse is load-bearing, not
 - **[inferred]** — my design judgement. §9 is almost entirely this. Argue with it.
 
 > **The p12 interpreter is currently broken and no Python ran this session.**
-> `/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python` exits **0 and prints nothing**;
+> `~/.pyenv/versions/3.12.12/envs/p12/bin/python` exits **0 and prints nothing**;
 > going through the shim gives
 > `pyenv-exec: line 48: …/versions/3.12.12/bin/python3: Undefined error: 0`. **[verified]**
 > `/usr/bin/python3` and `/opt/homebrew/bin/python3` work but have no numpy.

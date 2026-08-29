@@ -22,16 +22,16 @@ Repo state at time of writing (2026-08-28): `reelee` on `main`, clean tree, HEAD
 
 | Thing | Absolute path |
 |---|---|
-| reelee package | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/` |
-| reelee agent guide (the densest single doc) | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/CLAUDE.md` (219 lines) |
-| System overview (the vision; §5 layers, §6 "three-layer IR") | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/reelee_system_overview.md` |
-| Substrate handoff — what already exists below reelee | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/substrate_readiness.md` |
-| Gotchas from the substrate builder | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/learnings_so_far.md` |
-| Tested how-tos (executed in CI by `tests/test_how_tos.py`) | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/how_tos/` |
-| Dev skills (13) | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/.claude/skills/` |
-| Handoffs (8, May–Aug 2026) | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/.claude/handoffs/` |
-| Federation package manifest (absolute paths of all members) | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/video_gen_manifest.json` |
-| ADR — hosted MCP connector tool surface | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/adr_connector_tool_surface.md` |
+| reelee package | `$PP/tt/reelee/reelee/` |
+| reelee agent guide (the densest single doc) | `$PP/tt/reelee/CLAUDE.md` (219 lines) |
+| System overview (the vision; §5 layers, §6 "three-layer IR") | `$PP/tt/reelee/docs/reelee_system_overview.md` |
+| Substrate handoff — what already exists below reelee | `$PP/tt/reelee/docs/substrate_readiness.md` |
+| Gotchas from the substrate builder | `$PP/tt/reelee/docs/learnings_so_far.md` |
+| Tested how-tos (executed in CI by `tests/test_how_tos.py`) | `$PP/tt/reelee/docs/how_tos/` |
+| Dev skills (13) | `$PP/tt/reelee/.claude/skills/` |
+| Handoffs (8, May–Aug 2026) | `$PP/tt/reelee/.claude/handoffs/` |
+| Federation package manifest (absolute paths of all members) | `$PP/tt/reelee/docs/video_gen_manifest.json` |
+| ADR — hosted MCP connector tool surface | `$PP/tt/reelee/docs/adr_connector_tool_surface.md` |
 | Storage notes / migration plan | `.../docs/storage_architecture_notes.md`, `.../docs/storage_migration_plan.md` |
 
 There is **no `misc/docs/` and no `adr/` directory** in reelee — ADRs are single files under
@@ -70,13 +70,13 @@ There is **no `misc/docs/` and no `adr/` directory** in reelee — ADRs are sing
 > may warrant a new focused package.
 
 The routing table that operationalises it is
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee/.claude/skills/reelee-where-does-this-go/SKILL.md`.
+`$PP/tt/reelee/.claude/skills/reelee-where-does-this-go/SKILL.md`.
 Read it before you write a line: it will tell you that "segment a video into steps" is
 `mixing`/`nw` territory, not app territory.
 
 ### The federation map (from `CLAUDE.md` + `docs/video_gen_manifest.json`) **[verified]**
 
-| Layer | Packages (absolute paths under `/Users/thorwhalen/Dropbox/py/proj/`) |
+| Layer | Packages (absolute paths under `$PP/`) |
 |---|---|
 | Application | `tt/reelee`, `t/muvid` (music video), `t/braidio` (audio "commentary weave") |
 | Orchestration | `t/nw` — *Narrative Workflow*: Project, Transform, Genre, freshness, jobs |
@@ -94,8 +94,8 @@ Also present but **not in the manifest**: `t/burns`, `t/foley`, `t/braidio`, `t/
 ### Where it lives
 
 **Genre is an `nw` concept, not a reelee one.** The model is
-`/Users/thorwhalen/Dropbox/py/proj/t/nw/nw/genres.py` (33 KB). reelee's binding is
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/genres.py` (16 KB) and is deliberately thin.
+`$PP/t/nw/nw/genres.py` (33 KB). reelee's binding is
+`$PP/tt/reelee/reelee/genres.py` (16 KB) and is deliberately thin.
 `nw/genres.py` docstring **[verified]**:
 
 > A **Genre** is a pure-data descriptor of a *kind* of audiovisual production (music video,
@@ -217,8 +217,8 @@ treatment_to_beats.llm → beat_to_panel.segment → beat_to_panel.draft
 Other genres in the federation, registered from their own packages **[verified by reading]**:
 `muvid.genre_music_video.MUSIC_VIDEO` (slug `music_video`, **zero Transforms**, engine-less,
 templates are output-canvas presets) at
-`/Users/thorwhalen/Dropbox/py/proj/t/muvid/muvid/genre_music_video.py`; and
-`/Users/thorwhalen/Dropbox/py/proj/t/braidio/braidio/genre.py`.
+`$PP/t/muvid/muvid/genre_music_video.py`; and
+`$PP/t/braidio/braidio/genre.py`.
 
 > **This is the template for you.** `muvid`'s genre proves you can register a genre with **no
 > nw Transforms at all** and still be a first-class citizen of the catalog, the connector's
@@ -269,7 +269,7 @@ Two things to decide up front, because reelee had to and got bitten:
    will validate it. Make the initializer the one place it is read.
 
 The end-to-end, CI-executed recipe for creating a project in a genre is
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee/docs/how_tos/create_a_project_in_a_genre.md`.
+`$PP/tt/reelee/docs/how_tos/create_a_project_in_a_genre.md`.
 Read it — its python blocks actually run.
 
 ---
@@ -321,7 +321,7 @@ docs contradict each other and the code sides with the graph.]**
 
 This is the part you care about. The data structures, exactly:
 
-**`lacing.Annotation`** (`/Users/thorwhalen/Dropbox/py/proj/t/lacing/lacing/model.py`) — one
+**`lacing.Annotation`** (`$PP/t/lacing/lacing/model.py`) — one
 envelope, typed body, frozen pydantic, `extra="forbid"`:
 
 ```python
@@ -405,7 +405,7 @@ named intermediate type between graph and renderer. Each renderer ships its own 
 
 ### The analysis side: `nw.Transform`
 
-`/Users/thorwhalen/Dropbox/py/proj/t/nw/nw/transforms/__init__.py`. Docstring:
+`$PP/t/nw/nw/transforms/__init__.py`. Docstring:
 
 > A :class:`Transform` generalizes :class:`nw.renderers.Strategy` […] Every "A → B" arrow in an
 > audiovisual workflow — screenplay → treatment, beat → storyboard panel, panel → image, clips
@@ -548,7 +548,7 @@ plan_from_intent(project, intent: str, *, model: str = 'sonnet', exclude: frozen
 
 ### CLI — `reelee` (entry point `reelee.__main__:main`, built with `argh`)
 
-Commands are plain functions in `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/cli.py`
+Commands are plain functions in `$PP/tt/reelee/reelee/cli.py`
 listed in `_dispatch_funcs`. **[verified by grep]**:
 
 ```
@@ -628,7 +628,7 @@ CLAUDE.md lines 136-146.]**
 - **Types are generated, never hand-written**: `npm run codegen` runs
   `python3 -m reelee export-schemas <reelee-web>/schemas/`, then `json-schema-to-zod` per URI
   in `schemas/index.json`, writing `src/types/generated/`. 46 schema directories are committed
-  under `/Users/thorwhalen/Dropbox/py/proj/tt/reelee-web/schemas/`. Envelope types
+  under `$PP/tt/reelee-web/schemas/`. Envelope types
   (`Annotation`, `MediaRef`, `Provenance`, `RationalTime`) are hand-written in
   `src/types/envelope.ts` on purpose.
 - Every user action is an **acture command** (`src/commands/*.ts`, singleton registry in
@@ -657,10 +657,10 @@ to reuse there except the design tokens.** **[verified]**
 | **`nw.Transform`** for each analysis arrow | `nw.transforms` | plan/execute split, costed-before-spend, provenance-stamped skeletons, `impl_version` cache salting, `on_failure="isolate"` fan-out policy. |
 | **Genre + Template** | `nw.genres` | Your "step-by-step" genre with "dance-moves" subgenre is a one-file registration; you inherit the catalog, the create path, the FE picker, and the connector for free. |
 | **Freshness / regen** | `nw.stale_after`, `nw.stale_verdicts`, `reelee.edits.regen` | "Change the tempo, which blocks are now stale" is the same machine. Read `reelee/edits.py`'s docstring on **why regen converges** (topological order + identity adoption) before you build your own. |
-| **`mixing`** for all video/audio surgery | `/Users/thorwhalen/Dropbox/py/proj/t/mixing` | **[verified signatures]** `crop_video(src, start, end, *, time_unit=…, output=…)`, `loop_video(src, n_loops)`, `concatenate_videos`, `change_speed`, `save_frame`, `make_thumbnail(video, *, at_time, text, size)`, `find_segments(audio, *, strategy=…)`, `extract_segments`, `transcribe(audio, …)` (ElevenLabs Scribe, word timestamps, `cache=`), `srt_for_media`, `detect_chapters(transcript, …) -> list[Chapter]`, `assemble_audio_track`, `text_to_speech`, `ken_burns_film`. This is 80% of your "auto-crop a per-block loop from the source video" work. |
-| **`burns`** for pan/zoom | `/Users/thorwhalen/Dropbox/py/proj/t/burns` | `ken_burns_path` (pure `t -> Rect`), `ken_burns_film` (one encode, no concat seams). |
-| **`yb`** for YouTube ingest | `/Users/thorwhalen/Dropbox/py/proj/t/yb` | `download_youtube_video`, `download_youtube_audio`, `youtube_video_info`, `set_chapters`. **[verified by import]** |
-| **`falaw`** for any paid model call | `/Users/thorwhalen/Dropbox/py/proj/t/falaw` | Pure-data `Plan`, cost known at plan time, SHA-256 content-addressed cache, `execute_plan`. Never call a vendor eagerly. |
+| **`mixing`** for all video/audio surgery | `$PP/t/mixing` | **[verified signatures]** `crop_video(src, start, end, *, time_unit=…, output=…)`, `loop_video(src, n_loops)`, `concatenate_videos`, `change_speed`, `save_frame`, `make_thumbnail(video, *, at_time, text, size)`, `find_segments(audio, *, strategy=…)`, `extract_segments`, `transcribe(audio, …)` (ElevenLabs Scribe, word timestamps, `cache=`), `srt_for_media`, `detect_chapters(transcript, …) -> list[Chapter]`, `assemble_audio_track`, `text_to_speech`, `ken_burns_film`. This is 80% of your "auto-crop a per-block loop from the source video" work. |
+| **`burns`** for pan/zoom | `$PP/t/burns` | `ken_burns_path` (pure `t -> Rect`), `ken_burns_film` (one encode, no concat seams). |
+| **`yb`** for YouTube ingest | `$PP/t/yb` | `download_youtube_video`, `download_youtube_audio`, `youtube_video_info`, `set_chapters`. **[verified by import]** |
+| **`falaw`** for any paid model call | `$PP/t/falaw` | Pure-data `Plan`, cost known at plan time, SHA-256 content-addressed cache, `execute_plan`. Never call a vendor eagerly. |
 | **`lacing.render_artifact_exhibit`** | `lacing/exhibit.py` | Graph → HTML/PDF/Markdown with in-document provenance hyperlinks. Runs on *any* lacing graph. A free "show me the AST" debugging surface on day one. |
 | **`reelee.storybook` as the shape to copy** | `reelee/storybook.py` + `manual_video.py` | It is *already* a step-by-step guide generator: `storybook/v1` + `storybook-step/v1` body schemas (`index`, `narration`, `command_id`, `params`, `before_image`, `after_image`, `collapsed`, `dispatch_ok`), two input adapters → one render core → PDF **and** narrated mp4. Your `step/v1` is a sibling of `storybook-step/v1`. |
 | **`ShotTimingStrategy`** | `reelee/shot_timing.py` | `NarrationLedTiming` / `TargetDurationTiming` behind a Protocol, both pure. The pattern for "how long is each step on screen". |

@@ -73,7 +73,7 @@ The interpreter hosting `priv`
 (`~/.pyenv/versions/3.12.12/envs/p12/bin/python`, symlinked from
 `~/.pyenv/versions/3.12.12/bin/python`) began failing mid-session: it exits 0 but produces no
 output and cannot write files, and the pyenv shim reports
-`pyenv-exec: … /Users/thorwhalen/.pyenv/versions/p12/bin/python: Undefined error: 0`.
+`pyenv-exec: … ~/.pyenv/versions/p12/bin/python: Undefined error: 0`.
 `/usr/bin/python3` was unaffected, and the disk had 650 GB free, so it is not disk pressure.
 On macOS that error usually points at a code-signing / quarantine / dyld problem with the
 interpreter binary.

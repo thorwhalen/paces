@@ -19,12 +19,12 @@ is marked VERIFIED.
 | Step | Do this | Authority / worked example |
 |---|---|---|
 | Turn 1 | Write the **seam table** (≤5 rows) + the `NOT seams:` line + the **one-command test**, before code | `~/.claude/skills/architecture-first/SKILL.md` |
-| Core | `stepped/tools.py` — plain functions, JSON-able in, JSON-able dict out, **one list** `_dispatch_funcs` | `/Users/thorwhalen/Dropbox/py/proj/i/ir/ir/tools.py` |
-| Surface 1 | **CLI** via `argh` in `stepped/__main__.py` over that same list | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/__main__.py` |
+| Core | `stepped/tools.py` — plain functions, JSON-able in, JSON-able dict out, **one list** `_dispatch_funcs` | `$PP/i/ir/ir/tools.py` |
+| Surface 1 | **CLI** via `argh` in `stepped/__main__.py` over that same list | `$PP/tt/reelee/reelee/__main__.py` |
 | Surface 2 | **MCP** via `py2mcp.mk_mcp_from_refs(['stepped.tools:verb', …])` | `py2mcp` README + `t/coact/coact/realize.py:650` |
 | Surface 3 | **Shipped agent skills** in `stepped/data/skills/<name>/SKILL.md` | `i/enlace/enlace/data/skills/`, `t/yb/yb/data/skills/` |
-| Surface 4 | **HTTP** via `qh.mk_app(routes, config=AppConfig(path_prefix="/api"))` | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/server.py:283` |
-| Surface 5 | **Frontend** Vite+React+TS, `@zodal/*` collections + `acture` commands | `/Users/thorwhalen/Dropbox/py/proj/tt/reelee-web` |
+| Surface 4 | **HTTP** via `qh.mk_app(routes, config=AppConfig(path_prefix="/api"))` | `$PP/tt/reelee/reelee/server.py:283` |
+| Surface 5 | **Frontend** Vite+React+TS, `@zodal/*` collections + `acture` commands | `$PP/tt/reelee-web` |
 | Data | Media **never** in the repo/app dir. `~/.local/share/stepped/<kind>/`, addressed via a `dol` store | `~/.claude/skills/app-data-lifecycle/SKILL.md` |
 | Deploy | `tw_platform/deploy.py`, app registered with an `app.toml` + an enlace `server.py` | `~/.claude/skills/tw-deploy/SKILL.md` → `twp-deploy` |
 
@@ -35,7 +35,7 @@ to change?"), one line each, in the plan. Do not build them.
 
 ## 1. Turn 1 — the seam table (this governs the first commit)
 
-Source: `/Users/thorwhalen/.claude/skills/architecture-first/SKILL.md`. The load-bearing rules,
+Source: `~/.claude/skills/architecture-first/SKILL.md`. The load-bearing rules,
 verbatim in spirit:
 
 > Ship a working v1 fast, and make every later iteration an **ADD at a boundary that already
@@ -105,7 +105,7 @@ important structural rule, and the ecosystem has both the reference and the caut
 
 ### The reference: `ir/tools.py` (VERIFIED, quoted from the file)
 
-`/Users/thorwhalen/Dropbox/py/proj/i/ir/ir/tools.py`:
+`$PP/i/ir/ir/tools.py`:
 
 ```python
 """Agent-callable tool surface over ``ir`` — plain functions returning JSON-ready
@@ -153,7 +153,7 @@ of truth for 'what reelee can do', two front-ends."*
 ### The cautionary tale (VERIFIED — read the file, it is real)
 
 `architecture-first` cites `reelee/server.py`. The receipt is
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee/tests/test_http_mcp_parity.py` — **930 lines**,
+`$PP/tt/reelee/tests/test_http_mcp_parity.py` — **930 lines**,
 opening docstring:
 
 > `reelee/server.py` used to claim its HTTP closures and the MCP tools "stay aligned by
@@ -165,7 +165,7 @@ opening docstring:
 **The rule that falls out: if you need a parity test between two surfaces, you have two
 implementations.** Do not author two lists.
 
-`lookbook` (`/Users/thorwhalen/Dropbox/py/proj/t/lookbook/`) is the full single-module-per-surface
+`lookbook` (`$PP/t/lookbook/`) is the full single-module-per-surface
 layout (`facade.py`, `registry.py`, `store.py`, thin `http.py`/`mcp.py`/`__main__.py`) and
 states the rule as *"wire it once, expose it twice"* (`lookbook/mcp.py` docstring, VERIFIED).
 **Its one flaw, confirmed by reading the source:** `lookbook/mcp.py` imports from
@@ -181,7 +181,7 @@ nobody will call from a shell*, because it is the audit of the core and the way 
 one-command test. Pressure it applies: arguments must be flat, ordered, serializable; no live
 object crosses the boundary; nothing in the core may `print` or `sys.exit`.
 
-**Minimal real example** — `/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/__main__.py`,
+**Minimal real example** — `$PP/tt/reelee/reelee/__main__.py`,
 copied verbatim (VERIFIED, `argh` 'ok' + `argcomplete` importable in the `p12` env):
 
 ```python
@@ -243,7 +243,7 @@ dependents: surface deps belong in `[project.optional-dependencies]` and must be
 every operation needs a stable name, a typed schema, a side-effect class, and a description.
 It kills "just pass a dict" and any function that does two things.
 
-**Where it lives:** `/Users/thorwhalen/Dropbox/py/proj/t/py2mcp` (note: `t/`, not `i/`).
+**Where it lives:** `$PP/t/py2mcp` (note: `t/`, not `i/`).
 Installed version 0.1.9 resolves to the editable source tree (VERIFIED). Repo is
 `i2mint/py2mcp`; only dependency is `fastmcp`.
 
@@ -403,7 +403,7 @@ hot-reload) — so verify a new skill is invocable in a **fresh** session before
 
 ## 6. Surface 4 — HTTP (`qh`)
 
-**What it is.** `/Users/thorwhalen/Dropbox/py/proj/i/qh` — "quick http", convention-over-
+**What it is.** `$PP/i/qh` — "quick http", convention-over-
 configuration FastAPI wrapper. Repo `i2mint/qh`. Deps: `fastapi>=0.100`, `uvicorn>=0.23`,
 `requests`, `pydantic>=2`, `i2`. Pressure it applies: state must be explicit and per-request;
 no module-level mutation, no implicit session; errors need codes. Only build it with a remote
@@ -448,7 +448,7 @@ Also ships `export_openapi`, `mk_client_from_app`, `export_ts_client` (a generat
 is a real option for the frontend instead of hand-written fetch wrappers).
 
 **The in-house production example** —
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee/reelee/server.py:283 build_http_app`. Its module
+`$PP/tt/reelee/reelee/server.py:283 build_http_app`. Its module
 docstring states the convention: *"Per the saved feedback memory, this is a `qh`-driven app:
 we point `qh.mk_app` at our closures and ship."* The shape (VERIFIED):
 
@@ -496,7 +496,7 @@ see the media warning in §8: never serve video bytes through a `store[key] -> b
 ## 7. Surface 5 — the frontend
 
 **Stack (mandatory federation convention).** From
-`/Users/thorwhalen/Dropbox/py/proj/tt/reelee-web/README.md` (VERIFIED) and its `package.json`:
+`$PP/tt/reelee-web/README.md` (VERIFIED) and its `package.json`:
 
 - **Vite 8 + React 19 + TypeScript (strict)**, Tailwind v4 + shadcn/ui.
 - **`@zodal/*` + `acture` for the architecture** — *"This is the federation's mandatory
@@ -543,7 +543,7 @@ videoEl.src = (await provider.getUrl('block-03.mp4', 'clip'))!;
 Moving the clips to S3 later changes **one factory call** (`createS3BlobProvider`), not the
 component.
 
-**`acture`** (`/Users/thorwhalen/Dropbox/py/proj/tt/acture`) is the command-dispatch layer:
+**`acture`** (`$PP/tt/acture`) is the command-dispatch layer:
 define an operation once as a command and it becomes a palette entry, a hotkey, an AI tool
 call, an MCP tool, a macro step, an e2e action, an undo entry, and a telemetry event.
 `defineCommand({id, title, category, keybinding, when, params: z.object({…}), execute})`,
@@ -593,13 +593,13 @@ deploy *should* mirror and `--delete`; (2) large/binary media; (3) confidential 
 
 - **One env var overrides the root**: `STEPPED_DATA_DIR`. Never a per-kind env var.
 - Resolve cross-platform with `config2py.AppData("stepped").app_folder()` — VERIFIED:
-  `config2py.AppData('demo_proj_x').app_folder()` → `/Users/thorwhalen/.local/share/demo_proj_x`.
+  `config2py.AppData('demo_proj_x').app_folder()` → `~/.local/share/demo_proj_x`.
 - **Whose `~`?** It resolves against the home of the user the *server process* runs as, which
   is often not the SSH user. `systemctl show <unit> -p User` before assuming.
 
 **Address it through a store, not a path.** `dol` gives `Mapping[str, bytes]` over local files;
 `s3dol` over S3 — same interface, backend injected (VERIFIED: `from dol import Files` →
-`dol.filesys.Files`, from `/Users/thorwhalen/Dropbox/py/proj/i/dol`):
+`dol.filesys.Files`, from `$PP/i/dol`):
 
 ```python
 def clip_store(directory=None) -> Mapping[str, bytes]:
@@ -682,7 +682,7 @@ From `python-project-structure`, `python-iterables`, `python-storage` and the us
 
 **Ecosystem plugin pattern, if you need one:** `xdol.Registry` — a typed, dict-backed
 `MutableMapping` plugin registry with `on_conflict` policy and `subscribe()`
-(`/Users/thorwhalen/Dropbox/py/proj/i/xdol/xdol/registry.py:134`, VERIFIED). The video_gen
+(`$PP/i/xdol/xdol/registry.py:134`, VERIFIED). The video_gen
 workspace overview names it "the ecosystem-wide plugin pattern". Note the tension with
 `architecture-first` test 2 (a seam that grew a registry means you over-built) — a Registry is
 justified when *third parties* register into it (as genres do in `nw`), not to make your own
@@ -777,7 +777,7 @@ Facts you need up front:
   call `build_http_app(...)`.
 - Mounts: frontend at `https://apps.thorwhalen.com/<app>/`, backend at
   `https://apps.thorwhalen.com/api/<app>/`.
-- **Secrets:** never in a committed file; `ssh -t tw tw-edit-secret` (the `twp-secrets` skill).
+- **Secrets:** never in a committed file; the platform's secret-editing helper (see its skill).
 - **Privacy in public artifacts:** no absolute local paths, hostnames, or emails in issues,
   PRs, commit messages, or any committed file.
 
@@ -786,7 +786,7 @@ Facts you need up front:
 ## 13. Fleet context you should not re-discover
 
 - The federation overview lives at
-  `/Users/thorwhalen/Dropbox/py/proj/t/priv/data/groups/video_gen/workspace_overview.md`
+  `$PP/t/priv/data/groups/video_gen/workspace_overview.md`
   (note: `t/priv/data/…`, **not** `t/priv/priv/data/…`). It has the ASCII stack diagram,
   ~22 packages with one concern each, and the **prime directive**: *"We work from the top of
   the stack but do as little work as possible in either [app]. Whenever something looks like
@@ -827,7 +827,7 @@ Facts you need up front:
 4. **`stepped`'s AST: new type, or `lacing.Annotation`?** Out of scope for this file, but it
    determines whether the storage seam is a `dol` store of blobs plus a lacing graph, or a
    plain `MutableMapping` of JSON.
-5. **Is the `stepped` repo scaffolded?** `/Users/thorwhalen/Dropbox/py/proj/pocs/stepped/`
+5. **Is the `stepped` repo scaffolded?** `$PP/pocs/stepped/`
    currently contains **only** `docs/` — no `pyproject.toml`, no package dir, no `.git`. It is
    also under `pocs/`, not a normal `$PP` group (`t/ tt/ i/ c/ misc/`), and is not in the
    manifest. Decide whether it graduates to `$PP/tt/stepped` (and gets `priv pkg add-package`)

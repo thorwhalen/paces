@@ -67,7 +67,7 @@ def visual_tokens(w, h, tier="high"):
     return math.ceil(w2 / 28) * math.ceil(h2 / 28), (round(w2), round(h2))
 
 
-V = "/Users/thorwhalen/Dropbox/py/proj/tt/tw_platform/apps/que_calor_dance/frontend/media/filage.mp4"
+V = "$PP/tt/tw_platform/apps/que_calor_dance/frontend/media/filage.mp4"
 for cols, step, tw, label in [
     (6, 2.0, 400, "coarse 36-tile @2s"),
     (6, 0.5, 400, "fine 18-tile @0.5s"),

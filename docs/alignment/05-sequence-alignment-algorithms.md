@@ -57,7 +57,7 @@ b: np.ndarray  # shape (T+1,), higher is better; b[0] = b[T] = 0 by convention
 
 Everything else — beats, sub-bass ratio, ASR word hits, motion novelty, LLM votes — is a
 *producer* of `S` or `b`. This is exactly the `ScoreTensor` shape that already exists at
-`/Users/thorwhalen/Dropbox/py/proj/t/muvid/muvid/footage/scoring/grid.py` **[from docs, per
+`$PP/t/muvid/muvid/footage/scoring/grid.py` **[from docs, per
 `00-existing-in-fleet.md` §1]**; do not invent a second one.
 
 Choosing the hop is a real decision, not a detail:

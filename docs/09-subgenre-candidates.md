@@ -18,7 +18,7 @@ it), the fleet already has the two levels:
 
 | level | fleet type | where | this project |
 |---|---|---|---|
-| genre | `nw.Genre` (frozen dataclass, `/Users/thorwhalen/Dropbox/py/proj/t/nw/nw/genres.py`) | one-file registration from *your* package | `step_by_step` |
+| genre | `nw.Genre` (frozen dataclass, `$PP/t/nw/nw/genres.py`) | one-file registration from *your* package | `step_by_step` |
 | **subgenre** | **`nw.Template`** (`slug`, `title`, `description`, `params`) | `Genre.templates` | `dance_moves`, `judo_throw`, `recipe`, … |
 
 `Template.params` is **opaque to nw** — the owning package validates and interprets it. So a
@@ -137,7 +137,7 @@ is exactly `Step.steps` (recursive sub-steps) with `duration` in a unit that has
 grid at all**.
 
 **Segmentation signal — already written, verified by reading the source.**
-`/Users/thorwhalen/Dropbox/py/proj/t/kodokan/kodokan/segment.py`:
+`$PP/t/kodokan/kodokan/segment.py`:
 
 ```python
 def segment_demonstrations(seq, min_two_person_frac=0.3) -> list[Segment]
@@ -299,11 +299,11 @@ A `role="code"` / `role="diff"` payload with a copy-to-clipboard button in the r
 different rendering contract.
 
 **The reason this is "later" and not "now": `walkthru` may already own it.**
-`/Users/thorwhalen/Dropbox/py/proj/t/walkthru/walkthru/core/schema.py` is a Pydantic v2 SSOT of
+`$PP/t/walkthru/walkthru/core/schema.py` is a Pydantic v2 SSOT of
 ~30 models (`DemoDocument, Section, CommandStep, Beat, Tracks, Timing, Anchor,
 NarrationAnchor, WordTiming, CameraKeyframe, AssetRef, Locator, Target, Rect`, five `*Cue`
 types) with `resolve_timeline(document) -> Timeline` in `core/timeline.py`, JSON/WebVTT/SRT
-exporters, and a committed JSON Schema at `/Users/thorwhalen/Dropbox/py/proj/t/walkthru/schema/`
+exporters, and a committed JSON Schema at `$PP/t/walkthru/schema/`
 [reported verified in `05-fleet-inventory.md` §4.6]. Its conventions —
 "**relative, anchor-based time**, no absolute timestamps", "**separate tracks**… associated to
 steps **by anchor**", "discriminated unions, not flag soup" — are the conventions
@@ -420,9 +420,9 @@ fleet already has grid machinery.
 **Step delimiter.** A bar, a phrase, or a numbered exercise. **Segmentation signal** is
 `metric` again, but the grid can come from a *score* rather than from beat tracking — which is
 strictly better, because it survives rubato and the slow practice tempo. The fleet has
-`/Users/thorwhalen/Dropbox/py/proj/t/antescofo` (Python client for **Antescofo**, the
+`$PP/t/antescofo` (Python client for **Antescofo**, the
 score-following system: `AntescofoClient.load_score(...)`, `.start()`) and
-`/Users/thorwhalen/Dropbox/py/proj/t/audiate` ("render a symbolic music score to audio… MIDI,
+`$PP/t/audiate` ("render a symbolic music score to audio… MIDI,
 MusicXML, ABC, Humdrum-kern, MEI… the universal pivot is MIDI") **[verified by reading their
 `__init__.py` docstrings]**. `mixing.audio.beats.beat_grid` gives `.tempo_bpm` / `.beat_times`
 but **downbeats are always empty on the shipped backend** (`05-fleet-inventory.md` §7) — which

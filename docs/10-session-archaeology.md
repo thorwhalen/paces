@@ -10,11 +10,11 @@ looked like — interrogate the transcript before re-deriving it.*
 ## The transcript
 
 ```
-/Users/thorwhalen/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl
+~/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl
 ```
 
 **27.7 MB, JSONL, one JSON object per line.** Session id `0f75703c-6761-4aa0-b796-aafe02c94155`,
-2026-08-27/28, cwd `/Users/thorwhalen/Downloads`.
+2026-08-27/28, cwd `~/Downloads`.
 
 Do **not** `cat` it into an agent's context. Query it.
 
@@ -37,7 +37,7 @@ print(c)"
 ```python
 import json
 
-PATH = "/Users/thorwhalen/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl"
+PATH = "~/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl"
 
 
 def blocks(kinds=("text",)):
@@ -85,7 +85,7 @@ The window-picking and research agents each have their own transcript, with full
 about *why* a particular video window was chosen or rejected:
 
 ```
-/Users/thorwhalen/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155/subagents/workflows/
+~/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155/subagents/workflows/
     wf_3d11a5f2-2b3/     # clip picking (10 agents) + the thorwhalen.com deploy recipe
     wf_da66bd26-6ba/     # the research behind docs 04–09 in this folder
 ```

@@ -4,7 +4,7 @@ Gives ground-truth spans in filage-time for a semantic-matching evaluation."""
 import cv2, numpy as np, glob, os, json, sys
 
 SP = "/private/tmp/claude-501/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155/scratchpad"
-MED = "/Users/thorwhalen/Dropbox/py/proj/tt/tw_platform/apps/que_calor_dance/frontend/media"
+MED = "$PP/tt/tw_platform/apps/que_calor_dance/frontend/media"
 frames = [
     cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2GRAY)
     for p in sorted(glob.glob(f"{SP}/frames/*.jpg"))
