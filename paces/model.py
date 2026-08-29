@@ -231,6 +231,7 @@ class StepDocument(_Base):
     cues: list[Cue] = Field(default_factory=list)
     questions: list[OpenQuestion] = Field(default_factory=list)
     credits: str | None = None
+    locks: list[Lock] = Field(default_factory=list)  # document-level fields
     attrs: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -17,6 +17,10 @@ two maximally different ones so the seam is shaped by both rather than by one:
   or spans supplied directly, named when names were supplied, honestly unnamed
   when not.
 
+Plus ``chapters`` (external, explicit): author-supplied chapter metadata — a
+yt-dlp info dict or ffprobe's ``-show_chapters`` output — is a complete named
+segmentation for ~0 cost, and most tutorial content on the web carries it.
+
 Honesty rules (``docs/alignment/07 §9.5``): a segmenter may never return a
 step count it has no evidence for. Four legitimate return states — confident /
 found-unnamed / proposed-uncertain / refused — all expressed by the type, none
@@ -39,6 +43,7 @@ Span = tuple[float, float]  # seconds, half-open
 # what these grade is trust in the inputs, not in any inference.
 DFLT_EXPLICIT_CONFIDENCE = 0.95  # a human said so
 DFLT_GRID_CONFIDENCE = 0.9  # exact given the grid; the grid itself may drift
+DFLT_CHAPTERS_CONFIDENCE = 0.9  # the author said so, in metadata
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -188,6 +193,37 @@ def _normalize_grid(grid: MetricGrid | Mapping | None) -> MetricGrid | None:
     return MetricGrid.model_validate(dict(grid))
 
 
+def _normalize_chapters(metadata: Mapping | Sequence | None) -> list[dict]:
+    """Chapter records from the shapes chapters actually arrive in.
+
+    Accepts a yt-dlp info dict (``{"chapters": [{"start_time", "end_time",
+    "title"}, ...]}``), ffprobe's ``-show_chapters`` output (times as strings,
+    title under ``tags``), a plain ``{"chapters": [...]}``, or a bare list of
+    chapter mappings. Emits uniform ``{"title", "start", "end"}`` rows.
+    """
+    if metadata is None:
+        return []
+    raw = metadata.get("chapters") if isinstance(metadata, Mapping) else metadata
+    if not raw:
+        return []
+    rows = []
+    for i, chapter in enumerate(raw):
+        if not isinstance(chapter, Mapping):
+            raise TypeError(
+                f"chapters[{i}]: expected a mapping — got {type(chapter).__name__}"
+            )
+        title = chapter.get("title") or chapter.get("tags", {}).get("title", "")
+        start = chapter.get("start_time", chapter.get("start"))
+        end = chapter.get("end_time", chapter.get("end"))
+        if start is None or end is None:
+            raise ValueError(
+                f"chapters[{i}]: needs start_time/end_time (or start/end); "
+                f"got keys {sorted(chapter)}"
+            )
+        rows.append({"title": str(title), "start": float(start), "end": float(end)})
+    return rows
+
+
 def _facts(
     *,
     media: str | None,
@@ -195,6 +231,7 @@ def _facts(
     boundaries: Sequence[float] | None,
     grid: MetricGrid | None,
     k: int | None,
+    chapters: list[dict] | None = None,
 ) -> frozenset[str]:
     """The free half of the fact vocabulary (docs/alignment/07 §9.3): what is
     present among the inputs. Probed (intrinsic) facts arrive with the first
@@ -214,6 +251,8 @@ def _facts(
         facts.add("grid")
     if k is not None:
         facts.add("k")
+    if chapters:
+        facts.add("meta.chapters")
     return frozenset(facts)
 
 
@@ -227,6 +266,7 @@ def segment(
     steps: Sequence | None = None,
     boundaries: Sequence[float] | None = None,
     grid: MetricGrid | Mapping | None = None,
+    metadata: Mapping | Sequence | None = None,
     k: int | None = None,
     catalog: Mapping[str, Capability] | None = None,
 ) -> Segmentation:
@@ -247,12 +287,21 @@ def segment(
     catalog = dict(catalog) if catalog is not None else dict(_CAPABILITIES)
     step_rows = _normalize_steps(steps)
     grid = _normalize_grid(grid)
-    facts = _facts(media=media, steps=step_rows, boundaries=boundaries, grid=grid, k=k)
+    chapters = _normalize_chapters(metadata)
+    facts = _facts(
+        media=media,
+        steps=step_rows,
+        boundaries=boundaries,
+        grid=grid,
+        k=k,
+        chapters=chapters,
+    )
     inputs = {
         "media": media,
         "steps": step_rows,
         "boundaries": tuple(float(b) for b in boundaries) if boundaries else (),
         "grid": grid,
+        "chapters": chapters,
         "k": k,
     }
 
@@ -285,7 +334,7 @@ def segment(
                 flags=(
                     "no-signal",
                     "try: steps=[(name, duration), ...] with grid=, "
-                    "or boundaries=[t0, t1, ...]",
+                    "boundaries=[t0, t1, ...], or metadata= with chapters",
                 ),
                 elapsed_s=time.perf_counter() - started,
             )
@@ -412,6 +461,45 @@ def _segment_explicit(inputs: Mapping[str, Any]) -> Segmentation:
     )
 
 
+def _segment_chapters(inputs: Mapping[str, Any]) -> Segmentation:
+    """Adopt the author's own chapter list — names AND times, for ~0 cost.
+
+    External-explicit like ``explicit``, but the coordinates come from the
+    media's metadata rather than a human in this run. Untitled chapters stay
+    honestly unnamed.
+    """
+    chapters = inputs["chapters"]
+    seen: dict[str, int] = {}
+
+    def _unique_id(title: str, index: int) -> str:
+        slug = _slugify(title) if title else f"chapter-{index + 1}"
+        seen[slug] = seen.get(slug, 0) + 1
+        return slug if seen[slug] == 1 else f"{slug}-{seen[slug]}"
+
+    steps = tuple(
+        SegStep(
+            id=_unique_id(chapter["title"], i),
+            name=chapter["title"],
+            spans=((chapter["start"], chapter["end"]),),
+            confidence=DFLT_CHAPTERS_CONFIDENCE,
+            source="chapters",
+        )
+        for i, chapter in enumerate(chapters)
+    )
+    boundaries = tuple(
+        sorted({chapter["start"] for chapter in chapters} | {chapters[-1]["end"]})
+    )
+    flags: tuple[str, ...] = ()
+    if not any(chapter["title"] for chapter in chapters):
+        flags = ("naming-abstained",)
+    return Segmentation(
+        steps=steps,
+        boundaries=boundaries,
+        confidence=DFLT_CHAPTERS_CONFIDENCE,
+        flags=flags,
+    )
+
+
 GRID_PLACED = register(
     Capability(
         name="grid-placed",
@@ -433,11 +521,26 @@ EXPLICIT = register(
         gives="segmentation",
         summary=(
             "Adopt boundaries supplied explicitly — by a human ('ask the "
-            "user' is first-class), a chapter file, or a previous run."
+            "user' is first-class) or a previous run."
         ),
         target="paces.segmenters:_segment_explicit",
         needs=frozenset({"boundaries"}),
         base=0.5,
         resolution_s=0.01,
+    )
+)
+
+CHAPTERS = register(
+    Capability(
+        name="chapters",
+        gives="segmentation",
+        summary=(
+            "Adopt the media's own chapter metadata (yt-dlp info dict or "
+            "ffprobe -show_chapters): author-supplied names and times."
+        ),
+        target="paces.segmenters:_segment_chapters",
+        needs=frozenset({"meta.chapters"}),
+        base=0.75,  # names beat bare boundaries; a user's steps+grid beat both
+        resolution_s=0.1,
     )
 )

@@ -48,6 +48,7 @@ from paces.model import (
     seconds_per_unit,
     validate_document,
 )
+from paces.edits import apply_edits, merge_regenerated
 from paces.projection import to_document
 from paces.render import render_html
 from paces.segmenters import (
@@ -87,6 +88,9 @@ __all__ = [
     "register",
     "capabilities",
     "to_document",
+    # editing & regeneration
+    "apply_edits",
+    "merge_regenerated",
     # rendering
     "render_html",
 ]
