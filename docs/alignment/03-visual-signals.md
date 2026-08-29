@@ -51,7 +51,7 @@ executed here. **[inferred]** = my judgement; argue with it.
 ## 1. The rig
 
 Everything below ran on **Apple M1 Max / 64 GB / macOS 15 (Darwin 24.6)**, in
-`/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python`, ffmpeg 8.1 (Homebrew), fully
+`~/.pyenv/versions/3.12.12/envs/p12/bin/python`, ffmpeg 8.1 (Homebrew), fully
 offline except for one-time model downloads.
 
 Three clips, each **60.0 s, 1280×720, 30 fps, H.264**:

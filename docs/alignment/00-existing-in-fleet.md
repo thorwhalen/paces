@@ -78,7 +78,7 @@ The brief's starter list, plus what the POC actually used, against what is impor
 
 ### 3.1 `muvid.align` — the registry that already exists
 
-`/Users/thorwhalen/Dropbox/py/proj/t/muvid/muvid/align.py` **[verified: imported and ran]**
+`$PP/t/muvid/muvid/align.py` **[verified: imported and ran]**
 
 ```
 >>> import muvid.align as A
@@ -165,7 +165,7 @@ so `import mixing.audio` stays light.
 
 ### 3.3 `muvid.footage.select_score` — the order-prior solver, aimed at the dual problem
 
-`/Users/thorwhalen/Dropbox/py/proj/t/muvid/muvid/footage/select_score.py` **[verified]**
+`$PP/t/muvid/muvid/footage/select_score.py` **[verified]**
 
 Its own docstring: *"a beat-snapped semi-Markov Viterbi DP … choose which clip is on-air over
 each span of the song so that the weighted composite reward is maximized, cuts land only on
@@ -440,7 +440,7 @@ computation pure and the persistence explicit; that is what makes both testable.
 
 ## 6. The p12 env, alignment-relevant
 
-`/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python` **[verified: import probe]**
+`~/.pyenv/versions/3.12.12/envs/p12/bin/python` **[verified: import probe]**
 
 **Present.** numpy 2.2.6 · scipy 1.16.3 · scikit-learn 1.7.2 · librosa 0.11.0 · soundfile
 0.13.1 · pydub 0.25.1 · pyloudnorm 0.2.0 · torch 2.9.0 · **torchaudio 2.9.0** · torchvision

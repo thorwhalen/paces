@@ -759,7 +759,7 @@ Five notes, each earned by something measured above:
 
 ## 9. Environment: installed vs new
 
-**Already in `p12`** (`/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python`)
+**Already in `p12`** (`~/.pyenv/versions/3.12.12/envs/p12/bin/python`)
 **[verified: import probe]** — librosa 0.11.0 · numpy 2.2.6 · scipy 1.16.3 · scikit-learn 1.7.2 ·
 soundfile 0.13.1 · torch 2.9.0 · torchaudio 2.9.0 · mir_eval 0.8.2 · numba 0.61.2 ·
 matplotlib 3.10.0 · demucs 4.1.0.

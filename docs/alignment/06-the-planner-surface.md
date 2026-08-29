@@ -263,7 +263,7 @@ one and measured it on three real videos of three different genres.
 ### 2.2 Measured cost and measured separation **[verified]**
 
 Probe implemented in ~90 lines of numpy + two ffmpeg pipes, run in
-`/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python` on an M-series Mac, offline.
+`~/.pyenv/versions/3.12.12/envs/p12/bin/python` on an M-series Mac, offline.
 
 | | **`filage.mp4`** dance, music, one static take | **talking head** edited, 720p | **screencast** near-silent, 720p |
 |---|---|---|---|

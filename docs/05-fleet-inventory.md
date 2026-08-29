@@ -17,8 +17,8 @@ predecessor app built by the same pipeline. Neither was in your brief.**
 
 **Verified** (ran it / read it):
 
-- All 21 packages below import cleanly from `/Users/thorwhalen/.pyenv/versions/p12/bin/python`
-  with cwd `$PP` = `/Users/thorwhalen/Dropbox/py/proj`, each resolving to the **local source
+- All 21 packages below import cleanly from `~/.pyenv/versions/p12/bin/python`
+  with cwd `$PP` = `$PP`, each resolving to the **local source
   tree**, not a PyPI wheel. 21/21 OK.
 - Versions from each `pyproject.toml`; test-file counts from `find … -name 'test_*.py'`;
   last-commit dates/branches from `git log -1` / `git branch --show-current`. Every fleet
@@ -160,7 +160,7 @@ Model weights at `~/kodokan_data/style_models/face_paint_512_v2_0.onnx`; ffmpeg 
 the flashcard answer is not readable), `_make_clip(src_file, source, start, dur, out_file)`.
 
 **These are scripts, not library API.** They hardcode absolute paths
-(`APP_DIR = Path("/Users/thorwhalen/Dropbox/py/proj/tt/papp/migrated_apps/kodokan")`),
+(`APP_DIR = Path("$PP/tt/papp/migrated_apps/kodokan")`),
 `/opt/homebrew/bin/ffmpeg`, and `mps`. Promoting `process_clip` into a real,
 parametrised `kodokan` (or `stepped`) function with an injectable model set is a
 half-day of work and removes the single biggest "not built" item on your list.

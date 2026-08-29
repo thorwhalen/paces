@@ -59,7 +59,7 @@ block  8 118.9–133.7 Taper dans les mains du voisin
 block  9 133.7–163.5 Avancer / reculer sur le refrain (clip b9  located @ 150.9 s)
 ```
 
-Sources: `/Users/thorwhalen/Dropbox/py/proj/tt/tw_platform/apps/que_calor_dance/frontend/index.html`
+Sources: `$PP/tt/tw_platform/apps/que_calor_dance/frontend/index.html`
 (the `MEDIA` and `ROUTINE` objects) and `.../frontend/media/*.mp4`.
 
 **Chance baseline.** With nine queries and an argmax over the timeline, the expected number
@@ -75,7 +75,7 @@ above *"a cartoon illustration of a person"* on **92 % of the 166 frames** (mean
 The failures below are about pose and action semantics, not about the render.
 
 **The scripts that produced every number in this file** are kept beside it in
-`/Users/thorwhalen/Dropbox/py/proj/pocs/stepped/docs/alignment/04-evidence/`. They are
+`$PP/pocs/stepped/docs/alignment/04-evidence/`. They are
 throwaway quality — absolute paths hard-coded, no argument parsing — but they run as-is
 under `p12` and they are the evidence:
 
@@ -926,7 +926,7 @@ binary — behind `[llm]`.
 
 ## 10. Environment: what is already here
 
-Checked by import in `/Users/thorwhalen/.pyenv/versions/3.12.12/envs/p12/bin/python`
+Checked by import in `~/.pyenv/versions/3.12.12/envs/p12/bin/python`
 **[verified]**.
 
 **Present and sufficient.** `torch` 2.9.0 (mps working) · `transformers` 4.57.1 (has

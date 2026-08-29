@@ -2,7 +2,7 @@ import subprocess, math, os, glob, numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 
-V = "/Users/thorwhalen/Dropbox/py/proj/tt/tw_platform/apps/que_calor_dance/frontend/media/filage.mp4"
+V = "$PP/tt/tw_platform/apps/que_calor_dance/frontend/media/filage.mp4"
 FNT = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 20)
 
 

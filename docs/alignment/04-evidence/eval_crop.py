@@ -6,7 +6,7 @@ from PIL import Image
 from transformers import AutoModel, AutoProcessor
 
 SP = "/private/tmp/claude-501/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155/scratchpad"
-MED = "/Users/thorwhalen/Dropbox/py/proj/tt/tw_platform/apps/que_calor_dance/frontend/media"
+MED = "$PP/tt/tw_platform/apps/que_calor_dance/frontend/media"
 exec(open(f"{SP}/eval_vlm.py").read().split("FRAMES = sorted")[0])
 CLIPS = [
     ("b2", 1),
