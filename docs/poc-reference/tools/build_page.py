@@ -3,18 +3,19 @@
 Reads page/_head.html (doctype + CSS), page/_body.html, page/_script.js (the original
 artifact, split by tools/split), plus clips.json, and writes site/index.html.
 """
+
 import json, os, re
 
-SITE = 'https://thorwhalen.com/que_calor_dance/'
-CLIPS = json.load(open('clips.json'))
-head = open('page/_head.html').read()
-body = open('page/_body.html').read()
-script = open('page/_script.js').read()
+SITE = "https://thorwhalen.com/que_calor_dance/"
+CLIPS = json.load(open("clips.json"))
+head = open("page/_head.html").read()
+body = open("page/_body.html").read()
+script = open("page/_script.js").read()
 
 # ── head ───────────────────────────────────────────────────────────────────
 head = head.replace(
-    '<title>La choré — aide-mémoire</title>',
-    '<title>Que Calor — la choré, bloc par bloc</title>\n'
+    "<title>La choré — aide-mémoire</title>",
+    "<title>Que Calor — la choré, bloc par bloc</title>\n"
     # Targeted rather than blanket: a bare `robots` noindex also stops the link-preview
     # crawlers (WhatsApp/Signal/iMessage all go through facebookexternalhit, which
     # refuses to scrape a noindex page), so pasting the URL in a chat showed nothing.
@@ -63,7 +64,8 @@ head = head.replace(
     'et un extrait vid\u00e9o par mouvement.">\n'
     '<meta name="twitter:image" content="' + SITE + 'media/og.jpg">\n'
     '<meta name="description" content="Neuf blocs, 44 \u00d7 8 temps. Le compte au tempo '
-    'et un extrait vid\u00e9o par mouvement. Chor\u00e9graphie de C\u00e9line Pradeu.">')
+    'et un extrait vid\u00e9o par mouvement. Chor\u00e9graphie de C\u00e9line Pradeu.">',
+)
 
 EXTRA_CSS = """
 /* ═══════════════════════════════════════════════
@@ -173,21 +175,24 @@ body.playing .ribbon-wrap{margin-top:.5rem;padding-top:.45rem}
 head = head + EXTRA_CSS  # _head.html ends INSIDE the <style> block
 
 # ── body ───────────────────────────────────────────────────────────────────
-body = body.replace('<h1>La choré,<br>bloc par bloc</h1>',
-                    '<h1>Que Calor,<br>bloc par bloc</h1>')
 body = body.replace(
-    'Neuf blocs, 44 × 8 temps. Lance le compte : les figurines dansent au tempo que tu règles, '
-    'et le ruban montre où tu en es.',
-    'Neuf blocs, 44 × 8 temps, ~129 bpm. Lance le compte : le ruban montre où tu en es, et chaque '
-    'carte rejoue le mouvement en boucle, découpé depuis la vidéo de Céline.')
+    "<h1>La choré,<br>bloc par bloc</h1>", "<h1>Que Calor,<br>bloc par bloc</h1>"
+)
+body = body.replace(
+    "Neuf blocs, 44 × 8 temps. Lance le compte : les figurines dansent au tempo que tu règles, "
+    "et le ruban montre où tu en es.",
+    "Neuf blocs, 44 × 8 temps, ~129 bpm. Lance le compte : le ruban montre où tu en es, et chaque "
+    "carte rejoue le mouvement en boucle, découpé depuis la vidéo de Céline.",
+)
 body = body.replace('value="100"', 'value="129"')
 
 
 body = body.replace(
-    '</header>',
+    "</header>",
     '    <p class="byline">Chorégraphie, danse et vidéo&nbsp;: <b>Céline Pradeu</b> · '
     '<a href="https://youtu.be/q_TUyxUhoEw" target="_blank" rel="noopener">'
-    'voir la vidéo d\'origine&nbsp;↗</a></p>\n  </header>')
+    "voir la vidéo d'origine&nbsp;↗</a></p>\n  </header>",
+)
 
 FILAGE = """
     <details class="filage">
@@ -207,7 +212,10 @@ FILAGE = """
         <a href="media/howto.png" target="_blank" rel="noopener">l'image seule</a>.</p>
     </details>
 """
-body = body.replace('  <main class="grid" id="grid"></main>', FILAGE + '\n  <main class="grid" id="grid"></main>')
+body = body.replace(
+    '  <main class="grid" id="grid"></main>',
+    FILAGE + '\n  <main class="grid" id="grid"></main>',
+)
 
 OPEN_LIST = """    <ul class="open">
       <li><b>Bloc&nbsp;3</b> — tranché&nbsp;: c'est bien un mouvement de bras, pas les déhanchés.
@@ -223,7 +231,7 @@ OPEN_LIST = """    <ul class="open">
           face caméra, ce n'est pas l'orientation de scène.</li>
     </ul>"""
 body = re.sub(r'    <ul class="open">.*?</ul>', OPEN_LIST, body, flags=re.S)
-body = body.replace('<h3>À trancher</h3>', '<h3>Ce que la vidéo tranche</h3>')
+body = body.replace("<h3>À trancher</h3>", "<h3>Ce que la vidéo tranche</h3>")
 
 CREDIT = """
     <p class="credit">
@@ -236,14 +244,28 @@ CREDIT = """
       d'origine reste la référence. Musique&nbsp;: <i>Que Calor</i>. Les timings en&nbsp;secondes
       renvoient à la vidéo d'origine.
     </p>"""
-body = body.replace('  </footer>', CREDIT + '\n  </footer>')
+body = body.replace("  </footer>", CREDIT + "\n  </footer>")
 
 # ── script ─────────────────────────────────────────────────────────────────
 by_block = {}
 for c in CLIPS:
-    by_block.setdefault(c['block'], []).append(
-        {k: c[k] for k in ('id', 'src', 'start', 'dur', 'cap', 'tab', 'fig', 'yt_expl', 'yt_run')})
-MEDIA = 'const MEDIA = ' + json.dumps(by_block, ensure_ascii=False, indent=1) + ';\n\n'
+    by_block.setdefault(c["block"], []).append(
+        {
+            k: c[k]
+            for k in (
+                "id",
+                "src",
+                "start",
+                "dur",
+                "cap",
+                "tab",
+                "fig",
+                "yt_expl",
+                "yt_run",
+            )
+        }
+    )
+MEDIA = "const MEDIA = " + json.dumps(by_block, ensure_ascii=False, indent=1) + ";\n\n"
 MEDIA += 'const YT = "https://youtu.be/q_TUyxUhoEw?t=";\n'
 MEDIA += 'const mmss = s => `${Math.floor(s/60)}:${String(Math.round(s)%60).padStart(2,"0")}`;\n\n'
 script = MEDIA + script
@@ -252,22 +274,26 @@ script = MEDIA + script
 # ── la vidéo tranche : on corrige le texte des blocs 2, 3 et 9 ──────────────
 script = script.replace(
     '{eights:5, label:"Pas pointe et ronde"}',
-    '{eights:5, label:"Pas pointe et ronde — « marche, pose, marche, ramène »"}')
+    '{eights:5, label:"Pas pointe et ronde — « marche, pose, marche, ramène »"}',
+)
 script = script.replace(
     '{eights:4, label:"Grand cercle des deux bras"}',
-    '{eights:4, label:"Grandes droites des deux bras — « très net, un peu continu »"}')
-script = script.replace('    note:"À remplacer par les 1ers déhanchés ?" },', '  },')
-script = script.replace('    note:"Cycle de 2 × 8 à répéter 4 fois ?" }', '  }')
+    '{eights:4, label:"Grandes droites des deux bras — « très net, un peu continu »"}',
+)
+script = script.replace('    note:"À remplacer par les 1ers déhanchés ?" },', "  },")
+script = script.replace('    note:"Cycle de 2 × 8 à répéter 4 fois ?" }', "  }")
 
 
 # ── le bandeau collant ne doit plus recouvrir la carte visée ────────────────
-script = script.replace("""function scrollToCard(si){
+script = script.replace(
+    """function scrollToCard(si){
   const el = cards()[si];
   const r = el.getBoundingClientRect();
   if (r.top < 150 || r.bottom > window.innerHeight - 20) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-}""", """const transportEl = $('.transport');
+}""",
+    """const transportEl = $('.transport');
 
 /* --th = hauteur réelle du bandeau ; sert de marge de défilement aux cartes */
 function measure(){
@@ -284,18 +310,25 @@ function scrollToCard(si){
   if (top < th || top > window.innerHeight * 0.55) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-}""")
+}""",
+)
 
-script = script.replace("""  $('#play').textContent = 'Pause';
-  loop();""", """  $('#play').textContent = 'Pause';
+script = script.replace(
+    """  $('#play').textContent = 'Pause';
+  loop();""",
+    """  $('#play').textContent = 'Pause';
   document.body.classList.add('playing');
   measure();
-  loop();""")
-script = script.replace("""  clearTimeout(timer);
-  $('#play').textContent = 'Lancer';""", """  clearTimeout(timer);
+  loop();""",
+)
+script = script.replace(
+    """  clearTimeout(timer);
+  $('#play').textContent = 'Lancer';""",
+    """  clearTimeout(timer);
   $('#play').textContent = 'Lancer';
   document.body.classList.remove('playing');
-  measure();""")
+  measure();""",
+)
 
 OLD_STAGE = """  const list = sec.shownSubs || sec.subs;
   const pair = sec.figs.length > 1;
@@ -371,12 +404,17 @@ assert OLD_TAIL in script
 script = script.replace(OLD_TAIL, NEW_TAIL)
 
 script = script.replace(
-    "function figSvg(key){\n  return `<svg class=\"fig m-${key}\" viewBox=\"0 0 160 200\" role=\"img\" aria-hidden=\"true\">`",
-    "function figSvg(key, cls){\n  return `<svg class=\"fig m-${key} ${cls || ''}\" viewBox=\"0 0 160 200\" role=\"img\" aria-hidden=\"true\">`")
-script = script.replace("+ `<line class=\"floor\" x1=\"14\" y1=\"188\" x2=\"146\" y2=\"188\"/></svg>`",
-                        "+ `</svg>`")
-script = script.replace('setTempo(100);', 'setTempo(129);')
-script = script.replace('let beat = 0, playing = false, bpm = 100,', 'let beat = 0, playing = false, bpm = 129,')
+    'function figSvg(key){\n  return `<svg class="fig m-${key}" viewBox="0 0 160 200" role="img" aria-hidden="true">`',
+    'function figSvg(key, cls){\n  return `<svg class="fig m-${key} ${cls || \'\'}" viewBox="0 0 160 200" role="img" aria-hidden="true">`',
+)
+script = script.replace(
+    '+ `<line class="floor" x1="14" y1="188" x2="146" y2="188"/></svg>`', "+ `</svg>`"
+)
+script = script.replace("setTempo(100);", "setTempo(129);")
+script = script.replace(
+    "let beat = 0, playing = false, bpm = 100,",
+    "let beat = 0, playing = false, bpm = 129,",
+)
 
 OBSERVER = """
 
@@ -397,6 +435,8 @@ if (!reduce) {
 """
 script += OBSERVER
 
-os.makedirs('site', exist_ok=True)
-open('site/index.html', 'w').write(head + body + '<script>' + script + '</script>\n</body>\n</html>\n')
-print('site/index.html', os.path.getsize('site/index.html'), 'bytes')
+os.makedirs("site", exist_ok=True)
+open("site/index.html", "w").write(
+    head + body + "<script>" + script + "</script>\n</body>\n</html>\n"
+)
+print("site/index.html", os.path.getsize("site/index.html"), "bytes")

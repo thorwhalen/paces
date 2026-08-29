@@ -216,14 +216,16 @@ existing spine under different names:
 A `stepped` genre registration would be one file:
 
 ```python
-nw.register_genre(nw.Genre(
-    slug="stepped_routine",
-    title="Step-by-step routine",
-    body_schema_uris=("annot://schema/routine-step/v1", ...),
-    transform_names=("video_to_transcript.scribe", "transcript_to_steps.llm", ...),
-    projection_entrypoint="steps_to_web_guide.html",
-    templates=(nw.Template(slug="dance_routine", title="Dance routine"),),
-))
+nw.register_genre(
+    nw.Genre(
+        slug="stepped_routine",
+        title="Step-by-step routine",
+        body_schema_uris=("annot://schema/routine-step/v1", ...),
+        transform_names=("video_to_transcript.scribe", "transcript_to_steps.llm", ...),
+        projection_entrypoint="steps_to_web_guide.html",
+        templates=(nw.Template(slug="dance_routine", title="Dance routine"),),
+    )
+)
 ```
 
 **Read before designing:** `$PP/t/nw/nw/transforms/__init__.py` (lines 55–300),

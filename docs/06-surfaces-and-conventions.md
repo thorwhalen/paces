@@ -132,13 +132,16 @@ def search(query: str, *, corpus: Any, k: int = 8, mode: str = "hybrid",
 # stepped/tools.py
 """Tools with CLI support."""
 
+
 def parse(video: str, *, doc: str | None = None, prompt: str | None = None) -> dict: ...
 def render(ast_path: str, *, renderer: str = "html") -> dict: ...
 
-_dispatch_funcs = [parse, render]      # SSOT — every surface reads this
+
+_dispatch_funcs = [parse, render]  # SSOT — every surface reads this
 
 if __name__ == "__main__":
     import argh
+
     argh.dispatch_commands(_dispatch_funcs)
 ```
 
@@ -278,10 +281,15 @@ So for `stepped`:
 # stepped/mcp.py  (≤40 lines; the core imports nothing MCP)
 from py2mcp import mk_mcp_from_refs
 
-def build_mcp_server(*, name: str = "stepped", instructions: str | None = None, middleware=None):
+
+def build_mcp_server(
+    *, name: str = "stepped", instructions: str | None = None, middleware=None
+):
     return mk_mcp_from_refs(
         ["stepped.tools:parse", "stepped.tools:render"],
-        name=name, instructions=instructions, middleware=middleware,
+        name=name,
+        instructions=instructions,
+        middleware=middleware,
     )
 ```
 
@@ -408,9 +416,11 @@ already be done.
 from qh import mk_app
 from qh.testing import test_app
 
+
 def add(x: int, y: int) -> int:
     """Add two numbers"""
     return x + y
+
 
 app = mk_app([add])
 

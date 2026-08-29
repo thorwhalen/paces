@@ -45,14 +45,14 @@ monotonicity (§5, §8). Order buys you error correction for free.
 Every algorithm below is a function of one of two objects, and *nothing else*:
 
 ```python
-Span   = tuple[float, float]          # seconds, half-open, as in lacing
-Clock  = tuple[float, float]          # (t0, hop) — frame f is at t0 + f*hop seconds
+Span = tuple[float, float]  # seconds, half-open, as in lacing
+Clock = tuple[float, float]  # (t0, hop) — frame f is at t0 + f*hop seconds
 
 # (A) an EMISSION matrix: how well artifact k explains frame t
-S: np.ndarray            # shape (K, T), higher is better, may contain -inf for "forbidden"
+S: np.ndarray  # shape (K, T), higher is better, may contain -inf for "forbidden"
 
 # (B) a BOUNDARY score: how much frame t looks like a cut, independent of artifacts
-b: np.ndarray            # shape (T+1,), higher is better; b[0] = b[T] = 0 by convention
+b: np.ndarray  # shape (T+1,), higher is better; b[0] = b[T] = 0 by convention
 ```
 
 Everything else — beats, sub-bass ratio, ASR word hits, motion novelty, LLM votes — is a
@@ -120,8 +120,10 @@ the whole DP is **O(K · T · L)** where `L = max_len - min_len + 1`.
 ```python
 import numpy as np
 
-def ordered_segmentation(S, boundary_bonus=None, *, min_len=1, max_len=None, allowed=None,
-                         soft=False):
+
+def ordered_segmentation(
+    S, boundary_bonus=None, *, min_len=1, max_len=None, allowed=None, soft=False
+):
     """Cut a length-T clock into exactly K ordered, contiguous, non-overlapping segments,
     segment k assigned to artifact k.
 
@@ -133,10 +135,11 @@ def ordered_segmentation(S, boundary_bonus=None, *, min_len=1, max_len=None, all
     Returns (V, B). Boundaries: backtrack(B, K, T).
     """
     K, T = S.shape
-    P = np.concatenate([np.zeros((K, 1)), np.cumsum(S, axis=1)], axis=1)   # (K, T+1)
+    P = np.concatenate([np.zeros((K, 1)), np.cumsum(S, axis=1)], axis=1)  # (K, T+1)
     bonus = np.zeros(T + 1) if boundary_bonus is None else boundary_bonus
     max_len = T if max_len is None else max_len
-    V = np.full((K + 1, T + 1), -np.inf); V[0, 0] = 0.0
+    V = np.full((K + 1, T + 1), -np.inf)
+    V[0, 0] = 0.0
     B = np.zeros((K + 1, T + 1), dtype=np.int64)
     for k in range(1, K + 1):
         for t in range(1, T + 1):
@@ -145,21 +148,27 @@ def ordered_segmentation(S, boundary_bonus=None, *, min_len=1, max_len=None, all
                 continue
             s = np.arange(lo, hi + 1)
             cand = V[k - 1, s] + (P[k - 1, t] - P[k - 1, s])
-            if k >= 2:                                  # b_0 = 0 pays no bonus
+            if k >= 2:  # b_0 = 0 pays no bonus
                 cand = cand + bonus[s]
                 if allowed is not None:
                     cand = np.where(allowed[s], cand, -np.inf)
             if soft:
                 m = cand.max()
-                V[k, t] = (m + np.log(np.exp(cand - m).sum())) if np.isfinite(m) else -np.inf
+                V[k, t] = (
+                    (m + np.log(np.exp(cand - m).sum())) if np.isfinite(m) else -np.inf
+                )
             else:
-                j = int(np.argmax(cand)); V[k, t] = cand[j]; B[k, t] = s[j]
+                j = int(np.argmax(cand))
+                V[k, t] = cand[j]
+                B[k, t] = s[j]
     return V, B
+
 
 def backtrack(B, K, T):
     b, t = [T], T
     for k in range(K, 0, -1):
-        t = B[k, t]; b.append(t)
+        t = B[k, t]
+        b.append(t)
     return np.array(b[::-1])
 ```
 
@@ -242,11 +251,12 @@ The single most useful DTW variant for this package.
 
 ```python
 import librosa, numpy as np
+
 # X: (d, n) query features. Y: (d, m) stream features. FEATURE-MAJOR.
-D, wp = librosa.sequence.dtw(X=query, Y=stream, subseq=True, metric='cosine')
+D, wp = librosa.sequence.dtw(X=query, Y=stream, subseq=True, metric="cosine")
 # wp is returned LAST-STEP-FIRST. The match span in the stream is:
 start, end = wp[-1, 1], wp[0, 1]
-cost = D[-1, wp[0, 1]]                     # comparable across candidate ends
+cost = D[-1, wp[0, 1]]  # comparable across candidate ends
 ```
 
 **[verified]** — embedded a 2× time-stretched copy of a 40-frame query at stream frames
@@ -257,9 +267,11 @@ end frame, so you can rank *k* candidate endpoints from the last row without bac
 
 ```python
 from dtaidistance.subsequence.dtw import subsequence_alignment
-sa = subsequence_alignment(query_1d, series_1d)     # 1-D; use dtw_ndim for multivariate
-m = sa.best_match(); m.segment      # -> [158, 196]
-[mm.segment for mm in sa.kbest_matches(k=3)]        # -> [[158,196],[119,127],[29,38]]
+
+sa = subsequence_alignment(query_1d, series_1d)  # 1-D; use dtw_ndim for multivariate
+m = sa.best_match()
+m.segment  # -> [158, 196]
+[mm.segment for mm in sa.kbest_matches(k=3)]  # -> [[158,196],[119,127],[29,38]]
 ```
 **[verified]** — planted a 60-sample sine at 150–210 in 400 samples of noise; `best_match`
 returned `[158, 196]`. Note it under-covers the true span at both ends: subsequence DTW's
@@ -331,28 +343,43 @@ sides*, which is exactly the two failure modes.
 ```python
 import numpy as np
 
+
 def nw_align(S, *, gap_query=-0.5, gap_ref=-0.5, local=False):
     """Needleman-Wunsch (local=False) / Smith-Waterman (local=True) over a similarity
     matrix S[i, j] = score of matching artifact i to media chunk j.
     Returns matched (i, j) pairs; unmatched i or j are gaps."""
     n, m = S.shape
-    H = np.zeros((n + 1, m + 1)); ptr = np.zeros((n + 1, m + 1), dtype=np.int8)
-    if not local:                                   # global: edges cost gaps
-        H[1:, 0] = np.arange(1, n + 1) * gap_ref;   ptr[1:, 0] = 2
-        H[0, 1:] = np.arange(1, m + 1) * gap_query; ptr[0, 1:] = 3
+    H = np.zeros((n + 1, m + 1))
+    ptr = np.zeros((n + 1, m + 1), dtype=np.int8)
+    if not local:  # global: edges cost gaps
+        H[1:, 0] = np.arange(1, n + 1) * gap_ref
+        ptr[1:, 0] = 2
+        H[0, 1:] = np.arange(1, m + 1) * gap_query
+        ptr[0, 1:] = 3
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            c = (H[i-1, j-1] + S[i-1, j-1], H[i-1, j] + gap_ref, H[i, j-1] + gap_query)
-            k = int(np.argmax(c)); best = c[k]
-            if local and best < 0: best, k = 0.0, -1
-            H[i, j] = best; ptr[i, j] = k + 1       # 0 stop, 1 diag, 2 skip artifact, 3 skip chunk
+            c = (
+                H[i - 1, j - 1] + S[i - 1, j - 1],
+                H[i - 1, j] + gap_ref,
+                H[i, j - 1] + gap_query,
+            )
+            k = int(np.argmax(c))
+            best = c[k]
+            if local and best < 0:
+                best, k = 0.0, -1
+            H[i, j] = best
+            ptr[i, j] = k + 1  # 0 stop, 1 diag, 2 skip artifact, 3 skip chunk
     i, j = np.unravel_index(np.argmax(H), H.shape) if local else (n, m)
     pairs = []
     while i > 0 and j > 0 and ptr[i, j] != 0:
         p = ptr[i, j]
-        if   p == 1: pairs.append((i-1, j-1)); i, j = i-1, j-1
-        elif p == 2: i -= 1
-        else:        j -= 1
+        if p == 1:
+            pairs.append((i - 1, j - 1))
+            i, j = i - 1, j - 1
+        elif p == 2:
+            i -= 1
+        else:
+            j -= 1
     return pairs[::-1], H
 ```
 
@@ -416,6 +443,7 @@ order prior. Emission = your normalised evidence as a per-frame likelihood.
 ```python
 import numpy as np, librosa
 
+
 def left_to_right(K, *, p_stay=0.99, max_skip=0):
     """Order prior as a transition matrix. max_skip=0 -> every artifact must be visited;
     max_skip=1 -> an artifact may be skipped entirely (relaxes O4)."""
@@ -423,13 +451,19 @@ def left_to_right(K, *, p_stay=0.99, max_skip=0):
     for k in range(K):
         A[k, k] = p_stay
         adv = [k + d for d in range(1, max_skip + 2) if k + d < K]
-        for j in adv: A[k, j] = (1 - p_stay) / len(adv)
-        if not adv: A[k, k] = 1.0
+        for j in adv:
+            A[k, j] = (1 - p_stay) / len(adv)
+        if not adv:
+            A[k, k] = 1.0
         A[k] /= A[k].sum()
     return A
 
-p_init = np.zeros(K); p_init[0] = 1.0
-states = librosa.sequence.viterbi(prob, left_to_right(K, p_stay=1 - K/T), p_init=p_init)
+
+p_init = np.zeros(K)
+p_init[0] = 1.0
+states = librosa.sequence.viterbi(
+    prob, left_to_right(K, p_stay=1 - K / T), p_init=p_init
+)
 ```
 
 `prob` is `(n_states, n_steps)` and **librosa expects it column-normalised** (a distribution
@@ -480,8 +514,9 @@ sequence, which is exactly "assign a monotonic labelling with blanks allowed".
 
 ```python
 import torch, torchaudio.functional as F
-labels, scores = F.forced_align(log_probs, targets, blank=0)   # log_probs (B, T, V)
-spans = F.merge_tokens(labels[0], scores[0])                   # -> TokenSpan(token, start, end, score)
+
+labels, scores = F.forced_align(log_probs, targets, blank=0)  # log_probs (B, T, V)
+spans = F.merge_tokens(labels[0], scores[0])  # -> TokenSpan(token, start, end, score)
 ```
 
 It works and it is fast — **0.4 ms for T=400** — and `merge_tokens` correctly emits two
@@ -516,7 +551,7 @@ know about artifacts. Confirmed by reading the interface **[verified]**:
 ```python
 class BaseCost:
     @abc.abstractmethod
-    def error(self, start, end): ...     # <-- no segment INDEX argument
+    def error(self, start, end): ...  # <-- no segment INDEX argument
 ```
 
 `error(start, end)` cannot express "segment 3 is cheap when artifact 3 occupies it". So:
@@ -534,8 +569,9 @@ frequently what you want, because the number of artifacts is known.
 
 ```python
 import ruptures as rpt
-algo = rpt.KernelCPD(kernel="rbf", min_size=20).fit(signal)   # signal: (n, d) float
-bkps = algo.predict(n_bkps=K - 1)                             # [b1, …, b_{K-1}, n]
+
+algo = rpt.KernelCPD(kernel="rbf", min_size=20).fit(signal)  # signal: (n, d) float
+bkps = algo.predict(n_bkps=K - 1)  # [b1, …, b_{K-1}, n]
 ```
 
 **[verified]** On a 600 × 3 synthetic with true breaks `[90, 230, 300, 470, 600]`, **all six
@@ -589,7 +625,8 @@ when you want a cheap novelty *curve* rather than a decision (its `.score` is a 
 
 ```python
 from scipy.optimize import linear_sum_assignment
-rows, cols = linear_sum_assignment(-S)        # negate: LSA minimises
+
+rows, cols = linear_sum_assignment(-S)  # negate: LSA minimises
 ```
 
 **Use it only when O1 genuinely fails** — an unordered bag of artifacts (chapter thumbnails,
@@ -644,7 +681,7 @@ def estimate_phase(times, period):
     z = np.exp(2j * np.pi * np.asarray(times) / period)
     m = z.mean()
     t0 = (np.angle(m) / (2 * np.pi)) * period % period
-    return t0, abs(m)          # abs(m) in [0,1] = concentration = CONFIDENCE
+    return t0, abs(m)  # abs(m) in [0,1] = concentration = CONFIDENCE
 ```
 **[verified]** With 3 outliers present: `t0 = 1.215` vs true `12.34 mod 3.715 = 1.195`
 (19 ms error), concentration `R = 0.911`. `R` near 1 = the events really are on a grid;
@@ -655,10 +692,10 @@ def estimate_phase(times, period):
 ```python
 def fit_grid_phase(times, period_lo, period_hi, *, n_grid=4000):
     Ps = np.linspace(period_lo, period_hi, n_grid)
-    z = np.array([np.exp(2j*np.pi*np.asarray(times)/P).mean() for P in Ps])
+    z = np.array([np.exp(2j * np.pi * np.asarray(times) / P).mean() for P in Ps])
     k = int(np.argmax(np.abs(z)))
     P = Ps[k]
-    return P, (np.angle(z[k])/(2*np.pi))*P % P, abs(z[k])
+    return P, (np.angle(z[k]) / (2 * np.pi)) * P % P, abs(z[k])
 ```
 **[verified]** Searching 3.4–4.0 s in 4 000 steps: `P = 3.7166` (true 3.715), `t0 = 1.175`,
 `R = 0.912`, in **0.019 s**. This is the automated version of the POC's manual phase anchor.
@@ -671,19 +708,26 @@ right one because the wrong octave halves the concentration.
 
 ```python
 def fit_grid_ransac(times, *, period_lo, period_hi, tol=0.15, iters=2000, seed=0):
-    rng = np.random.default_rng(seed); t = np.sort(np.asarray(times, float))
+    rng = np.random.default_rng(seed)
+    t = np.sort(np.asarray(times, float))
     best = (-1, None)
     for _ in range(iters):
         i, j = rng.choice(len(t), 2, replace=False)
-        if t[j] == t[i]: continue
-        for k in range(1, 60):                       # how many periods apart i and j are
+        if t[j] == t[i]:
+            continue
+        for k in range(1, 60):  # how many periods apart i and j are
             P = abs(t[j] - t[i]) / k
-            if not (period_lo <= P <= period_hi): continue
+            if not (period_lo <= P <= period_hi):
+                continue
             resid = t - (t[i] + np.round((t - t[i]) / P) * P)
             inl = np.abs(resid) < tol
-            if inl.sum() > best[0]: best = (int(inl.sum()), (P, inl))
+            if inl.sum() > best[0]:
+                best = (int(inl.sum()), (P, inl))
     _, (P, inl) = best
-    return fit_grid_ls(t[inl], np.round((t[inl] - t[inl][0]) / P)) + (int(inl.sum()), len(t))
+    return fit_grid_ls(t[inl], np.round((t[inl] - t[inl][0]) / P)) + (
+        int(inl.sum()),
+        len(t),
+    )
 ```
 **[verified]** `P = 3.7160`, `t0 mod P = 1.172`, **41/44 inliers** (it found all three planted
 outliers), in **0.07 s**. `tol` is the only real knob — set it to the beat tracker's own
@@ -733,9 +777,10 @@ def robust_z(x, axis=None):
     iqr = np.subtract(*np.percentile(x, [75, 25], axis=axis, keepdims=True)) + 1e-9
     return (x - med) / iqr
 
+
 S = sum(w[name] * robust_z(curve, axis=1) for name, curve in emissions.items())
-b = sum(w[name] * robust_z(curve)         for name, curve in boundary_curves.items())
-b[beat_frames] += w['beat_snap']
+b = sum(w[name] * robust_z(curve) for name, curve in boundary_curves.items())
+b[beat_frames] += w["beat_snap"]
 ```
 
 ### 10.2 The measured ablation **[verified]**
@@ -773,7 +818,9 @@ def rrf(score_lists, *, k=60):
     """score_lists: sequence of (K, T) arrays. Returns (K, T) fused rank score."""
     out = 0.0
     for S in score_lists:
-        r = (-S).argsort(axis=1).argsort(axis=1)      # rank of each t within each artifact row
+        r = (
+            (-S).argsort(axis=1).argsort(axis=1)
+        )  # rank of each t within each artifact row
         out = out + 1.0 / (k + r)
     return out
 ```
@@ -788,12 +835,12 @@ For fusion to be a table lookup rather than glue code, every producer returns th
 ```python
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Evidence:
-    name: str                      # 'asr_text', 'beat_grid', 'motion_novelty', 'llm_sheet'
-    kind: Literal['emission', 'boundary']
-    clock: Clock                   # (t0, hop) — the solver resamples, the producer does not
-    values: np.ndarray             # (K, T) for emission, (T+1,) for boundary
-    mask: np.ndarray | None = None # where the producer had coverage; NaN-safe fusion
-    scale: Literal['score', 'logprob', 'rank'] = 'score'
+    name: str  # 'asr_text', 'beat_grid', 'motion_novelty', 'llm_sheet'
+    kind: Literal["emission", "boundary"]
+    clock: Clock  # (t0, hop) — the solver resamples, the producer does not
+    values: np.ndarray  # (K, T) for emission, (T+1,) for boundary
+    mask: np.ndarray | None = None  # where the producer had coverage; NaN-safe fusion
+    scale: Literal["score", "logprob", "rank"] = "score"
 ```
 
 `mask` is the field people forget and then regret: "no evidence here" and "evidence says no"
@@ -879,12 +926,13 @@ without adaptation.
 
 ```python
 import numpy as np, mir_eval.segment as seg
-ref_i = np.stack([ref_b[:-1], ref_b[1:]], axis=1)      # (n, 2) intervals in SECONDS
+
+ref_i = np.stack([ref_b[:-1], ref_b[1:]], axis=1)  # (n, 2) intervals in SECONDS
 est_i = np.stack([est_b[:-1], est_b[1:]], axis=1)
-P, R, F = seg.detection(ref_i, est_i, window=0.5, trim=False)   # boundary hit rate
-d_re, d_er = seg.deviation(ref_i, est_i)                        # median boundary deviation
-seg.pairwise(ref_i, ref_lab, est_i, est_lab)                    # frame-pair P/R/F on LABELS
-seg.nce(ref_i, ref_lab, est_i, est_lab)                         # over/under-segmentation
+P, R, F = seg.detection(ref_i, est_i, window=0.5, trim=False)  # boundary hit rate
+d_re, d_er = seg.deviation(ref_i, est_i)  # median boundary deviation
+seg.pairwise(ref_i, ref_lab, est_i, est_lab)  # frame-pair P/R/F on LABELS
+seg.nce(ref_i, ref_lab, est_i, est_lab)  # over/under-segmentation
 ```
 
 **[verified]** on `ref = [0,90,230,300,470,600]`, `est = [0,88,235,299,466,600]`:
@@ -967,37 +1015,43 @@ produces evidence and calls a **Solver**; a **Solver** knows no media.
 
 ```python
 # ---- what a solver consumes ------------------------------------------------
-Clock = tuple[float, float]                       # (t0_seconds, hop_seconds)
+Clock = tuple[float, float]  # (t0_seconds, hop_seconds)
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Prior:
     """Structural knowledge about the artifact SET. Nothing here mentions media."""
-    ordered: bool = True                          # O1
-    non_overlapping: bool = True                  # O2
-    covers: bool = True                           # O3 — spans tile the media
-    exhaustive: bool = True                       # O4 — every artifact has a span
-    min_len_s: float | Sequence[float] = 0.0      # scalar or per-artifact
+
+    ordered: bool = True  # O1
+    non_overlapping: bool = True  # O2
+    covers: bool = True  # O3 — spans tile the media
+    exhaustive: bool = True  # O4 — every artifact has a span
+    min_len_s: float | Sequence[float] = 0.0  # scalar or per-artifact
     max_len_s: float | Sequence[float] | None = None
-    anchors: Mapping[str, Span] = field(default_factory=dict)   # artifact_id -> pinned span
-    grid: tuple[float, float] | None = None       # (offset_s, period_s), from §9
+    anchors: Mapping[str, Span] = field(
+        default_factory=dict
+    )  # artifact_id -> pinned span
+    grid: tuple[float, float] | None = None  # (offset_s, period_s), from §9
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class Evidence:                                   # see §10.4
+class Evidence:  # see §10.4
     name: str
-    kind: Literal['emission', 'boundary']
+    kind: Literal["emission", "boundary"]
     clock: Clock
     values: np.ndarray
     mask: np.ndarray | None = None
-    scale: Literal['score', 'logprob', 'rank'] = 'score'
+    scale: Literal["score", "logprob", "rank"] = "score"
+
 
 # ---- the one solver verb ---------------------------------------------------
 @runtime_checkable
 class Solver(Protocol):
     name: str
-    handles: frozenset[str]        # {'ordered','gaps','skips','unordered','grid'}
-    requires: tuple[str, ...] = () # importable modules; () means numpy only
+    handles: frozenset[str]  # {'ordered','gaps','skips','unordered','grid'}
+    requires: tuple[str, ...] = ()  # importable modules; () means numpy only
     licence: str = "MIT"
-    complexity: str = "O(K*T*L)"   # a STRING, for the agent to read
+    complexity: str = "O(K*T*L)"  # a STRING, for the agent to read
 
     def __call__(
         self,
@@ -1009,13 +1063,14 @@ class Solver(Protocol):
         **kw,
     ) -> "Alignment": ...
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Alignment:
-    boundaries: np.ndarray                 # (n_artifacts + 1,) SECONDS, or NaN for absent
-    assignment: np.ndarray                 # (n_artifacts,) index into boundaries, -1 = absent
-    confidence: np.ndarray                 # (n_artifacts,) 0..1
-    posterior: np.ndarray | None = None    # (n_artifacts - 1, T + 1), from §11.1
-    score: float = float("nan")            # the objective value, comparable within a solver
+    boundaries: np.ndarray  # (n_artifacts + 1,) SECONDS, or NaN for absent
+    assignment: np.ndarray  # (n_artifacts,) index into boundaries, -1 = absent
+    confidence: np.ndarray  # (n_artifacts,) 0..1
+    posterior: np.ndarray | None = None  # (n_artifacts - 1, T + 1), from §11.1
+    score: float = float("nan")  # the objective value, comparable within a solver
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 ```
 

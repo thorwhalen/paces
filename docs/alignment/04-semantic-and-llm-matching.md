@@ -331,11 +331,29 @@ Reference implementation, verified to run this session
 `poc-reference/tools/sheet.py` with the geometry made explicit:
 
 ```python
-subprocess.run(['ffmpeg','-v','error','-ss',str(t0),'-i',src,'-to',str(t1),
-                '-vf', f'fps=1/{step},scale={tile_w}:-2', '-q:v','2', f'{tmp}/t_%04d.jpg'])
+subprocess.run(
+    [
+        "ffmpeg",
+        "-v",
+        "error",
+        "-ss",
+        str(t0),
+        "-i",
+        src,
+        "-to",
+        str(t1),
+        "-vf",
+        f"fps=1/{step},scale={tile_w}:-2",
+        "-q:v",
+        "2",
+        f"{tmp}/t_%04d.jpg",
+    ]
+)
 # ... then PIL: paste each tile, and stamp it
-d.text((x+6, y+2), f"t={t0 + i*step:.1f}s", fill=(255,205,50), font=mono_20)
-d.rectangle([x, y+lab, x+w-1, y+lab+h-1], outline=(60,60,70))   # a border per tile
+d.text((x + 6, y + 2), f"t={t0 + i * step:.1f}s", fill=(255, 205, 50), font=mono_20)
+d.rectangle(
+    [x, y + lab, x + w - 1, y + lab + h - 1], outline=(60, 60, 70)
+)  # a border per tile
 ```
 
 Three details that are not optional:
@@ -608,10 +626,12 @@ I synthesised 36 s of French instruction, ran `mlx_whisper` `whisper-large-v3-tu
 cue detector over the word-timed output. No spaCy, no LLM, no new dependency.
 
 ```python
-ORDINAL = r"(?:et\s+là|et\s+puis|ensuite|après\s+ça|après\s+quoi|puis|maintenant|d'abord|"\
-          r"pour\s+commencer|enfin|pour\s+finir|on\s+enchaîne|on\s+passe\s+à|"\
-          r"la\s+prochaine|voilà|d'accord|alors)"
-IMPER   = r"\b(?:vous\s+)?(\w{3,}(?:ez|issez))\b"     # French 2pl imperative / instructional present
+ORDINAL = (
+    r"(?:et\s+là|et\s+puis|ensuite|après\s+ça|après\s+quoi|puis|maintenant|d'abord|"
+    r"pour\s+commencer|enfin|pour\s+finir|on\s+enchaîne|on\s+passe\s+à|"
+    r"la\s+prochaine|voilà|d'accord|alors)"
+)
+IMPER = r"\b(?:vous\s+)?(\w{3,}(?:ez|issez))\b"  # French 2pl imperative / instructional present
 CLOSERS = r"(?:voilà|d'accord|ok|c'est\s+tout|ça\s+y\s+est)"
 ```
 
@@ -667,8 +687,8 @@ Shape:
 client.messages.create(
     model="claude-opus-5",
     max_tokens=16000,
-    output_config={"format": {...}},                    # not the deprecated output_format
-    cache_control={"type": "ephemeral"},                # transcript is the stable prefix
+    output_config={"format": {...}},  # not the deprecated output_format
+    cache_control={"type": "ephemeral"},  # transcript is the stable prefix
     system=[{"type": "text", "text": ARTIFACT_LIST_AND_SCHEMA}],
     messages=[{"role": "user", "content": TIMESTAMPED_TRANSCRIPT}],
 )
@@ -790,12 +810,15 @@ So the minimal addition — one narrower Protocol, subsumed by the existing one:
 ```python
 Span = tuple[float, float]
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Grid:
     """The shared media clock. One per alignment run; every Scorer resamples onto it."""
+
     t0: float
     hop_s: float
     n: int
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Evidence:
@@ -804,24 +827,28 @@ class Evidence:
     `curve` answers "where"; `relevance` answers "at all". Never collapse them here --
     the fusion layer decides the weighting, and it needs both to do so.
     """
+
     artifact_id: str
-    curve: "np.ndarray"                 # (grid.n,) float32, NaN where the method abstains
-    mask: "np.ndarray"                  # (grid.n,) bool -- coverage. NaN is never 0.
-    relevance: float | None = None      # decoy-calibrated; None = not calibrated
-    regime: str = ""                    # what the numbers mean: 'cosine/siglip2-base' ...
+    curve: "np.ndarray"  # (grid.n,) float32, NaN where the method abstains
+    mask: "np.ndarray"  # (grid.n,) bool -- coverage. NaN is never 0.
+    relevance: float | None = None  # decoy-calibrated; None = not calibrated
+    regime: str = ""  # what the numbers mean: 'cosine/siglip2-base' ...
     detail: Mapping[str, Any] = field(default_factory=dict)
+
 
 @runtime_checkable
 class Scorer(Protocol):
     """A Method whose `produces` is 'evidence'. Every method in doc 04 is one of these."""
+
     name: str
-    consumes: tuple[str, ...]           # 'video' | 'audio' | 'text' | 'transcript'
+    consumes: tuple[str, ...]  # 'video' | 'audio' | 'text' | 'transcript'
     produces: str = "evidence"
     requires: tuple[str, ...] = ()
     licence: str = "apache-2.0"
-    cost: str = "cheap"                 # 'cheap' | 'gpu' | 'network' | 'billable'
-    resolution_s: float = 1.0           # the finest boundary this method can justify
-    granularity: str = "scene"          # 'scene' | 'event' | 'pose'  -- see below
+    cost: str = "cheap"  # 'cheap' | 'gpu' | 'network' | 'billable'
+    resolution_s: float = 1.0  # the finest boundary this method can justify
+    granularity: str = "scene"  # 'scene' | 'event' | 'pose'  -- see below
+
     def score(self, artifacts, media, *, grid: Grid, **kw) -> list[Evidence]: ...
 ```
 
@@ -870,7 +897,14 @@ it and it is 40 lines:
 
 ```python
 def contact_sheet(
-    media, spans, *, step_s, cols=6, tile_w=400, crop=None, max_tiles=36,
+    media,
+    spans,
+    *,
+    step_s,
+    cols=6,
+    tile_w=400,
+    crop=None,
+    max_tiles=36,
 ) -> tuple[Path, list[float]]:
     """Tile frames into a timestamped sheet; return the path and the tile times.
 

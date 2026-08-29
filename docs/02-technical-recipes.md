@@ -62,14 +62,19 @@ the discriminator; RMS alone will not do it.
 
 ```python
 import numpy as np, wave
-w = wave.open('audio16k.wav'); sr = w.getframerate()
-data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32)/32768.
-for i in range(len(data)//sr):
-    x = data[i*sr:(i+1)*sr]
-    X = np.abs(np.fft.rfft(x*np.hanning(len(x)))) + 1e-10
-    f = np.fft.rfftfreq(len(x), 1/sr)
-    rms  = float(np.sqrt((x**2).mean()))
-    bass = float(X[(f >= 30) & (f <= 140)].sum() / X.sum())   # ← the useful one
+
+w = wave.open("audio16k.wav")
+sr = w.getframerate()
+data = (
+    np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32)
+    / 32768.0
+)
+for i in range(len(data) // sr):
+    x = data[i * sr : (i + 1) * sr]
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x)))) + 1e-10
+    f = np.fft.rfftfreq(len(x), 1 / sr)
+    rms = float(np.sqrt((x**2).mean()))
+    bass = float(X[(f >= 30) & (f <= 140)].sum() / X.sum())  # ← the useful one
 ```
 
 Observed on the POC:
@@ -87,8 +92,9 @@ audio first with `ffmpeg -i src.mp4 -vn -ac 1 -ar 16000 audio16k.wav`.
 
 ```python
 import librosa
-y, sr = librosa.load('audio16k.wav', sr=22050, offset=MUSIC_START, duration=MUSIC_DUR)
-tempo, beats = librosa.beat.beat_track(y=y, sr=sr, units='time', trim=False)
+
+y, sr = librosa.load("audio16k.wav", sr=22050, offset=MUSIC_START, duration=MUSIC_DUR)
+tempo, beats = librosa.beat.beat_track(y=y, sr=sr, units="time", trim=False)
 ```
 
 Gave 129.2 bpm; one 8-count = `8 * 60/129.2` = 3.715 s. **Sanity-check the tempo against the
@@ -119,9 +125,14 @@ version; untested.
 
 ```python
 import mlx_whisper
-r = mlx_whisper.transcribe('audio16k.wav',
-        path_or_hf_repo='mlx-community/whisper-large-v3-turbo',
-        language='fr', word_timestamps=False, verbose=False)
+
+r = mlx_whisper.transcribe(
+    "audio16k.wav",
+    path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
+    language="fr",
+    word_timestamps=False,
+    verbose=False,
+)
 ```
 
 45 s for 651 s of audio on an M-series Mac; segments carry `start`/`end`. Set `language`
@@ -172,7 +183,8 @@ What works, `poc-reference/tools/mkclip.py`:
 
 ```python
 from ultralytics import YOLO
-m = YOLO('yolo11s.pt')                       # ~19 MB, auto-fetched
+
+m = YOLO("yolo11s.pt")  # ~19 MB, auto-fetched
 r = m.predict(frames, classes=[0], conf=0.3, imgsz=768, verbose=False)
 ```
 
@@ -197,18 +209,18 @@ Three stages per frame:
 
 ```python
 # 1. painterly — the per-frame bottleneck after AnimeGAN, so run it at half res
-small = cv2.resize(frame, (w//2, h//2), interpolation=cv2.INTER_AREA)
-styl  = cv2.resize(cv2.stylization(small, sigma_s=60, sigma_r=0.45), (w, h))
+small = cv2.resize(frame, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+styl = cv2.resize(cv2.stylization(small, sigma_s=60, sigma_r=0.45), (w, h))
 
 # 2. background → two flat colours, from the person mask
-r = seg.predict(fr, classes=[0], device='mps')[0]      # yolo11n-seg.pt
-mask = morphologyEx(union_of_instance_masks, MORPH_CLOSE, ones(7,7))
-pmf  = GaussianBlur(mask.astype(float32), (0,0), 2)[..., None]   # feather
+r = seg.predict(fr, classes=[0], device="mps")[0]  # yolo11n-seg.pt
+mask = morphologyEx(union_of_instance_masks, MORPH_CLOSE, ones(7, 7))
+pmf = GaussianBlur(mask.astype(float32), (0, 0), 2)[..., None]  # feather
 comp = styl * pmf + flat * (1 - pmf)
 
 # 3. face → AnimeGANv2 in a feathered ellipse, PLUS a blur on top
-det = FaceAnalysis(name='buffalo_l', allowed_modules=['detection'])
-det.prepare(ctx_id=0, det_size=(640,640), det_thresh=0.35)   # low on purpose
+det = FaceAnalysis(name="buffalo_l", allowed_modules=["detection"])
+det.prepare(ctx_id=0, det_size=(640, 640), det_thresh=0.35)  # low on purpose
 # crop padded 60%, resized 512², x/127.5-1, NCHW RGB → face_paint_512_v2_0.onnx
 ```
 

@@ -35,9 +35,12 @@ def load_models():
     from ultralytics import YOLO
     import onnxruntime as ort
     from insightface.app import FaceAnalysis
+
     seg = YOLO(str(YOLOSEG))
     anime = ort.InferenceSession(str(ANIMEGAN), providers=ORT_PROVIDERS)
-    det = FaceAnalysis(name="buffalo_l", allowed_modules=["detection"], providers=ORT_PROVIDERS)
+    det = FaceAnalysis(
+        name="buffalo_l", allowed_modules=["detection"], providers=ORT_PROVIDERS
+    )
     det.prepare(ctx_id=0, det_size=(640, 640), det_thresh=0.35)
     return seg, anime, det
 
@@ -46,8 +49,11 @@ def load_models():
 def _b1(frame):
     h, w = frame.shape[:2]
     small = cv2.resize(frame, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
-    return cv2.resize(cv2.stylization(small, sigma_s=60, sigma_r=0.45), (w, h),
-                      interpolation=cv2.INTER_LINEAR)
+    return cv2.resize(
+        cv2.stylization(small, sigma_s=60, sigma_r=0.45),
+        (w, h),
+        interpolation=cv2.INTER_LINEAR,
+    )
 
 
 def _person_instances(fr, seg):
@@ -56,9 +62,15 @@ def _person_instances(fr, seg):
     if r.masks is None:
         z = np.zeros((h, w), np.uint8)
         return z, []
-    inst = [cv2.resize((m > 0.5).astype(np.uint8), (w, h), interpolation=cv2.INTER_NEAREST)
-            for m in r.masks.data.cpu().numpy()]
-    union = np.clip(np.sum(inst, axis=0), 0, 1).astype(np.uint8) if inst else np.zeros((h, w), np.uint8)
+    inst = [
+        cv2.resize((m > 0.5).astype(np.uint8), (w, h), interpolation=cv2.INTER_NEAREST)
+        for m in r.masks.data.cpu().numpy()
+    ]
+    union = (
+        np.clip(np.sum(inst, axis=0), 0, 1).astype(np.uint8)
+        if inst
+        else np.zeros((h, w), np.uint8)
+    )
     return union, inst
 
 
@@ -78,17 +90,17 @@ def _head_band(mask):
     y0, y1 = ys[0], ys[-1]
     ph = max(1, y1 - y0)
     band = mask.copy()
-    band[y0 + int(ph * 0.28):] = 0
+    band[y0 + int(ph * 0.28) :] = 0
     if not NARROW_HEAD_BAND:
         return band
-    sh = mask[y0 + int(ph * 0.28):y0 + int(ph * 0.48)]
+    sh = mask[y0 + int(ph * 0.28) : y0 + int(ph * 0.48)]
     cols = np.where(sh.any(axis=0))[0]
     if len(cols) == 0:
         return band
     cx = int(np.median(np.where(sh)[1]))
     halfw = max(int(mask.shape[1] * 0.09), int((cols[-1] - cols[0]) * 0.70))
     win = np.zeros_like(band)
-    win[:, max(0, cx - halfw):cx + halfw] = 1
+    win[:, max(0, cx - halfw) : cx + halfw] = 1
     return band * win
 
 
@@ -105,8 +117,8 @@ def _flat_bg(frames, seg):
     rowcol = np.median(bg, axis=1)
     lo, hi = int(h * 0.30), int(h * 0.78)
     hy = lo + int(np.argmax(np.linalg.norm(np.diff(rowcol, axis=0), axis=1)[lo:hi]))
-    wall = np.median(rowcol[int(h * 0.05):int(h * 0.25)], axis=0)
-    floor = np.median(rowcol[int(h * 0.82):int(h * 0.97)], axis=0)
+    wall = np.median(rowcol[int(h * 0.05) : int(h * 0.25)], axis=0)
+    floor = np.median(rowcol[int(h * 0.82) : int(h * 0.97)], axis=0)
     flat = np.empty((h, w, 3), np.float32)
     flat[:hy] = wall
     flat[hy:] = floor
@@ -129,11 +141,16 @@ def _anime_face(anime):
     iname = anime.get_inputs()[0].name
 
     def run(bgr):
-        rgb = cv2.cvtColor(cv2.resize(bgr, (512, 512)), cv2.COLOR_BGR2RGB).astype(np.float32)
+        rgb = cv2.cvtColor(cv2.resize(bgr, (512, 512)), cv2.COLOR_BGR2RGB).astype(
+            np.float32
+        )
         x = (rgb / 127.5 - 1.0).transpose(2, 0, 1)[None]
         y = anime.run(None, {iname: x})[0][0]
-        return cv2.cvtColor(((y.transpose(1, 2, 0) + 1.0) * 127.5).clip(0, 255).astype(np.uint8),
-                            cv2.COLOR_RGB2BGR)
+        return cv2.cvtColor(
+            ((y.transpose(1, 2, 0) + 1.0) * 127.5).clip(0, 255).astype(np.uint8),
+            cv2.COLOR_RGB2BGR,
+        )
+
     return run
 
 
@@ -141,16 +158,28 @@ def _ellipse(shape, box, pad=0.12, feather=0.14):
     h, w = shape
     x0, y0, x1, y1 = box
     m = np.zeros((h, w), np.float32)
-    cv2.ellipse(m, ((x0 + x1) // 2, (y0 + y1) // 2),
-                (int((x1 - x0) / 2 * (1 + pad)), int((y1 - y0) / 2 * (1 + pad))), 0, 0, 360, 1.0, -1)
+    cv2.ellipse(
+        m,
+        ((x0 + x1) // 2, (y0 + y1) // 2),
+        (int((x1 - x0) / 2 * (1 + pad)), int((y1 - y0) / 2 * (1 + pad))),
+        0,
+        0,
+        360,
+        1.0,
+        -1,
+    )
     return cv2.GaussianBlur(m, (0, 0), max(1.0, feather * (x1 - x0)))
 
 
 def _clamp(box, w, h, pad):
     x0, y0, x1, y1 = box
     bw, bh = x1 - x0, y1 - y0
-    return (max(0, int(x0 - bw * pad)), max(0, int(y0 - bh * pad)),
-            min(w, int(x1 + bw * pad)), min(h, int(y1 + bh * pad)))
+    return (
+        max(0, int(x0 - bw * pad)),
+        max(0, int(y0 - bh * pad)),
+        min(w, int(x1 + bw * pad)),
+        min(h, int(y1 + bh * pad)),
+    )
 
 
 def _blur_bands(comp, bands, h, w):
@@ -169,8 +198,20 @@ def _cut(src, start, dur, vf, out, crf="18"):
     cmd += ["-i", str(src), "-an"]
     if vf:
         cmd += ["-vf", vf]
-    cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", crf, "-preset", "veryfast", str(out)]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    cmd += [
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        crf,
+        "-preset",
+        "veryfast",
+        str(out),
+    ]
+    subprocess.run(
+        cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
+    )
 
 
 def stylize(models, tmp_src, out_path, flat_bg=True, audio_from=None, crf="26"):
@@ -193,15 +234,54 @@ def stylize(models, tmp_src, out_path, flat_bg=True, audio_from=None, crf="26"):
         flat = _flat_bg(samples, seg)
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
-    enc = [FF, "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{w}x{h}", "-r", f"{fps}", "-i", "-"]
+    enc = [
+        FF,
+        "-y",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "bgr24",
+        "-s",
+        f"{w}x{h}",
+        "-r",
+        f"{fps}",
+        "-i",
+        "-",
+    ]
     if audio_from:
-        enc += ["-i", str(audio_from), "-map", "0:v", "-map", "1:a?", "-c:a", "aac", "-b:a", "96k", "-shortest"]
+        enc += [
+            "-i",
+            str(audio_from),
+            "-map",
+            "0:v",
+            "-map",
+            "1:a?",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "96k",
+            "-shortest",
+        ]
     else:
         enc += ["-an"]
-    enc += ["-c:v", "libx264", "-profile:v", "main", "-pix_fmt", "yuv420p", "-crf", crf,
-            "-preset", "veryfast", "-movflags", "+faststart", str(out_path)]
-    proc = subprocess.Popen(enc, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
+    enc += [
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "main",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        crf,
+        "-preset",
+        "veryfast",
+        "-movflags",
+        "+faststart",
+        str(out_path),
+    ]
+    proc = subprocess.Popen(
+        enc, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
     ker = np.ones((7, 7), np.uint8)
     slot_cache, pm, insts, faces, hold, fi = {}, None, [], [], 0, 0
@@ -214,7 +294,11 @@ def stylize(models, tmp_src, out_path, flat_bg=True, audio_from=None, crf="26"):
             pm = cv2.morphologyEx(union, cv2.MORPH_CLOSE, ker)
         pmf = cv2.GaussianBlur(pm.astype(np.float32), (0, 0), 2)[..., None]
         styl = _b1(f)
-        comp = (styl * pmf + flat * (1 - pmf)).astype(np.uint8) if flat is not None else styl
+        comp = (
+            (styl * pmf + flat * (1 - pmf)).astype(np.uint8)
+            if flat is not None
+            else styl
+        )
 
         d = _faces(det, f, pm)
         if d:
@@ -237,11 +321,15 @@ def stylize(models, tmp_src, out_path, flat_bg=True, audio_from=None, crf="26"):
             a = cv2.resize(tile, (cx1 - cx0, cy1 - cy0))
             ell = _ellipse((h, w), box)
             m = ell[cy0:cy1, cx0:cx1, None]
-            comp[cy0:cy1, cx0:cx1] = (a * m + comp[cy0:cy1, cx0:cx1] * (1 - m)).astype(np.uint8)
+            comp[cy0:cy1, cx0:cx1] = (a * m + comp[cy0:cy1, cx0:cx1] * (1 - m)).astype(
+                np.uint8
+            )
             anime_cov = np.maximum(anime_cov, ell)
         safety = np.zeros((h, w), np.float32)
         for im in insts:
-            safety = np.maximum(safety, _head_band(im).astype(np.float32) * (anime_cov < 0.4))
+            safety = np.maximum(
+                safety, _head_band(im).astype(np.float32) * (anime_cov < 0.4)
+            )
         comp = _blur_bands(comp, safety, h, w)
         if BLUR_ANIME_FACES:
             comp = _blur_bands(comp, anime_cov, h, w)
@@ -255,23 +343,29 @@ def stylize(models, tmp_src, out_path, flat_bg=True, audio_from=None, crf="26"):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--video')
-    ap.add_argument('--start', type=float)
-    ap.add_argument('--dur', type=float)
-    ap.add_argument('--vf', default='')
-    ap.add_argument('--out', required=True)
-    ap.add_argument('--bg', default='flat', choices=['flat', 'keep'])
-    ap.add_argument('--audio', action='store_true')
-    ap.add_argument('--crf', default='26')
+    ap.add_argument("--video")
+    ap.add_argument("--start", type=float)
+    ap.add_argument("--dur", type=float)
+    ap.add_argument("--vf", default="")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--bg", default="flat", choices=["flat", "keep"])
+    ap.add_argument("--audio", action="store_true")
+    ap.add_argument("--crf", default="26")
     a = ap.parse_args()
-    tmp = a.out + '.src.mp4'
+    tmp = a.out + ".src.mp4"
     _cut(a.video, a.start, a.dur, a.vf, tmp)
     models = load_models()
-    n = stylize(models, tmp, a.out, flat_bg=(a.bg == 'flat'),
-                audio_from=tmp if a.audio else None, crf=a.crf)
+    n = stylize(
+        models,
+        tmp,
+        a.out,
+        flat_bg=(a.bg == "flat"),
+        audio_from=tmp if a.audio else None,
+        crf=a.crf,
+    )
     os.remove(tmp)
-    print(f'{a.out}  {n} frames  {os.path.getsize(a.out)/1024:.0f} KB')
+    print(f"{a.out}  {n} frames  {os.path.getsize(a.out) / 1024:.0f} KB")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -66,16 +66,20 @@ Clip C is worth keeping as a test fixture — it is the only way to tell "the me
 "the video happened to cooperate". The generator, in full:
 
 ```python
-W, H, FPS, DUR, PERIOD, BPM, CUTS = 1280, 720, 30, 60.0, 0.8, 150.0, [15., 30., 45.]
+W, H, FPS, DUR, PERIOD, BPM, CUTS = 1280, 720, 30, 60.0, 0.8, 150.0, [15.0, 30.0, 45.0]
 vw = cv2.VideoWriter("syn_raw.mp4", cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
 noise = np.random.default_rng(0).integers(0, 12, (H, W, 3), dtype=np.uint8)
-bgs = [(30,30,40), (60,20,20), (20,60,20), (20,20,60)]
+bgs = [(30, 30, 40), (60, 20, 20), (20, 60, 20), (20, 20, 60)]
 for i in range(int(DUR * FPS)):
     t = i / FPS
     img = np.full((H, W, 3), bgs[sum(t >= c for c in CUTS)], np.uint8) + noise
     ph = (t % PERIOD) / PERIOD
-    y = int(200 + 380 * abs(np.sin(np.pi * ph)) ** 0.6)     # |sin| -> a sharp impact at the bottom
-    x = int(W / 2 + 220 * np.sin(2 * np.pi * t / 7.0))      # slow lateral drift, aperiodic vs PERIOD
+    y = int(
+        200 + 380 * abs(np.sin(np.pi * ph)) ** 0.6
+    )  # |sin| -> a sharp impact at the bottom
+    x = int(
+        W / 2 + 220 * np.sin(2 * np.pi * t / 7.0)
+    )  # slow lateral drift, aperiodic vs PERIOD
     cv2.circle(img, (x, y), 60, (230, 230, 240), -1)
     cv2.rectangle(img, (x - 14, y - 160), (x + 14, y - 60), (200, 180, 120), -1)
     vw.write(img)
@@ -136,8 +140,11 @@ model weights, fully offline). **[verified]**
 
 ```python
 from scenedetect import detect, AdaptiveDetector, ContentDetector
+
 scenes = detect("clip.mp4", AdaptiveDetector(), show_progress=False)
-cuts = [s[0].seconds for s in scenes[1:]]          # .seconds; get_seconds() is deprecated in 0.7
+cuts = [
+    s[0].seconds for s in scenes[1:]
+]  # .seconds; get_seconds() is deprecated in 0.7
 ```
 
 | Detector | Clip C (truth 15/30/45) | Clip B (truth 22.25/29.25/36.25/42.25/49.25) | s / min ⊕ |
@@ -200,7 +207,7 @@ build) but you are shelling out, not linking.
 
 ```python
 g = gray_frames(path, rate_hz=30, width=320)[0].astype(np.int16)
-energy = np.abs(np.diff(g, axis=0)).mean(axis=(1, 2))       # (F-1,)
+energy = np.abs(np.diff(g, axis=0)).mean(axis=(1, 2))  # (F-1,)
 ```
 
 **2.1 s decode + 0.13 s compute per minute.** **[verified]** It gives you a usable activity curve,
@@ -247,10 +254,12 @@ torchvision (already installed, `Raft_Small_Weights.C_T_V2`). **[verified]**
 ```python
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 import torchvision.transforms.functional as TF
+
 m = raft_small(weights=Raft_Small_Weights.DEFAULT).eval().to("mps")
-a = TF.normalize(batch_t, [.5]*3, [.5]*3); b = TF.normalize(batch_t1, [.5]*3, [.5]*3)
-flow = m(a, b)[-1]                                   # (B,2,H,W); [-1] = final refinement iter
-mag  = flow.pow(2).sum(1).sqrt().mean(dim=(1, 2))
+a = TF.normalize(batch_t, [0.5] * 3, [0.5] * 3)
+b = TF.normalize(batch_t1, [0.5] * 3, [0.5] * 3)
+flow = m(a, b)[-1]  # (B,2,H,W); [-1] = final refinement iter
+mag = flow.pow(2).sum(1).sqrt().mean(dim=(1, 2))
 ```
 
 | Config | Device | s / min ⊖ |
@@ -299,24 +308,33 @@ from mediapipe.tasks.python import vision
 
 opts = vision.PoseLandmarkerOptions(
     base_options=mpp.BaseOptions(model_asset_path="pose_landmarker_full.task"),
-    running_mode=vision.RunningMode.VIDEO,     # VIDEO gives temporal smoothing + tracking
+    running_mode=vision.RunningMode.VIDEO,  # VIDEO gives temporal smoothing + tracking
     num_poses=1,
 )
 lm = vision.PoseLandmarker.create_from_options(opts)
 
-cap = cv2.VideoCapture(path); fps = cap.get(cv2.CAP_PROP_FPS)
+cap = cv2.VideoCapture(path)
+fps = cap.get(cv2.CAP_PROP_FPS)
 out, n = [], 0
 while True:
     ok, frame = cap.read()
-    if not ok: break
-    img = mp.Image(image_format=mp.ImageFormat.SRGB,
-                   data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    r = lm.detect_for_video(img, int(n / fps * 1000))          # timestamp in ms, must increase
-    out.append([[p.x, p.y, p.z, p.visibility] for p in r.pose_landmarks[0]]
-               if r.pose_landmarks else [[np.nan] * 4] * 33)
+    if not ok:
+        break
+    img = mp.Image(
+        image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    )
+    r = lm.detect_for_video(img, int(n / fps * 1000))  # timestamp in ms, must increase
+    out.append(
+        [[p.x, p.y, p.z, p.visibility] for p in r.pose_landmarks[0]]
+        if r.pose_landmarks
+        else [[np.nan] * 4] * 33
+    )
     n += 1
-kp = np.asarray(out, np.float32)     # (F, 33, 4); x,y are NORMALISED 0..1, z is relative depth
-lm.close(); cap.release()
+kp = np.asarray(
+    out, np.float32
+)  # (F, 33, 4); x,y are NORMALISED 0..1, z is relative depth
+lm.close()
+cap.release()
 ```
 
 Models are **not** bundled — download once (Apache-2.0, ~6/9/31 MB):
@@ -332,13 +350,19 @@ curl -L -o gesture_recognizer.task  https://storage.googleapis.com/mediapipe-mod
 The other two backends, both already wrapped by `kodokan.pose` with a COCO-17 output contract:
 
 ```python
-from rtmlib import Body                      # RTMDet + RTMPose, ONNX, auto-downloads to ~/.cache/rtmlib
-body = Body(mode="lightweight", backend="onnxruntime", device="mps")   # "mps" -> CoreMLExecutionProvider
-kpts, scores = body(frame_bgr)               # (n,17,2), (n,17)
+from rtmlib import Body  # RTMDet + RTMPose, ONNX, auto-downloads to ~/.cache/rtmlib
 
-from ultralytics import YOLO                 # AGPL
-r = YOLO("yolo11n-pose.pt")(frames_list, device="mps", verbose=False)  # pass a LIST -> batched
-kp = r[0].keypoints.data.cpu().numpy()       # (n,17,3)
+body = Body(
+    mode="lightweight", backend="onnxruntime", device="mps"
+)  # "mps" -> CoreMLExecutionProvider
+kpts, scores = body(frame_bgr)  # (n,17,2), (n,17)
+
+from ultralytics import YOLO  # AGPL
+
+r = YOLO("yolo11n-pose.pt")(
+    frames_list, device="mps", verbose=False
+)  # pass a LIST -> batched
+kp = r[0].keypoints.data.cpu().numpy()  # (n,17,3)
 ```
 
 ### 5.3 Cost, on clip A, one person **[verified]**
@@ -408,10 +432,13 @@ This is where the brief is right that the ground is thin. Here is what survives 
 ### 6.1 Motion energy from pose
 
 ```python
-xy, conf = kp[..., :2], kp[..., 2]                     # (F,P,K,2), (F,P,K)
-disp = np.linalg.norm(np.diff(xy, axis=0), axis=-1)    # (F-1,P,K)
-w    = np.minimum(conf[1:], conf[:-1]); w[w < 0.2] = 0
-energy = np.concatenate([[0], np.nansum(disp * w, (1, 2)) / (np.nansum(w, (1, 2)) + 1e-9)])
+xy, conf = kp[..., :2], kp[..., 2]  # (F,P,K,2), (F,P,K)
+disp = np.linalg.norm(np.diff(xy, axis=0), axis=-1)  # (F-1,P,K)
+w = np.minimum(conf[1:], conf[:-1])
+w[w < 0.2] = 0
+energy = np.concatenate(
+    [[0], np.nansum(disp * w, (1, 2)) / (np.nansum(w, (1, 2)) + 1e-9)]
+)
 ```
 
 That is `kodokan.segment.pose_motion_energy` verbatim, and it is correct: confidence-weighted,
@@ -452,10 +479,13 @@ Autocorrelate any motion curve. Validated against clip C's exact 0.800 s ground 
 
 ```python
 def acf_periods(x, rate_hz, *, lo_s=0.3, hi_s=3.0, sigma=1.0, k=3):
-    x = gaussian_filter1d(np.asarray(x, float), sigma); x -= x.mean()
-    a = np.correlate(x, x, "full")[x.size - 1:]; a /= a[0] + 1e-12
+    x = gaussian_filter1d(np.asarray(x, float), sigma)
+    x -= x.mean()
+    a = np.correlate(x, x, "full")[x.size - 1 :]
+    a /= a[0] + 1e-12
     lo, hi = int(lo_s * rate_hz), min(int(hi_s * rate_hz), len(a) - 1)
-    pk, _ = find_peaks(a[lo:hi]); pk += lo
+    pk, _ = find_peaks(a[lo:hi])
+    pk += lo
     top = pk[np.argsort(a[pk])[::-1]][:k]
     return [(float(l / rate_hz), float(a[l])) for l in top]
 ```
@@ -491,16 +521,23 @@ periodic landmark on a contact sheet. Here is that, automated, validated on clip
 
 ```python
 # 1. a visual "onset" curve: half-wave-rectified deceleration -> impact spikes
-env  = gaussian_filter1d(motion_curve, 1.0)
+env = gaussian_filter1d(motion_curve, 1.0)
 onset = np.maximum(np.diff(env, prepend=env[0]), 0)
 
 # 2. impacts
 pk, _ = find_peaks(onset, height=np.quantile(onset, 0.90), distance=int(0.2 * rate_hz))
 hits = pk / rate_hz
 
+
 # 3. sweep the offset against the audio beat grid, maximise a soft alignment score
-def bas(a, b, sigma=0.06):        # AIST++ Beat Alignment Score, localized
-    return float(np.mean([np.exp(-0.5 * ((t - b[np.argmin(np.abs(b - t))]) / sigma) ** 2) for t in a]))
+def bas(a, b, sigma=0.06):  # AIST++ Beat Alignment Score, localized
+    return float(
+        np.mean(
+            [np.exp(-0.5 * ((t - b[np.argmin(np.abs(b - t))]) / sigma) ** 2) for t in a]
+        )
+    )
+
+
 offsets = np.linspace(-0.4, 0.4, 81)
 best = offsets[int(np.argmax([bas(hits + o, beat_times) for o in offsets]))]
 ```
@@ -539,10 +576,14 @@ the one alignment needs.
 
 ```python
 from dtaidistance.subsequence.dtw import subsequence_alignment
-sa   = subsequence_alignment(query_feats, stream_feats)   # both (T, D) float64, C-contiguous
+
+sa = subsequence_alignment(
+    query_feats, stream_feats
+)  # both (T, D) float64, C-contiguous
 best = sa.best_match()
 t0, t1 = best.segment[0] / rate_hz, best.segment[1] / rate_hz
-for m in sa.kbest_matches(k=6): ...
+for m in sa.kbest_matches(k=6):
+    ...
 ```
 
 **[verified]** on 8-D joint-angle features from clip A: a 2 s query against a 60 s stream costs
@@ -613,9 +654,14 @@ model then fails with `AttributeError: 'NoneType' object has no attribute 'shape
 is to call the video processor positionally and rename the key:
 
 ```python
-px = proc.video_processor([list_of_8_frames], return_tensors="pt")   # positional, not videos=
-out = model(input_ids=tk["input_ids"], attention_mask=tk["attention_mask"],
-            pixel_values=px["pixel_values"].to("mps"))
+px = proc.video_processor(
+    [list_of_8_frames], return_tensors="pt"
+)  # positional, not videos=
+out = model(
+    input_ids=tk["input_ids"],
+    attention_mask=tk["attention_mask"],
+    pixel_values=px["pixel_values"].to("mps"),
+)
 p = out.logits_per_video.softmax(-1)
 ```
 
@@ -655,18 +701,29 @@ cost on short clips — cache the model, not the embeddings.
 ```python
 from transformers import AutoProcessor, AutoModel
 import torch, numpy as np
+
 mid = "google/siglip2-base-patch16-224"
-proc, m = AutoProcessor.from_pretrained(mid), AutoModel.from_pretrained(mid).eval().to("mps")
+proc, m = (
+    AutoProcessor.from_pretrained(mid),
+    AutoModel.from_pretrained(mid).eval().to("mps"),
+)
 
-with torch.inference_mode():                                   # images
+with torch.inference_mode():  # images
     px = proc(images=rgb_frames_batch, return_tensors="pt").to("mps")
-    E = torch.nn.functional.normalize(m.get_image_features(**px), dim=-1).float().cpu().numpy()
+    E = (
+        torch.nn.functional.normalize(m.get_image_features(**px), dim=-1)
+        .float()
+        .cpu()
+        .numpy()
+    )
 
-with torch.inference_mode():                                   # text
-    tk = proc(text=prompts, padding="max_length", return_tensors="pt")   # SigLIP needs max_length
+with torch.inference_mode():  # text
+    tk = proc(
+        text=prompts, padding="max_length", return_tensors="pt"
+    )  # SigLIP needs max_length
     T = torch.nn.functional.normalize(m.get_text_features(**tk), dim=-1).numpy()
 
-S = E @ T.T          # (n_frames, n_artifacts) cosine score matrix — THE evidence matrix
+S = E @ T.T  # (n_frames, n_artifacts) cosine score matrix — THE evidence matrix
 ```
 
 `padding="max_length"` is mandatory for SigLIP/SigLIP2 (unlike CLIP) — the text tower is trained
@@ -677,13 +734,15 @@ with a fixed 64-token context. **[from docs, and required to make the above run]
 No text, no artifacts, no labels — just "where does the picture stop meaning the same thing".
 
 ```python
-D = E @ E.T                                        # (F,F) cosine self-similarity
-K = int(2.0 * rate_hz)                             # half-kernel, 2 s
+D = E @ E.T  # (F,F) cosine self-similarity
+K = int(2.0 * rate_hz)  # half-kernel, 2 s
 nov = np.zeros(len(E))
 for i in range(K, len(E) - K):
     a, b = slice(i - K, i), slice(i, i + K)
     nov[i] = D[a, a].mean() + D[b, b].mean() - 2 * D[a, b].mean()
-peaks, _ = find_peaks(nov, height=np.quantile(nov[nov > 0], 0.85), distance=int(3 * rate_hz))
+peaks, _ = find_peaks(
+    nov, height=np.quantile(nov[nov > 0], 0.85), distance=int(3 * rate_hz)
+)
 ```
 
 Clip B, SigLIP2 at 6 Hz, ground truth boundaries **22.25 / 29.25 / 36.25 / 42.25 / 49.25 s**
@@ -711,16 +770,21 @@ Given the score matrix `S` (frames × artifacts) and the fact that the artifacts
 do not overlap**, this DP finds the boundaries:
 
 ```python
-S = (S - S.mean(0)) / (S.std(0) + 1e-9)      # z per artifact over time
-S = S - S.mean(1, keepdims=True)             # contrastive: subtract the per-frame mean over artifacts
+S = (S - S.mean(0)) / (S.std(0) + 1e-9)  # z per artifact over time
+S = S - S.mean(
+    1, keepdims=True
+)  # contrastive: subtract the per-frame mean over artifacts
 S = uniform_filter1d(S, size=int(rate_hz), axis=0)
 cum = np.vstack([np.zeros(Q), np.cumsum(S, 0)])
-dp = np.full((Q, F + 1), -1e9); bk = np.zeros((Q, F + 1), int)
+dp = np.full((Q, F + 1), -1e9)
+bk = np.zeros((Q, F + 1), int)
 for q in range(Q):
     for f in range((q + 1) * MIN, F + 1):
         starts = np.arange(q * MIN, f - MIN + 1)
         val = (0 if q == 0 else dp[q - 1, starts]) + (cum[f, q] - cum[starts, q])
-        j = int(np.argmax(val)); dp[q, f] = val[j]; bk[q, f] = starts[j]
+        j = int(np.argmax(val))
+        dp[q, f] = val[j]
+        bk[q, f] = starts[j]
 # backtrack from f=F
 ```
 
@@ -850,9 +914,18 @@ The five true section boundaries used throughout §8 were not hand-annotated. Th
 that OCR the page heading at 2 Hz and run-length-encode the result **[verified]**:
 
 ```python
-band = frame[85:145, 150:700]                            # where the big heading lives
-g = cv2.resize(cv2.cvtColor(band, cv2.COLOR_BGR2GRAY), None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-label = next((w for w in VOCAB if w in pytesseract.image_to_string(g, config="--psm 7").lower()), None)
+band = frame[85:145, 150:700]  # where the big heading lives
+g = cv2.resize(
+    cv2.cvtColor(band, cv2.COLOR_BGR2GRAY),
+    None,
+    fx=3,
+    fy=3,
+    interpolation=cv2.INTER_CUBIC,
+)
+label = next(
+    (w for w in VOCAB if w in pytesseract.image_to_string(g, config="--psm 7").lower()),
+    None,
+)
 ```
 
 ```
@@ -876,34 +949,53 @@ Every method above is one of exactly four things. That is the whole interface.
 @dataclass(frozen=True)
 class Curve:
     """One evidence signal on the media clock. 1-D or (T, D)."""
-    values: np.ndarray          # (T,) or (T, D)
-    t0: float                   # seconds of values[0]
-    hop_s: float                # seconds between samples
-    name: str                   # 'motion_energy', 'siglip2', 'scene_score', 'pose_kp'
-    mask: np.ndarray | None = None      # (T,) bool: where the signal is valid
+
+    values: np.ndarray  # (T,) or (T, D)
+    t0: float  # seconds of values[0]
+    hop_s: float  # seconds between samples
+    name: str  # 'motion_energy', 'siglip2', 'scene_score', 'pose_kp'
+    mask: np.ndarray | None = None  # (T,) bool: where the signal is valid
+
     def times(self) -> np.ndarray: ...
 
-Span = tuple[float, float]      # half-open seconds; lacing.TimeInterval at the edges
+
+Span = tuple[float, float]  # half-open seconds; lacing.TimeInterval at the edges
+
 
 # ── the four verbs ────────────────────────────────────────────────────────────
 class Featurizer(Protocol):
     """media -> a Curve. §2-§5, §8.1, §9. Every visual method is one of these."""
-    def __call__(self, media: MediaRef, *, span: Span | None = None,
-                 rate_hz: float = 6.0) -> Curve: ...
+
+    def __call__(
+        self, media: MediaRef, *, span: Span | None = None, rate_hz: float = 6.0
+    ) -> Curve: ...
+
 
 class Boundarizer(Protocol):
     """Curve -> candidate boundary times. §3, §6.2, §8.2."""
+
     def __call__(self, curve: Curve, **kw) -> list[float]: ...
+
 
 class Scorer(Protocol):
     """(artifacts, Curve) -> (T, n_artifacts) evidence. §6.5, §8.1, §10."""
+
     def __call__(self, artifacts: Sequence[Artifact], curve: Curve) -> Curve: ...
+
 
 class Assigner(Protocol):
     """evidence + constraints -> one Span per artifact, or None. §8.3."""
-    def __call__(self, evidence: Curve, *, ordered: bool = True, overlap: bool = False,
-                 cover: bool = True, min_dur_s: float = 0.0,
-                 snap_to: Sequence[float] | None = None) -> list[Span | None]: ...
+
+    def __call__(
+        self,
+        evidence: Curve,
+        *,
+        ordered: bool = True,
+        overlap: bool = False,
+        cover: bool = True,
+        min_dur_s: float = 0.0,
+        snap_to: Sequence[float] | None = None,
+    ) -> list[Span | None]: ...
 ```
 
 Five design points that the measurements force:

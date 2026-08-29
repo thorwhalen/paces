@@ -351,34 +351,42 @@ rename plus a type generalization, not a rewrite.
 ```python
 # ---- the two nouns ---------------------------------------------------------
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Artifact:
     """A thing to be placed on a media timeline."""
+
     id: str
-    text: str = ""                     # what a text-matching method sees
-    order: int | None = None           # position in a known sequence; None = unordered
-    hint: Span | None = None           # a human anchor: pins, not proposes
+    text: str = ""  # what a text-matching method sees
+    order: int | None = None  # position in a known sequence; None = unordered
+    hint: Span | None = None  # a human anchor: pins, not proposes
     meta: Mapping[str, Any] = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Placement:
     """One artifact placed. `span is None` means 'this method abstained', never 'nowhere'."""
+
     artifact_id: str
-    span: Span | None                  # Span = tuple[float, float], seconds
+    span: Span | None  # Span = tuple[float, float], seconds
     confidence: float = 1.0
-    method: str = ""                   # which method produced it
-    evidence: Mapping[str, Any] = field(default_factory=dict)   # why — beats, matched words…
+    method: str = ""  # which method produced it
+    evidence: Mapping[str, Any] = field(
+        default_factory=dict
+    )  # why — beats, matched words…
+
 
 # ---- the one verb ----------------------------------------------------------
 
+
 def align(
     artifacts: Sequence[Artifact],
-    media: Media,                      # path | (audio_path, video_path) | a loaded handle.
-                                       # NOT lacing's MediaRef — that is an OUTPUT type,
-                                       # naming the asset an Annotation points at.
+    media: Media,  # path | (audio_path, video_path) | a loaded handle.
+    # NOT lacing's MediaRef — that is an OUTPUT type,
+    # naming the asset an Annotation points at.
     *,
     method: str = "auto",
-    prior: Prior | None = None,        # ordered / non-overlapping / durations / anchors
+    prior: Prior | None = None,  # ordered / non-overlapping / durations / anchors
     **method_kwargs,
 ) -> list[Placement]:
     """Place each artifact on the media timeline. Returns one Placement per artifact,
@@ -391,11 +399,14 @@ The plug-in contract, one Protocol:
 @runtime_checkable
 class Method(Protocol):
     name: str
-    consumes: tuple[str, ...]          # 'audio' | 'video' | 'text' | 'transcript' | 'order'
-    produces: str                      # 'spans' | 'boundaries' | 'evidence'
-    requires: tuple[str, ...] = ()     # importable module names; preflighted before dispatch
-    licence: str = "MIT"               # the madmom lesson: licence is a first-class field
-    cost: str = "cheap"                # 'cheap' | 'gpu' | 'network' | 'billable'
+    consumes: tuple[str, ...]  # 'audio' | 'video' | 'text' | 'transcript' | 'order'
+    produces: str  # 'spans' | 'boundaries' | 'evidence'
+    requires: tuple[
+        str, ...
+    ] = ()  # importable module names; preflighted before dispatch
+    licence: str = "MIT"  # the madmom lesson: licence is a first-class field
+    cost: str = "cheap"  # 'cheap' | 'gpu' | 'network' | 'billable'
+
     def __call__(self, artifacts, media, *, prior=None, **kw) -> list[Placement]: ...
 ```
 

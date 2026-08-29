@@ -192,6 +192,7 @@ line per frame. Rank the curve; never threshold it (`03 §3.3`).
 ```python
 # 2. pip install scenedetect  ->  0.7.1, BSD-3-Clause [verified: PyPI JSON + raw LICENSE]
 from scenedetect import detect, AdaptiveDetector
+
 cuts = detect("in.mp4", AdaptiveDetector())
 ```
 
@@ -258,10 +259,13 @@ fitting (`05 §9`), which is a solved problem.
 ```python
 def acf_periods(x, rate_hz, *, lo_s=0.3, hi_s=3.0, sigma=1.0, k=3):
     """kodokan.segment.estimate_period, generalised to return the top-k. 03 §6.3."""
-    x = gaussian_filter1d(np.asarray(x, float), sigma); x -= x.mean()
-    a = np.correlate(x, x, "full")[x.size - 1:]; a /= a[0] + 1e-12
+    x = gaussian_filter1d(np.asarray(x, float), sigma)
+    x -= x.mean()
+    a = np.correlate(x, x, "full")[x.size - 1 :]
+    a /= a[0] + 1e-12
     lo, hi = int(lo_s * rate_hz), min(int(hi_s * rate_hz), len(a) - 1)
-    pk, _ = find_peaks(a[lo:hi]); pk += lo
+    pk, _ = find_peaks(a[lo:hi])
+    pk += lo
     top = pk[np.argsort(a[pk])[::-1]][:k]
     return [(float(l / rate_hz), float(a[l])) for l in top]
 ```
@@ -302,12 +306,14 @@ the same `periods()` seam — its one genuine advantage is robustness to a *vary
 ```python
 # Foote checkerboard novelty. 03 §8.2. E is (F, d) L2-normalised features — ANY features.
 D = E @ E.T
-K = int(2.0 * rate_hz)                      # half-kernel, 2 s. K barely matters between 2 and 4 s.
+K = int(2.0 * rate_hz)  # half-kernel, 2 s. K barely matters between 2 and 4 s.
 nov = np.zeros(len(E))
 for i in range(K, len(E) - K):
     a, b = slice(i - K, i), slice(i, i + K)
     nov[i] = D[a, a].mean() + D[b, b].mean() - 2 * D[a, b].mean()
-peaks, _ = find_peaks(nov, height=np.quantile(nov[nov > 0], 0.85), distance=int(3 * rate_hz))
+peaks, _ = find_peaks(
+    nov, height=np.quantile(nov[nov > 0], 0.85), distance=int(3 * rate_hz)
+)
 ```
 
 **Write this operator once, modality-agnostically.** `mixing.audio.segmentation`'s
@@ -347,11 +353,19 @@ a real product-tour video, **all five to within 0.3 s**, where PySceneDetect got
 positives and ffmpeg's thresholded detector got 4 of 5 (`03 §8.2`).
 
 ```python
-mid = "google/siglip2-base-patch16-224"          # in ~/.cache/huggingface already [03 §12]
-proc, m = AutoProcessor.from_pretrained(mid), AutoModel.from_pretrained(mid).eval().to("mps")
+mid = "google/siglip2-base-patch16-224"  # in ~/.cache/huggingface already [03 §12]
+proc, m = (
+    AutoProcessor.from_pretrained(mid),
+    AutoModel.from_pretrained(mid).eval().to("mps"),
+)
 with torch.inference_mode():
     px = proc(images=rgb_batch, return_tensors="pt").to("mps")
-    E = torch.nn.functional.normalize(m.get_image_features(**px), dim=-1).float().cpu().numpy()
+    E = (
+        torch.nn.functional.normalize(m.get_image_features(**px), dim=-1)
+        .float()
+        .cpu()
+        .numpy()
+    )
 # then §2.5's novelty over E.  For the text side: padding="max_length" is MANDATORY for SigLIP.
 ```
 
@@ -549,8 +563,9 @@ already written up, 25 lines, no dependency (`05 §5.1`). Implement `05 §5`; ci
   extra steps.
 
 ```python
-import ruptures as rpt                                   # 1.1.10, BSD-2-Clause [verified: PyPI JSON]
-algo = rpt.KernelCPD(kernel="rbf", min_size=20).fit(signal)   # signal: (n, d)
+import ruptures as rpt  # 1.1.10, BSD-2-Clause [verified: PyPI JSON]
+
+algo = rpt.KernelCPD(kernel="rbf", min_size=20).fit(signal)  # signal: (n, d)
 bkps = algo.predict(n_bkps=K - 1)
 ```
 
@@ -760,10 +775,12 @@ chapter sources with a documented fallback ladder **[verified: read
 `yt_dlp/extractor/youtube/_video.py:4398-4402`]**:
 
 ```python
-info['chapters'] = (self._extract_chapters_from_json(initial_data, duration)          # markers map
-                    or self._extract_chapters_from_engagement_panel(initial_data, duration)
-                    or self._extract_chapters_from_description(video_description, duration)
-                    or None)
+info["chapters"] = (
+    self._extract_chapters_from_json(initial_data, duration)  # markers map
+    or self._extract_chapters_from_engagement_panel(initial_data, duration)
+    or self._extract_chapters_from_description(video_description, duration)
+    or None
+)
 ```
 
 The third is the one that matters for instructional content: **timestamps typed into the
@@ -799,7 +816,11 @@ graph and exposes it as `info['heatmap']` **[verified: read `_extract_heatmap`,
 
 ```python
 # 100 markers, each:
-{'start_time': float_seconds, 'end_time': float_seconds, 'value': intensity_normalized_0_1}
+{
+    "start_time": float_seconds,
+    "end_time": float_seconds,
+    "value": intensity_normalized_0_1,
+}
 ```
 
 For an *instructional* video this is not a vanity metric — **it is crowd-sourced annotation of where
@@ -877,8 +898,12 @@ making.
 ### 7.4 The `ask` capability is a *function*, not a UI
 
 ```python
-def ask(media, *, candidates: Segmentation, ui: Callable[..., Segmentation] | None = None,
-        ) -> Segmentation:
+def ask(
+    media,
+    *,
+    candidates: Segmentation,
+    ui: Callable[..., Segmentation] | None = None,
+) -> Segmentation:
     """Human-in-the-loop segmentation. `ui` is the seam."""
 ```
 
@@ -936,14 +961,14 @@ insertion point now means something different. **Key a correction by its time, n
 ```python
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Correction:
-    verb: Literal['pin', 'forbid', 'absent', 'split', 'merge']
-    anchor_t: float                    # WHERE on the media clock. The durable key. [NEW vs 06 §5.4]
+    verb: Literal["pin", "forbid", "absent", "split", "merge"]
+    anchor_t: float  # WHERE on the media clock. The durable key. [NEW vs 06 §5.4]
     span: Span | None = None
-    step_id: str | None = None         # convenience for display; NEVER the join key
+    step_id: str | None = None  # convenience for display; NEVER the join key
     author: str
-    at: str                            # ISO timestamp
-    media_key: str                     # which rendering this was true of (02 §10.5)
-    reason: str = ''
+    at: str  # ISO timestamp
+    media_key: str  # which rendering this was true of (02 §10.5)
+    reason: str = ""
 ```
 
 `anchor_t` is stable under any change of K, any change of method, and any change of naming; it
@@ -1008,34 +1033,44 @@ The return type is the most important decision in this file, because it is what 
 must produce and every renderer must consume.
 
 ```python
-Span = tuple[float, float]                    # seconds, half-open, as in lacing
+Span = tuple[float, float]  # seconds, half-open, as in lacing
 MAPPING_0 = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Step:
     """One named piece of the media. The unit a learner practises."""
+
     id: str
-    name: str = ''                            # '' means "found, not named" -- a VALID state
-    spans: tuple[Span, ...] = ()              # MANY, not one: run-through AND breakdown (brief §5.1)
+    name: str = ""  # '' means "found, not named" -- a VALID state
+    spans: tuple[
+        Span, ...
+    ] = ()  # MANY, not one: run-through AND breakdown (brief §5.1)
     confidence: float = 0.0
-    children: tuple['Step', ...] = ()         # sub-steps, when the input had a hierarchy
-    source: str = ''                          # which capability named it
-    evidence: Mapping[str, Any] = MAPPING_0   # WHY. Never a bare float (00 §5 note 3)
+    children: tuple["Step", ...] = ()  # sub-steps, when the input had a hierarchy
+    source: str = ""  # which capability named it
+    evidence: Mapping[str, Any] = MAPPING_0  # WHY. Never a bare float (00 §5 note 3)
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Segmentation:
     """What every segmenter returns. Reviewable, re-runnable, arguable."""
-    steps: tuple[Step, ...] = ()              # ordered. MAY BE EMPTY while boundaries is not.
-    boundaries: tuple[float, ...] = ()        # the raw cut set, ALWAYS, even when naming failed
-    unit: str = 'seconds'                     # '8-count' | 'rep' | 'seconds'   (brief §5.2)
-    grid: 'Grid | None' = None                # (phase, period, meter) when one was found (02 §1)
+
+    steps: tuple[Step, ...] = ()  # ordered. MAY BE EMPTY while boundaries is not.
+    boundaries: tuple[
+        float, ...
+    ] = ()  # the raw cut set, ALWAYS, even when naming failed
+    unit: str = "seconds"  # '8-count' | 'rep' | 'seconds'   (brief §5.2)
+    grid: "Grid | None" = None  # (phase, period, meter) when one was found (02 §1)
     confidence: float = 0.0
-    method: str = ''                          # the plan, as a name
-    profile: 'Profile | None' = None          # 06 §2.7 -- what was measured
-    plan: 'Plan | None' = None                # 06 §6.2 -- what was chosen and why
-    alignment: 'Alignment | None' = None      # 06 §6.2 -- the placement result underneath
-    flags: tuple['Flag', ...] = ()            # 06 §4.3 -- validators, incl. the doc-vs-video diff
-    corrections: tuple['Correction', ...] = ()# §7.5 -- what a human has said, replayed
+    method: str = ""  # the plan, as a name
+    profile: "Profile | None" = None  # 06 §2.7 -- what was measured
+    plan: "Plan | None" = None  # 06 §6.2 -- what was chosen and why
+    alignment: "Alignment | None" = None  # 06 §6.2 -- the placement result underneath
+    flags: tuple["Flag", ...] = ()  # 06 §4.3 -- validators, incl. the doc-vs-video diff
+    corrections: tuple[
+        "Correction", ...
+    ] = ()  # §7.5 -- what a human has said, replayed
     elapsed_s: float = 0.0
     spent_usd: float = 0.0
 ```
@@ -1076,21 +1111,19 @@ def segment(
     *,
     # ── the seam. None = plan it from what is present (§9.4). A name pins it. ──────────
     segmenter: str | Sequence[str] | Capability | None = None,
-
     # ── the optional inputs. Their PRESENCE is what selects the default. ──────────────
-    steps: Sequence[str] | Sequence[Step] | Mapping[str, str] | None = None,   # tier B
-    notes: str | Path | 'StepDocument | None' = None,                          # tier C
-    steering: str = '',                                                        # tier D
-    metadata: Mapping[str, Any] | None = None,                                 # tier E (info.json)
-    k: int | None = None,                                                      # §7.3 step 1
-    corrections: Iterable[Correction] = (),                                    # §7.5
-
+    steps: Sequence[str] | Sequence[Step] | Mapping[str, str] | None = None,  # tier B
+    notes: str | Path | "StepDocument | None" = None,  # tier C
+    steering: str = "",  # tier D
+    metadata: Mapping[str, Any] | None = None,  # tier E (info.json)
+    k: int | None = None,  # §7.3 step 1
+    corrections: Iterable[Correction] = (),  # §7.5
     # ── the other seams, each defaulting to the strongest no-new-dependency thing ─────
-    solver: str = 'auto',            # 05 §13's registry; 'auto' = ordered_dp with gaps
-    budget: 'Budget | float | None' = None,   # None = Budget.default(): 60 s/min, $0, offline
-    profile: 'Profile | None' = None,         # None = probe it (06 §2). Pass to reuse.
-    catalog: 'Catalog | None' = None,         # Mapping[str, Capability]; the testability seam
-    on_progress: Callable[['Event'], None] | None = None,
+    solver: str = "auto",  # 05 §13's registry; 'auto' = ordered_dp with gaps
+    budget: "Budget | float | None" = None,  # None = Budget.default(): 60 s/min, $0, offline
+    profile: "Profile | None" = None,  # None = probe it (06 §2). Pass to reuse.
+    catalog: "Catalog | None" = None,  # Mapping[str, Capability]; the testability seam
+    on_progress: Callable[["Event"], None] | None = None,
 ) -> Segmentation:
     """Cut `media` into named steps, using whatever else is present.
 
@@ -1113,14 +1146,17 @@ the house style names first. Internally they normalise into one `Inputs` record 
 segment("routine.mp4")
 
 # 2. The common real case.
-segment("routine.mp4", notes="choregraphie.html",
-        steering="9 blocks, in order, 8-counts, roughly 130 bpm; she does a run-through then breaks it down")
+segment(
+    "routine.mp4",
+    notes="choregraphie.html",
+    steering="9 blocks, in order, 8-counts, roughly 130 bpm; she does a run-through then breaks it down",
+)
 
 # 3. Complex things possible.
-prof = probe("routine.mp4", extras=('person',))
-p    = plan(prof, require=('pose-rtmlib',), exclude=('siglip2-frames',))
+prof = probe("routine.mp4", extras=("person",))
+p = plan(prof, require=("pose-rtmlib",), exclude=("siglip2-frames",))
 print(p.explain())
-seg  = segment("routine.mp4", profile=prof, segmenter=[s.name for s in p.steps])
+seg = segment("routine.mp4", profile=prof, segmenter=[s.name for s in p.steps])
 ```
 
 ### 9.3 How a segmenter declares what it needs — reusing `Capability` unchanged
@@ -1131,10 +1167,17 @@ whose `gives` is a step list. Concretely:
 
 ```python
 Product = Literal[
-    'grid', 'regions', 'curve', 'timed_text', 'boundary',
-    'emission', 'placement', 'alignment', 'placements',   # <- 06 §1.1's nine, UNCHANGED
-    'steps',          # NEW: an ordered, named step list -- WITHOUT times
-    'segmentation',   # NEW: the §9.1 result -- steps WITH times
+    "grid",
+    "regions",
+    "curve",
+    "timed_text",
+    "boundary",
+    "emission",
+    "placement",
+    "alignment",
+    "placements",  # <- 06 §1.1's nine, UNCHANGED
+    "steps",  # NEW: an ordered, named step list -- WITHOUT times
+    "segmentation",  # NEW: the §9.1 result -- steps WITH times
 ]
 ```
 
@@ -1257,19 +1300,29 @@ ground-truth trick is the cheapest way to get the data to answer it.
 
 ```python
 # in paces/segmenters/transnet.py -- A NEW FILE. Nothing else in the package is touched.
-register(Capability(
-    name='transnet-cuts',
-    gives='boundary',
-    needs={'video', 'cuts'},                     # only offered on edited footage
-    requires=('transnetv2_pytorch', 'torch'),    # preflighted; the error names the pip install
-    licence='MIT',                               # [verified: soCzech/TransNetV2 LICENSE]
-    target='paces.segmenters.transnet:cuts',     # LAZY -- listing it does not import torch
-    summary='Learned shot-boundary detection (TransNetV2).',
-    boosts={'cuts': 3.0},
-    penalties={'static_camera': 3.0},            # 03 §0: one take -> zero shot cuts, nine steps
-    s_per_min=6.0, fixed_s=2.0, device='mps',
-    resolution_s=0.04, calibrated_on=None,
-))
+register(
+    Capability(
+        name="transnet-cuts",
+        gives="boundary",
+        needs={"video", "cuts"},  # only offered on edited footage
+        requires=(
+            "transnetv2_pytorch",
+            "torch",
+        ),  # preflighted; the error names the pip install
+        licence="MIT",  # [verified: soCzech/TransNetV2 LICENSE]
+        target="paces.segmenters.transnet:cuts",  # LAZY -- listing it does not import torch
+        summary="Learned shot-boundary detection (TransNetV2).",
+        boosts={"cuts": 3.0},
+        penalties={
+            "static_camera": 3.0
+        },  # 03 §0: one take -> zero shot cuts, nine steps
+        s_per_min=6.0,
+        fixed_s=2.0,
+        device="mps",
+        resolution_s=0.04,
+        calibrated_on=None,
+    )
+)
 ```
 
 **Files edited: zero. Functions edited: zero.** It becomes a planner candidate, appears in

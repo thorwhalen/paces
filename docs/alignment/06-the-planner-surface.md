@@ -73,53 +73,58 @@ that reasons without hard-coded logic" must not have.
 
 ```python
 Product = Literal[
-    'grid',        # 02: a periodic ruler (phase, period, meter, beats)
-    'regions',     # 02, 01 §4: labelled spans — music/speech/silence, VAD, structure
-    'curve',       # 03: one signal on the media clock (motion, novelty, embeddings)
-    'timed_text',  # 01: text with times — transcript, word times, forced alignment
-    'boundary',    # 03, 05: candidate cut times, no labels
-    'emission',    # 03, 04, 05: (K, T) — how well artifact k explains frame t
-    'placement',   # 02 §7: ONE artifact located (subsequence DTW, xcorr, fingerprint)
-    'alignment',   # 05: boundaries + assignment + confidence, from evidence
-    'placements',  # 00 §5: the end product — one Placement per artifact
+    "grid",  # 02: a periodic ruler (phase, period, meter, beats)
+    "regions",  # 02, 01 §4: labelled spans — music/speech/silence, VAD, structure
+    "curve",  # 03: one signal on the media clock (motion, novelty, embeddings)
+    "timed_text",  # 01: text with times — transcript, word times, forced alignment
+    "boundary",  # 03, 05: candidate cut times, no labels
+    "emission",  # 03, 04, 05: (K, T) — how well artifact k explains frame t
+    "placement",  # 02 §7: ONE artifact located (subsequence DTW, xcorr, fingerprint)
+    "alignment",  # 05: boundaries + assignment + confidence, from evidence
+    "placements",  # 00 §5: the end product — one Placement per artifact
 ]
 ```
 
 ### 1.2 The declaration
 
 ```python
-MAPPING_0 = field(default_factory=dict)     # shorthand used throughout this file
+MAPPING_0 = field(default_factory=dict)  # shorthand used throughout this file
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Capability:
     """What one method needs, gives, and costs. The planner reads ONLY this."""
 
     # --- identity -----------------------------------------------------------
-    name: str                                   # 'bass-ratio', 'beat-this', 'llm-sheets'
+    name: str  # 'bass-ratio', 'beat-this', 'llm-sheets'
     gives: Product
-    summary: str                                # one line, shown to a human and an agent
-    target: str                                 # "module:func" — LAZY, per muvid.footage.strategy
+    summary: str  # one line, shown to a human and an agent
+    target: str  # "module:func" — LAZY, per muvid.footage.strategy
 
     # --- the three independent gates ----------------------------------------
-    needs: frozenset[str] = frozenset()         # FACTS (§1.3). Hard. Checked against Profile.
-    requires: tuple[str, ...] = ()              # IMPORTABLE MODULES. Hard. Preflight, per muvid.align
-    licence: str = 'MIT'                        # Hard, policy-filtered. The madmom lesson (02 §2.3)
+    needs: frozenset[str] = frozenset()  # FACTS (§1.3). Hard. Checked against Profile.
+    requires: tuple[
+        str, ...
+    ] = ()  # IMPORTABLE MODULES. Hard. Preflight, per muvid.align
+    licence: str = "MIT"  # Hard, policy-filtered. The madmom lesson (02 §2.3)
 
     # --- ranking ------------------------------------------------------------
-    boosts: Mapping[str, float] = MAPPING_0     # fact -> weight added when the fact holds
-    penalties: Mapping[str, float] = MAPPING_0  # fact -> weight subtracted when the fact holds
-    base: float = 0.0                           # prior preference, breaks ties
+    boosts: Mapping[str, float] = MAPPING_0  # fact -> weight added when the fact holds
+    penalties: Mapping[str, float] = (
+        MAPPING_0  # fact -> weight subtracted when the fact holds
+    )
+    base: float = 0.0  # prior preference, breaks ties
 
     # --- cost, in the three units that actually differ ----------------------
-    s_per_min: float = 0.0                      # wall-clock seconds per minute of media
-    usd_per_hour: float = 0.0                   # for billable methods; 0 for local
-    device: Literal['cpu', 'mps', 'cuda', 'network'] = 'cpu'
-    fixed_s: float = 0.0                        # model load / first-call cost, amortised
+    s_per_min: float = 0.0  # wall-clock seconds per minute of media
+    usd_per_hour: float = 0.0  # for billable methods; 0 for local
+    device: Literal["cpu", "mps", "cuda", "network"] = "cpu"
+    fixed_s: float = 0.0  # model load / first-call cost, amortised
 
     # --- what the number it returns MEANS ------------------------------------
-    resolution_s: float = 1.0                   # finest boundary this method can justify (04 §9)
-    regime: str = ''                            # 'cosine/siglip2-base', 'ratio/bass-20-120' (04 §8.3)
-    calibrated_on: str | None = None            # None => confidence is NOT decision-grade
+    resolution_s: float = 1.0  # finest boundary this method can justify (04 §9)
+    regime: str = ""  # 'cosine/siglip2-base', 'ratio/bass-20-120' (04 §8.3)
+    calibrated_on: str | None = None  # None => confidence is NOT decision-grade
 ```
 
 **Seven notes, each paid for by something a sibling measured.**
@@ -288,10 +293,13 @@ that line is thrown away. It should not be — it is the cheapest `metronomic` d
 design, and it costs **zero** on top of a tempo fit you were doing anyway:
 
 ```python
-idx = np.arange(len(beats)); A = np.vstack([idx, np.ones_like(idx)]).T
+idx = np.arange(len(beats))
+A = np.vstack([idx, np.ones_like(idx)]).T
 (period, phase), *_ = np.linalg.lstsq(A, beats, rcond=None)
-resid_sd = (beats - A @ [period, phase]).std()          # <— the free fact
-metronomic = float(np.clip(1.0 - resid_sd / 0.15, 0, 1))   # 0.15 s ≈ half a beat at 200 bpm
+resid_sd = (beats - A @ [period, phase]).std()  # <— the free fact
+metronomic = float(
+    np.clip(1.0 - resid_sd / 0.15, 0, 1)
+)  # 0.15 s ≈ half a beat at 200 bpm
 ```
 
 Measured `resid_sd`: **9.2 ms** on a synthetic click track, **12 ms** on real dance music,
@@ -333,8 +341,14 @@ The split is clean, because the two halves scale differently:
   total duration — an hour costs the same 2.9 s. **[verified]**
 
 ```python
-def probe(media, *, sample_video_over_s: float = 600.0, windows: int = 3, window_s: float = 45.0,
-          extras: tuple[str, ...] = ()) -> Profile: ...
+def probe(
+    media,
+    *,
+    sample_video_over_s: float = 600.0,
+    windows: int = 3,
+    window_s: float = 45.0,
+    extras: tuple[str, ...] = (),
+) -> Profile: ...
 ```
 
 The cost: `cuts` and `static_camera` become estimates from 2 % of a long file. Report that —
@@ -352,7 +366,9 @@ set of fact overrides.** Never a tool loop, never in the selection path, and it 
 at all. Concretely:
 
 ```python
-def read_steering(prompt: str, artifacts, *, llm=..., schema=PriorDraft) -> tuple[Prior, dict[str, float]]:
+def read_steering(
+    prompt: str, artifacts, *, llm=..., schema=PriorDraft
+) -> tuple[Prior, dict[str, float]]:
     """Prompt + artifact texts -> a Prior and fact overrides. Structured output, one call,
     no media, no tools. Returns an EMPTY Prior when `llm` is None -- this is a seam, not a
     dependency, and every default in the package works without it."""
@@ -370,16 +386,19 @@ did. **[inferred]**
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Profile:
     """Everything the planner is allowed to know. ~25 floats and a dict."""
+
     duration_s: float
     has_audio: bool
     has_video: bool
-    facts: Mapping[str, float]          # §1.3 vocabulary -> [0,1]; ABSENT means unknown
-    raw: Mapping[str, Any]              # the measurements behind the facts (curves, beats, tempo)
-    prior: "Prior"                      # from the artifact set + §2.6's steering
-    sampled: bool = False               # video facts came from windows, not the whole file
-    provenance: Mapping[str, str] = MAPPING_0   # fact -> 'probe' | 'steering' | 'user' | 'correction'
+    facts: Mapping[str, float]  # §1.3 vocabulary -> [0,1]; ABSENT means unknown
+    raw: Mapping[str, Any]  # the measurements behind the facts (curves, beats, tempo)
+    prior: "Prior"  # from the artifact set + §2.6's steering
+    sampled: bool = False  # video facts came from windows, not the whole file
+    provenance: Mapping[str, str] = (
+        MAPPING_0  # fact -> 'probe' | 'steering' | 'user' | 'correction'
+    )
     probe_s: float = 0.0
-    media_key: str = ''                 # content hash; the cache key AND the staleness key
+    media_key: str = ""  # content hash; the cache key AND the staleness key
 ```
 
 `facts` is a `Mapping`, and **absence means unknown, not false**. That distinction is the same
@@ -417,6 +436,7 @@ def rank(cap: Capability, profile: Profile) -> float:
         s -= w * profile.facts.get(fact, 0.0)
     return s
 
+
 def cost(cap: Capability, profile: Profile) -> float:
     return cap.fixed_s + cap.s_per_min * profile.duration_s / 60.0
 ```
@@ -424,26 +444,56 @@ def cost(cap: Capability, profile: Profile) -> float:
 Example declarations, weights taken straight from the siblings' measurements:
 
 ```python
-Capability(name='beat-this', gives='grid', needs={'audio'},
-           requires=('beat_this', 'torch'), licence='MIT',
-           boosts={'music': 3.0, 'metronomic': 2.0},      # 02 §2.2: the recommendation, when there IS music
-           penalties={'speech': 1.0},                      # 02 §2.6: robust to speech, but not a reason to run
-           s_per_min=0.14, fixed_s=3.0, device='mps', base=1.0)
+Capability(
+    name="beat-this",
+    gives="grid",
+    needs={"audio"},
+    requires=("beat_this", "torch"),
+    licence="MIT",
+    boosts={
+        "music": 3.0,
+        "metronomic": 2.0,
+    },  # 02 §2.2: the recommendation, when there IS music
+    penalties={"speech": 1.0},  # 02 §2.6: robust to speech, but not a reason to run
+    s_per_min=0.14,
+    fixed_s=3.0,
+    device="mps",
+    base=1.0,
+)
 
-Capability(name='siglip2-frames', gives='emission', needs={'video', 'artifacts.text'},
-           requires=('torch', 'transformers'), licence='apache-2.0',
-           boosts={'cuts': 2.0},                           # 03 §8.2: 5/5 section boundaries on edited video
-           penalties={'static_camera': 2.0,                # 04 §0: indistinguishable from chance on the dance
-                      'periodic_motion': 1.5},             #        video — one camera, one wall, one dancer
-           s_per_min=4.4, fixed_s=3.0, device='mps',
-           regime='cosine/siglip2-base', calibrated_on=None, resolution_s=0.17, base=1.0)
+Capability(
+    name="siglip2-frames",
+    gives="emission",
+    needs={"video", "artifacts.text"},
+    requires=("torch", "transformers"),
+    licence="apache-2.0",
+    boosts={"cuts": 2.0},  # 03 §8.2: 5/5 section boundaries on edited video
+    penalties={
+        "static_camera": 2.0,  # 04 §0: indistinguishable from chance on the dance
+        "periodic_motion": 1.5,
+    },  #        video — one camera, one wall, one dancer
+    s_per_min=4.4,
+    fixed_s=3.0,
+    device="mps",
+    regime="cosine/siglip2-base",
+    calibrated_on=None,
+    resolution_s=0.17,
+    base=1.0,
+)
 
-Capability(name='asr-mlx', gives='timed_text', needs={'audio'},
-           requires=('mlx_whisper',), licence='MIT',
-           boosts={'speech': 4.0},
-           penalties={'music': 5.0},                       # 01 §1.4 + the POC: hallucinates over music.
-           s_per_min=17.0, device='mps', base=0.0)         # The gate is a PENALTY, not a `needs`, so a
-                                                           # mixed file still gets ASR — inside speech regions.
+Capability(
+    name="asr-mlx",
+    gives="timed_text",
+    needs={"audio"},
+    requires=("mlx_whisper",),
+    licence="MIT",
+    boosts={"speech": 4.0},
+    penalties={"music": 5.0},  # 01 §1.4 + the POC: hallucinates over music.
+    s_per_min=17.0,
+    device="mps",
+    base=0.0,
+)  # The gate is a PENALTY, not a `needs`, so a
+# mixed file still gets ASR — inside speech regions.
 ```
 
 **Why a linear model and not an `if`-tree.** Three reasons, and the third is the real one:
@@ -598,16 +648,18 @@ are like this. Rather than special-case them:
 class Validator:
     name: str
     needs: frozenset[str] = frozenset()
-    target: str = ''
+    target: str = ""
+
     def __call__(self, result, *, prior, profile) -> list["Flag"]: ...
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Flag:
-    check: str                     # 'duration', 'monotonic', 'relevance', 'trustworthy'
-    severity: Literal['info', 'warn', 'error']
-    scope: Literal['run', 'artifact', 'boundary']
-    subject: str | int | None      # artifact_id or boundary index
-    message: str                   # human-readable, and it is the escalation reason
+    check: str  # 'duration', 'monotonic', 'relevance', 'trustworthy'
+    severity: Literal["info", "warn", "error"]
+    scope: Literal["run", "artifact", "boundary"]
+    subject: str | int | None  # artifact_id or boundary index
+    message: str  # human-readable, and it is the escalation reason
     detail: Mapping[str, Any] = MAPPING_0
 ```
 
@@ -725,12 +777,12 @@ had a transcript because `mlx_whisper` isn't installed".
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Correction:
     artifact_id: str
-    verb: Literal['pin', 'forbid', 'absent']
+    verb: Literal["pin", "forbid", "absent"]
     span: Span | None
     author: str
-    at: str                       # ISO timestamp
-    media_key: str                # WHICH rendering this was true of (02 §10.5)
-    reason: str = ''
+    at: str  # ISO timestamp
+    media_key: str  # WHICH rendering this was true of (02 §10.5)
+    reason: str = ""
 ```
 
 Stored **separately from the alignment**, in `lacing` (which already ships PROV-O provenance and
@@ -765,14 +817,17 @@ def align(
     media: Media,
     *,
     # --- the seams, each defaulting to the strongest no-new-dependency thing ---
-    method: str | Sequence[str] | Capability | None = None,   # None = plan it (§3). A name pins it.
-    prior: "Prior | None" = None,                             # None = infer from artifacts + steering
-    profile: "Profile | None" = None,                         # None = probe it (§2). Pass to reuse.
-    budget: "Budget | float | None" = None,                   # None = Budget.default() (§6.3)
-    solver: str = 'auto',                                     # 05 §13's registry; 'auto' = ordered_dp
-    corrections: Iterable["Correction"] = (),                 # §5.4 — applied as Prior constraints
-    steering: str = '',                                       # §2.6 — free text, one LLM call, or ignored
-    catalog: "Catalog | None" = None,                         # the seam that makes §8.4 testable
+    method: str
+    | Sequence[str]
+    | Capability
+    | None = None,  # None = plan it (§3). A name pins it.
+    prior: "Prior | None" = None,  # None = infer from artifacts + steering
+    profile: "Profile | None" = None,  # None = probe it (§2). Pass to reuse.
+    budget: "Budget | float | None" = None,  # None = Budget.default() (§6.3)
+    solver: str = "auto",  # 05 §13's registry; 'auto' = ordered_dp
+    corrections: Iterable["Correction"] = (),  # §5.4 — applied as Prior constraints
+    steering: str = "",  # §2.6 — free text, one LLM call, or ignored
+    catalog: "Catalog | None" = None,  # the seam that makes §8.4 testable
     on_progress: Callable[["Event"], None] | None = None,
 ) -> "Alignment":
     """Place each artifact on the media timeline.
@@ -780,16 +835,26 @@ def align(
     Returns one Placement per artifact, ALWAYS -- an unplaced artifact carries span=None.
     """
 
+
 # ── the four things you call when `align` is not enough ───────────────────────
-def probe(media, artifacts=None, *, extras=(), sample_video_over_s=600.0) -> Profile: ...
+def probe(
+    media, artifacts=None, *, extras=(), sample_video_over_s=600.0
+) -> Profile: ...
 def plan(profile, *, budget=None, catalog=None, exclude=(), require=()) -> Plan: ...
-def solve(evidence, n_artifacts, *, prior, solver='auto', weights=None) -> "SolverResult": ...
+def solve(
+    evidence, n_artifacts, *, prior, solver="auto", weights=None
+) -> "SolverResult": ...
 def explain(x: "Alignment | Plan | Placement") -> str: ...
 
+
 # ── the catalogue: the agent's menu ───────────────────────────────────────────
-def list_capabilities(*, gives=None, needs=None, installed_only=False) -> list[Capability]: ...
+def list_capabilities(
+    *, gives=None, needs=None, installed_only=False
+) -> list[Capability]: ...
 def capability_info(name: str) -> Capability: ...
-def register(cap: Capability) -> Capability: ...          # or register_lazy(name, "module:func", **kw)
+def register(
+    cap: Capability,
+) -> Capability: ...  # or register_lazy(name, "module:func", **kw)
 ```
 
 `list_capabilities` / `capability_info` are 00 §5's *"two functions on top, and only two — resist
@@ -802,11 +867,12 @@ point rather than a query.
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Alignment:
     """The result. Everything needed to review it, re-run it, or argue with it."""
-    placements: tuple[Placement, ...]        # one per artifact, ALWAYS (00 §5 note 2)
-    profile: Profile                         # what was measured (§2.7)
-    plan: "Plan"                             # what was chosen and why (§6.4)
-    flags: tuple[Flag, ...] = ()             # §4.3 validators
-    evidence: Mapping[str, "Evidence"] = MAPPING_0    # keyed by capability name, for §5.3
+
+    placements: tuple[Placement, ...]  # one per artifact, ALWAYS (00 §5 note 2)
+    profile: Profile  # what was measured (§2.7)
+    plan: "Plan"  # what was chosen and why (§6.4)
+    flags: tuple[Flag, ...] = ()  # §4.3 validators
+    evidence: Mapping[str, "Evidence"] = MAPPING_0  # keyed by capability name, for §5.3
     elapsed_s: float = 0.0
     spent_usd: float = 0.0
 
@@ -814,13 +880,15 @@ class Alignment:
     def needs_review(self) -> tuple[Placement, ...]:
         """Ascending by confidence, plus a sample of the confident ones (§5.3)."""
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Plan:
-    steps: tuple["Step", ...]                # (capability, kwargs, within, est_cost)
-    considered: tuple["Rejected", ...]        # (name, why) — the column §5.3 needs
+    steps: tuple["Step", ...]  # (capability, kwargs, within, est_cost)
+    considered: tuple["Rejected", ...]  # (name, why) — the column §5.3 needs
     budget: "Budget"
     est_s: float = 0.0
     est_usd: float = 0.0
+
     def explain(self) -> str: ...
 ```
 
@@ -832,15 +900,16 @@ redefine them here** — that is the point of having read the siblings.
 ```python
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Budget:
-    seconds: float = 60.0                    # wall clock, per minute of media
-    usd: float = 0.0                         # zero => no billable capability is even a candidate
-    network: bool = False                    # offline by default -- the house rule
-    devices: frozenset[str] = frozenset({'cpu', 'mps'})
-    licences: frozenset[str] | None = None   # None => permissive allowlist (§3.5)
+    seconds: float = 60.0  # wall clock, per minute of media
+    usd: float = 0.0  # zero => no billable capability is even a candidate
+    network: bool = False  # offline by default -- the house rule
+    devices: frozenset[str] = frozenset({"cpu", "mps"})
+    licences: frozenset[str] | None = None  # None => permissive allowlist (§3.5)
 
     @classmethod
-    def default(cls) -> "Budget": ...        # 60 s/min, $0, offline. Everything in files 00-05
-                                             # except llm-sheets and diarize-pyannote fits.
+    def default(cls) -> "Budget":
+        ...  # 60 s/min, $0, offline. Everything in files 00-05
+        # except llm-sheets and diarize-pyannote fits.
 ```
 
 `usd=0.0` and `network=False` as defaults is the load-bearing choice: **`align()` out of the box
@@ -855,15 +924,18 @@ disclosure with the failure mode facing the right way.
 align(["warm-up", "block 1", "block 2"], "routine.mp4")
 
 # 2. The common real case: steering + a prior.
-align(blocks, "routine.mp4",
-      steering="9 blocks, in order, 8-counts, roughly 130 bpm",
-      budget=Budget(seconds=120))
+align(
+    blocks,
+    "routine.mp4",
+    steering="9 blocks, in order, 8-counts, roughly 130 bpm",
+    budget=Budget(seconds=120),
+)
 
 # 3. Complex things possible: drive it by hand.
-prof = probe("routine.mp4", extras=('person',))
-p    = plan(prof, require=('pose-rtmlib',), exclude=('siglip2-frames',))
+prof = probe("routine.mp4", extras=("person",))
+p = plan(prof, require=("pose-rtmlib",), exclude=("siglip2-frames",))
 print(p.explain())
-res  = align(blocks, "routine.mp4", profile=prof, method=[s.name for s in p.steps])
+res = align(blocks, "routine.mp4", profile=prof, method=[s.name for s in p.steps])
 ```
 
 And the `context=` idiom from `muvid/footage/strategy.py` **[verified: read the source]** —
@@ -1023,17 +1095,18 @@ One parametrised test over every registered `Capability` — the thing that keep
 rotting as capability 35 arrives:
 
 ```python
-@pytest.mark.parametrize('cap', list_capabilities(), ids=lambda c: c.name)
+@pytest.mark.parametrize("cap", list_capabilities(), ids=lambda c: c.name)
 def test_capability_conforms(cap, synth_fixture):
     assert cap.gives in get_args(Product)
-    assert cap.needs <= FACT_VOCABULARY | set(get_args(Product))   # §1.3 is CLOSED
+    assert cap.needs <= FACT_VOCABULARY | set(get_args(Product))  # §1.3 is CLOSED
     assert cap.licence in KNOWN_LICENCES
-    assert (cap.calibrated_on is None) or cap.regime               # calibrated => say against what
+    assert (cap.calibrated_on is None) or cap.regime  # calibrated => say against what
     assert cap.s_per_min >= 0 and cap.usd_per_hour >= 0
     missing = [m for m in cap.requires if not importable(m)]
-    if missing: pytest.skip(f'{cap.name} requires {missing}')
+    if missing:
+        pytest.skip(f"{cap.name} requires {missing}")
     out = resolve(cap.target)(**fixture_args_for(cap, synth_fixture))
-    assert product_type(out) is PRODUCT_TYPES[cap.gives]           # it gives what it says
+    assert product_type(out) is PRODUCT_TYPES[cap.gives]  # it gives what it says
 ```
 
 Thirty lines, scales to any catalog size, and it is the only test that can fail when someone
@@ -1046,18 +1119,33 @@ dozen of them as JSON fixtures and assert the chosen plan.**
 
 ```python
 # tests/profiles/dance-static-music.json   <- produced by probe(), committed
-{"duration_s": 166.0, "has_audio": true, "has_video": true,
- "facts": {"music": 0.95, "metronomic": 0.92, "speech": 0.05, "cuts": 0.0,
-           "static_camera": 0.97, "periodic_motion": 0.70,
-           "artifacts.ordered": 1.0, "artifacts.count": 9, "artifacts.text": 1.0}}
+{
+    "duration_s": 166.0,
+    "has_audio": true,
+    "has_video": true,
+    "facts": {
+        "music": 0.95,
+        "metronomic": 0.92,
+        "speech": 0.05,
+        "cuts": 0.0,
+        "static_camera": 0.97,
+        "periodic_motion": 0.70,
+        "artifacts.ordered": 1.0,
+        "artifacts.count": 9,
+        "artifacts.text": 1.0,
+    },
+}
+
 
 def test_plan_for_static_music_video(profile_fixture):
-    p = plan(profile_fixture('dance-static-music'), budget=Budget.default())
+    p = plan(profile_fixture("dance-static-music"), budget=Budget.default())
     names = [s.capability.name for s in p.steps]
-    assert 'bass-ratio' in names and 'librosa-beats' in names
-    assert 'siglip2-frames' not in names        # 04 §0: measured null result on exactly this profile
-    assert 'ordered-dp' == names[-1]
-    assert p.est_s < 60 * profile_fixture('dance-static-music').duration_s / 60
+    assert "bass-ratio" in names and "librosa-beats" in names
+    assert (
+        "siglip2-frames" not in names
+    )  # 04 §0: measured null result on exactly this profile
+    assert "ordered-dp" == names[-1]
+    assert p.est_s < 60 * profile_fixture("dance-static-music").duration_s / 60
 ```
 
 Four properties this has that a media-based test cannot: it runs in microseconds, it needs no

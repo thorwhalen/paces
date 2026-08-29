@@ -253,12 +253,37 @@ That is the same boundary you are being asked to draw. Its schema
 Zod codegen in `ts/`):
 
 ```python
-class DemoDocument(_Base):    id: Id; meta: Meta; sections: list[Section]; tracks: Tracks
-class Section(_Base):         id: Id; title: str|None; steps: list[Step]
+class DemoDocument(_Base):
+    id: Id
+    meta: Meta
+    sections: list[Section]
+    tracks: Tracks
+
+
+class Section(_Base):
+    id: Id
+    title: str | None
+    steps: list[Step]
+
+
 Step = Annotated[CommandStep | Beat, Field(discriminator="kind")]
-class Tracks(_Base):          cues: list[Cue]; narration: list[NarrationSegment]; camera: list[CameraKeyframe]
-class Anchor(_Base):          step_id: Id; local_offset_ms: int
-class Timing(_Base):          duration_ms: int; hold_after_ms: int|None; wait_for: WaitFor|None
+
+
+class Tracks(_Base):
+    cues: list[Cue]
+    narration: list[NarrationSegment]
+    camera: list[CameraKeyframe]
+
+
+class Anchor(_Base):
+    step_id: Id
+    local_offset_ms: int
+
+
+class Timing(_Base):
+    duration_ms: int
+    hold_after_ms: int | None
+    wait_for: WaitFor | None
 ```
 
 Conventions in its module docstring, all of which you should adopt verbatim:
@@ -349,118 +374,149 @@ model except the explicit `attrs` bags. Wire format JSON; JSON Schema exported f
 
 ```python
 # ── identity & units ────────────────────────────────────────────────────────────
-Slug = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")]   # NOT a uuid4 — git-readable
-Decimal = Annotated[str, Field(pattern=r"^-?\d+(\.\d+)?$")]        # exact via Fraction; diffs cleanly
+Slug = Annotated[
+    str, Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
+]  # NOT a uuid4 — git-readable
+Decimal = Annotated[
+    str, Field(pattern=r"^-?\d+(\.\d+)?$")
+]  # exact via Fraction; diffs cleanly
+
 
 class Measure(_Base):
     """A duration in the DOMAIN's own unit. Never seconds unless the domain is seconds."""
-    value: Decimal                     # "2", "0.5", "12"
-    unit: Slug                         # "eight" | "bar" | "rep" | "second" | "page" | "beat"
+
+    value: Decimal  # "2", "0.5", "12"
+    unit: Slug  # "eight" | "bar" | "rep" | "second" | "page" | "beat"
+
 
 class MetricGrid(_Base):
     """How the domain unit relates to wall-clock, when it does at all. Optional by design:
     a 'reps' domain has no grid; a dance routine does (this is what drives the metronome)."""
-    unit: Slug                         # "eight"
-    subdivisions: int = 1              # 8 beats per eight
-    tempo_bpm: Decimal | None = None   # "129"
-    origin: Decimal | None = None      # seconds into `origin_source` where unit 0 starts
+
+    unit: Slug  # "eight"
+    subdivisions: int = 1  # 8 beats per eight
+    tempo_bpm: Decimal | None = None  # "129"
+    origin: Decimal | None = None  # seconds into `origin_source` where unit 0 starts
     origin_source: Slug | None = None
+
 
 # ── sources & spans ─────────────────────────────────────────────────────────────
 class Source(_Base):
-    id: Slug                           # "celine-yt"
-    kind: Literal["video","audio","image","document","url"]
-    uri: str                           # https://youtu.be/q_TUyxUhoEw
-    asset_id: str | None = None        # lacing.Artifact.asset_id of the local copy, if any
+    id: Slug  # "celine-yt"
+    kind: Literal["video", "audio", "image", "document", "url"]
+    uri: str  # https://youtu.be/q_TUyxUhoEw
+    asset_id: str | None = None  # lacing.Artifact.asset_id of the local copy, if any
     duration_s: Decimal | None = None
     title: str | None = None
-    attribution: str | None = None     # "Chorégraphie, danse et vidéo : Céline Pradeu"
-    rights: str | None = None          # this domain NEEDS this; lacing.Artifact.rights is only proposed
+    attribution: str | None = None  # "Chorégraphie, danse et vidéo : Céline Pradeu"
+    rights: str | None = (
+        None  # this domain NEEDS this; lacing.Artifact.rights is only proposed
+    )
     attrs: dict[str, Any] = {}
+
 
 class SourceSpan(_Base):
     """ONE step's presence in ONE source, in ONE role. A step has a LIST of these."""
+
     source: Slug
-    role: Slug = "performance"         # open vocab; seen: performance | instruction |
-                                       # closeup | mirrored | reference
-    start: Decimal                     # seconds in the source's own media time
+    role: Slug = "performance"  # open vocab; seen: performance | instruction |
+    # closeup | mirrored | reference
+    start: Decimal  # seconds in the source's own media time
     end: Decimal
-    excerpt: tuple[Decimal, Decimal] | None = None   # loopable sub-window, chosen for looks
-    label: str | None = None           # POC `tab`: "hanches + regard"
-    caption: str | None = None         # POC `cap`: prose about THIS span
+    excerpt: tuple[Decimal, Decimal] | None = (
+        None  # loopable sub-window, chosen for looks
+    )
+    label: str | None = None  # POC `tab`: "hanches + regard"
+    caption: str | None = None  # POC `cap`: prose about THIS span
     confidence: float | None = None
     attrs: dict[str, Any] = {}
+
 
 # ── derived artifacts ───────────────────────────────────────────────────────────
 class ArtifactRef(_Base):
     """WHAT, never HOW. The recipe lives in the lacing store."""
-    role: Slug                         # clip | gif | poster | thumbnail | waveform | audio
-    asset_id: str | None = None        # 64-hex SHA-256 — the join key into the lacing store
-    uri: str                           # "media/b4a.mp4" — relative, deploy-portable
+
+    role: Slug  # clip | gif | poster | thumbnail | waveform | audio
+    asset_id: str | None = None  # 64-hex SHA-256 — the join key into the lacing store
+    uri: str  # "media/b4a.mp4" — relative, deploy-portable
     mime: str | None = None
     width: int | None = None
     height: int | None = None
     duration_s: Decimal | None = None
-    derived_from: Slug | None = None   # which SourceSpan.role it came from
+    derived_from: Slug | None = None  # which SourceSpan.role it came from
     attrs: dict[str, Any] = {}
+
 
 # ── cues (their own track, anchored) ────────────────────────────────────────────
 class Cue(_Base):
     id: Slug
-    kind: Slug                         # lyric | count | audio-landmark | caption | warning
-    text: str                          # "se hace difícil respirar"
-    anchor: "Anchor"                   # step_id + offset in the domain unit
+    kind: Slug  # lyric | count | audio-landmark | caption | warning
+    text: str  # "se hace difícil respirar"
+    anchor: "Anchor"  # step_id + offset in the domain unit
     duration: Measure | None = None
     source: Slug | None = None
-    at_s: Decimal | None = None        # optional resolved time in that source
+    at_s: Decimal | None = None  # optional resolved time in that source
     attrs: dict[str, Any] = {}
+
 
 class Anchor(_Base):
     step: Slug
-    offset: Measure | None = None      # relative, in the domain unit. NEVER absolute.
+    offset: Measure | None = None  # relative, in the domain unit. NEVER absolute.
+
 
 # ── provenance & edit protection ────────────────────────────────────────────────
 class Lock(_Base):
     """A human (or approved-AI) decision that regeneration MUST NOT overwrite."""
-    path: str                          # JSON pointer relative to the node: "/name", "/spans/1/caption"
-    by: str                            # "user:thor" | "agent:opus-5@<hash>"
-    at: str                            # ISO-8601 UTC, second resolution (diff-stable)
-    was: Any | None = None             # the pre-edit value — makes the edit reversible
+
+    path: str  # JSON pointer relative to the node: "/name", "/spans/1/caption"
+    by: str  # "user:thor" | "agent:opus-5@<hash>"
+    at: str  # ISO-8601 UTC, second resolution (diff-stable)
+    was: Any | None = None  # the pre-edit value — makes the edit reversible
     reason: str | None = None
+
 
 class Origin(_Base):
     """Back-reference into the evidence layer. Lets a renderer say 'why', and lets
     regeneration know what it may replace."""
-    annotation_id: str | None = None   # UUID in the lacing store
-    value_digest: str | None = None    # lacing.digest.annotation_value_digest — 'did it change?'
-    generated_by: str | None = None    # "processor:segment_steps" | "user:thor"
+
+    annotation_id: str | None = None  # UUID in the lacing store
+    value_digest: str | None = (
+        None  # lacing.digest.annotation_value_digest — 'did it change?'
+    )
+    generated_by: str | None = None  # "processor:segment_steps" | "user:thor"
     confidence: float | None = None
+
 
 # ── the step ────────────────────────────────────────────────────────────────────
 class Step(_Base):
-    id: Slug                           # "b4", "b4a" — stable across re-runs, human-meaningful
-    name: str                          # "Déhanchés"
-    duration: Measure                  # {"value":"8","unit":"eight"}
+    id: Slug  # "b4", "b4a" — stable across re-runs, human-meaningful
+    name: str  # "Déhanchés"
+    duration: Measure  # {"value":"8","unit":"eight"}
     description: str = ""
-    spans: list[SourceSpan] = []       # >= 0; SEVERAL ROLES IS THE NORM, NOT THE EXCEPTION
+    spans: list[SourceSpan] = []  # >= 0; SEVERAL ROLES IS THE NORM, NOT THE EXCEPTION
     artifacts: list[ArtifactRef] = []
-    steps: list["Step"] = []           # sub-steps: a step is a step
-    repeat: int = 1                    # block 9 = repeat 4 of a 2-substep cycle
-    optional: bool = False             # b6b: "Facultatif — si tu le sens"
-    variant_of: Slug | None = None     # b9b is another angle on b9, not a new step
+    steps: list["Step"] = []  # sub-steps: a step is a step
+    repeat: int = 1  # block 9 = repeat 4 of a 2-substep cycle
+    optional: bool = False  # b6b: "Facultatif — si tu le sens"
+    variant_of: Slug | None = None  # b9b is another angle on b9, not a new step
     tags: list[Slug] = []
     questions: list["OpenQuestion"] = []
     origin: Origin | None = None
     locks: list[Lock] = []
-    attrs: dict[str, Any] = {}         # namespaced: attrs["render.web"] = {"fig":"soleil", "hue":48}
+    attrs: dict[
+        str, Any
+    ] = {}  # namespaced: attrs["render.web"] = {"fig":"soleil", "hue":48}
+
 
 class OpenQuestion(_Base):
     """The POC's `note` fields, promoted. Uncertainty is content."""
+
     id: Slug
     text: str
-    status: Literal["open","settled","dropped"] = "open"
+    status: Literal["open", "settled", "dropped"] = "open"
     resolution: str | None = None
     evidence: list[SourceSpan] = []
+
 
 # ── the document ────────────────────────────────────────────────────────────────
 class StepDocument(_Base):
@@ -468,12 +524,12 @@ class StepDocument(_Base):
     schema_version: str = "0.1.0"
     id: Slug
     title: str
-    lang: str = "en"                   # BCP-47
-    domain: Slug = "generic"           # "dance" | "recipe" | "workout" | "assembly" | …
+    lang: str = "en"  # BCP-47
+    domain: Slug = "generic"  # "dance" | "recipe" | "workout" | "assembly" | …
     metric: MetricGrid | None = None
     sources: list[Source] = []
-    steps: list[Step] = []             # ORDER IS SEMANTIC
-    cues: list[Cue] = []               # separate track, anchored by step id (walkthru D8)
+    steps: list[Step] = []  # ORDER IS SEMANTIC
+    cues: list[Cue] = []  # separate track, anchored by step id (walkthru D8)
     questions: list[OpenQuestion] = []
     credits: str | None = None
     attrs: dict[str, Any] = {}

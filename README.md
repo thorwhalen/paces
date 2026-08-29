@@ -20,13 +20,20 @@ from paces import segment, to_document, render_html
 
 seg = segment(
     "https://youtu.be/q_TUyxUhoEw",
-    steps=[("Mise en place", 2), ("Pas pieds pointe et ronde", 6),
-           ("Soleil avec les bras", 4), ("Déhanchés", 8)],
-    grid={"unit": "eight", "subdivisions": 8,
-          "tempoBpm": "129.2", "origin": "51.2"},
+    steps=[
+        ("Mise en place", 2),
+        ("Pas pieds pointe et ronde", 6),
+        ("Soleil avec les bras", 4),
+        ("Déhanchés", 8),
+    ],
+    grid={"unit": "eight", "subdivisions": 8, "tempoBpm": "129.2", "origin": "51.2"},
 )
-doc = to_document(seg, doc_id="que-calor", title="Chorégraphie Que Calor",
-                  source="https://youtu.be/q_TUyxUhoEw")
+doc = to_document(
+    seg,
+    doc_id="que-calor",
+    title="Chorégraphie Que Calor",
+    source="https://youtu.be/q_TUyxUhoEw",
+)
 open("page.html", "w").write(render_html(doc))
 ```
 

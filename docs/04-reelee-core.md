@@ -117,16 +117,20 @@ class Genre:
     slug: str
     title: str
     description: str = ""
-    body_schema_uris: tuple[str, ...] = ()      # lacing body schemas its artifacts validate against
-    transform_names: tuple[str, ...] = ()       # nw.transforms entries forming its pipeline DAG
-    strategy_names: tuple[str, ...] = ()        # optional nw.renderers strategies
-    projection_entrypoint: str | None = None    # the final assemble/render step
+    body_schema_uris: tuple[
+        str, ...
+    ] = ()  # lacing body schemas its artifacts validate against
+    transform_names: tuple[
+        str, ...
+    ] = ()  # nw.transforms entries forming its pipeline DAG
+    strategy_names: tuple[str, ...] = ()  # optional nw.renderers strategies
+    projection_entrypoint: str | None = None  # the final assemble/render step
     folder_conventions: Mapping[str, str] = {}  # compare=False
-    status: str = "available"                   # "available" | "experimental" | "planned"
-    templates: tuple[Template, ...] = ()        # named presets == "subgenres"
-    intake_kinds: tuple[str, ...] = ()          # "what are you making?" answers that select it
-    cost_profile: str | None = None             # routing tag for the cost gate ("per_clip", "tts")
-    defaults: Mapping[str, Any] = {}            # "start from scratch" params; compare=False
+    status: str = "available"  # "available" | "experimental" | "planned"
+    templates: tuple[Template, ...] = ()  # named presets == "subgenres"
+    intake_kinds: tuple[str, ...] = ()  # "what are you making?" answers that select it
+    cost_profile: str | None = None  # routing tag for the cost gate ("per_clip", "tts")
+    defaults: Mapping[str, Any] = {}  # "start from scratch" params; compare=False
 ```
 
 `nw.Template` — the **subgenre**:
@@ -137,7 +141,9 @@ class Template:
     slug: str
     title: str
     description: str = ""
-    params: Mapping[str, Any] = {}   # OPAQUE to the substrate; the owning app defines the meaning
+    params: Mapping[
+        str, Any
+    ] = {}  # OPAQUE to the substrate; the owning app defines the meaning
 ```
 
 The critical design point, straight from the `nw.genres` docstring **[verified]**:
@@ -226,24 +232,32 @@ templates are output-canvas presets) at
 # stepped/genre.py  — one file, registered from YOUR package, importing only nw
 from nw import Genre, Template, register_genre, register_genre_initializer
 
-STEP_BY_STEP = register_genre(Genre(
-    slug="step_by_step",
-    title="Step-by-step guide",
-    description="Segment an instructional video into named, timed steps and render a guide.",
-    body_schema_uris=(STEP_BODY_SCHEMA_URI, ROUTINE_BODY_SCHEMA_URI, ...),
-    transform_names=("video_to_steps.llm", "step_to_extract.mixing", ...),
-    projection_entrypoint="steps_to_page.html",
-    intake_kinds=("dance-routine", "recipe", "tutorial"),
-    cost_profile=None,          # local ffmpeg = free; set a tag if you spend
-    defaults={"guide_format": "interactive_web", "step_style": "loop_clip"},
-    templates=(
-        Template(slug="dance_moves", title="Dance routine",
-                 description="8-count blocks, metronome transport, looping move clips.",
-                 params={"guide_format": "interactive_web", "step_style": "loop_clip",
-                         "beat_grid": "8_count"}),
-        ...
-    ),
-))
+STEP_BY_STEP = register_genre(
+    Genre(
+        slug="step_by_step",
+        title="Step-by-step guide",
+        description="Segment an instructional video into named, timed steps and render a guide.",
+        body_schema_uris=(STEP_BODY_SCHEMA_URI, ROUTINE_BODY_SCHEMA_URI, ...),
+        transform_names=("video_to_steps.llm", "step_to_extract.mixing", ...),
+        projection_entrypoint="steps_to_page.html",
+        intake_kinds=("dance-routine", "recipe", "tutorial"),
+        cost_profile=None,  # local ffmpeg = free; set a tag if you spend
+        defaults={"guide_format": "interactive_web", "step_style": "loop_clip"},
+        templates=(
+            Template(
+                slug="dance_moves",
+                title="Dance routine",
+                description="8-count blocks, metronome transport, looping move clips.",
+                params={
+                    "guide_format": "interactive_web",
+                    "step_style": "loop_clip",
+                    "beat_grid": "8_count",
+                },
+            ),
+            ...,
+        ),
+    )
+)
 register_genre_initializer(STEP_BY_STEP.slug, _seed_step_by_step_project)
 ```
 
@@ -313,10 +327,10 @@ envelope, typed body, frozen pydantic, `extra="forbid"`:
 ```python
 class Annotation(BaseModel):
     id: UUID
-    tier: str                       # tier name (SqliteStore enforces an FK on this!)
-    reference: MediaRef | NodeRef | AnnotationRef   # discriminated on `kind`
-    body: dict                      # validated by body_schema_uri; string keys only
-    body_schema_uri: str            # r"^annot://schema/[a-z0-9-]+/v\d+$"
+    tier: str  # tier name (SqliteStore enforces an FK on this!)
+    reference: MediaRef | NodeRef | AnnotationRef  # discriminated on `kind`
+    body: dict  # validated by body_schema_uri; string keys only
+    body_schema_uri: str  # r"^annot://schema/[a-z0-9-]+/v\d+$"
     provenance: Provenance
     confidence: float | None
 ```
@@ -401,20 +415,30 @@ Two-phase, and the split is the whole point:
 
 ```python
 class Transform(Protocol):
-    name: str                    # "<from_kind>_to_<to_kind>[.<flavor>[.<variant>]]"
-    input_kinds: tuple[str, ...] # body-schema URIs; [0] is primary, rest are context
+    name: str  # "<from_kind>_to_<to_kind>[.<flavor>[.<variant>]]"
+    input_kinds: tuple[str, ...]  # body-schema URIs; [0] is primary, rest are context
     output_kind: str
-    is_batch: bool               # does plan() consume all of inputs.primary at once?
-    impl_version: str            # behaviour version; salts the falaw cache key
-    params_model: type           # a pydantic model → JSON Schema for MCP/CLI for free
+    is_batch: bool  # does plan() consume all of inputs.primary at once?
+    impl_version: str  # behaviour version; salts the falaw cache key
+    params_model: type  # a pydantic model → JSON Schema for MCP/CLI for free
 
-    def plan(self, project, inputs: TransformInputs, *, params=None
-             ) -> tuple[falaw.Plan, tuple[Annotation, ...]]: ...
+    def plan(
+        self, project, inputs: TransformInputs, *, params=None
+    ) -> tuple[falaw.Plan, tuple[Annotation, ...]]:
+        ...
         # PURE DATA. No billable calls. Returns a costed Plan + SKELETON output
         # annotations that already carry provenance (was_derived_from → inputs).
 
-    def execute(self, project, plan, skeleton, *, use_cache=True, force=False,
-                on_failure: Literal["halt","isolate"]="halt") -> TransformResult: ...
+    def execute(
+        self,
+        project,
+        plan,
+        skeleton,
+        *,
+        use_cache=True,
+        force=False,
+        on_failure: Literal["halt", "isolate"] = "halt",
+    ) -> TransformResult: ...
 ```
 
 `TransformResult` carries `annotations`, `artifacts`, `cost_usd_actual`,

@@ -131,10 +131,13 @@ roughly 4× there.** Budget for it.
 ```python
 # mlx-whisper — the default on Apple Silicon.  [verified]
 import mlx_whisper
+
 r = mlx_whisper.transcribe(
     "audio16k.wav",
     path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
-    language="fr", word_timestamps=True, verbose=False,
+    language="fr",
+    word_timestamps=True,
+    verbose=False,
 )
 # r["segments"][i]["words"] -> [{"word": " genou", "start": 2.24, "end": 2.54,
 #                               "probability": 0.87}, ...]
@@ -143,11 +146,13 @@ r = mlx_whisper.transcribe(
 ```python
 # faster-whisper — when you need VAD, clip gating, or a non-Mac fallback.  [verified]
 from faster_whisper import WhisperModel
+
 m = WhisperModel("small", device="cpu", compute_type="int8")
-segs, info = m.transcribe("audio16k.wav", language="fr",
-                          word_timestamps=True, vad_filter=True)
+segs, info = m.transcribe(
+    "audio16k.wav", language="fr", word_timestamps=True, vad_filter=True
+)
 for s in segs:
-    for w in s.words:          # w.word, w.start, w.end, w.probability
+    for w in s.words:  # w.word, w.start, w.end, w.probability
         ...
 ```
 
@@ -194,7 +199,9 @@ Three verified facts, each a trap:
    `load_with_torchcodec` and raises `ImportError: TorchCodec is required`. Use `soundfile`:
    ```python
    import soundfile as sf, torch
-   d, sr = sf.read(path, dtype="float32"); wav = torch.from_numpy(d)[None, :]
+
+   d, sr = sf.read(path, dtype="float32")
+   wav = torch.from_numpy(d)[None, :]
    ```
 3. **`merge_tokens(tokens, scores, blank=0)` wants *probabilities*, not log-probs**
    [verified]. Pass `scores.exp()`. `TokenSpan.score` then lands in [0,1] and §0's table
@@ -230,13 +237,15 @@ no romanization step, and the confidences are directly interpretable. Fall back 
 
 ```python
 """French word-level forced alignment. torchaudio + soundfile only."""
+
 import re, torch, soundfile as sf
 import torchaudio.functional as F
 from torchaudio.pipelines import VOXPOPULI_ASR_BASE_10K_FR as B
 
-_model = B.get_model()                      # 360 MB, cached in ~/.cache/torch/hub
+_model = B.get_model()  # 360 MB, cached in ~/.cache/torch/hub
 _D = {c: i for i, c in enumerate(B.get_labels())}
 BLANK = 0
+
 
 def _prep(text):
     """French text -> (token_ids, [(tok_start, tok_end, word)]).
@@ -247,8 +256,10 @@ def _prep(text):
     for w in parts:
         cs = [_D[c] for c in w if c in _D]
         if cs:
-            bounds.append((len(ids), len(ids) + len(cs), w)); ids += cs
+            bounds.append((len(ids), len(ids) + len(cs), w))
+            ids += cs
     return ids, bounds
+
 
 def align_words(wav_path, text):
     d, sr = sf.read(wav_path, dtype="float32")
@@ -257,9 +268,11 @@ def align_words(wav_path, text):
     with torch.inference_mode():
         emission, _ = _model(wav)
         logp = torch.log_softmax(emission, dim=-1)
-        toks, sc = F.forced_align(logp, torch.tensor([ids], dtype=torch.int32), blank=BLANK)
-        spans = F.merge_tokens(toks[0], sc[0].exp(), blank=BLANK)   # .exp() is REQUIRED
-    ratio = wav.shape[-1] / emission.shape[1] / sr                  # 0.020 s per frame
+        toks, sc = F.forced_align(
+            logp, torch.tensor([ids], dtype=torch.int32), blank=BLANK
+        )
+        spans = F.merge_tokens(toks[0], sc[0].exp(), blank=BLANK)  # .exp() is REQUIRED
+    ratio = wav.shape[-1] / emission.shape[1] / sr  # 0.020 s per frame
     out = []
     for a, b, w in bounds:
         sub = spans[a:b]
@@ -379,7 +392,9 @@ assignment.
 
 ```python
 """Monotonic assignment of ordered artifacts to ordered candidate spans."""
+
 import numpy as np
+
 
 def monotonic_assign(S, *, strict=True):
     """S: (n_artifacts, n_candidates), rows in artifact order, cols in TIME order.
@@ -388,21 +403,26 @@ def monotonic_assign(S, *, strict=True):
     Returns (col_index_per_artifact, total_score).  O(n*m)."""
     n, m = S.shape
     NEG = -1e18
-    dp = np.full((n, m), NEG); bk = np.full((n, m), -1, dtype=int)
+    dp = np.full((n, m), NEG)
+    bk = np.full((n, m), -1, dtype=int)
     dp[0] = S[0]
     for i in range(1, n):
-        best = np.full(m, NEG); arg = np.full(m, -1, dtype=int)
+        best = np.full(m, NEG)
+        arg = np.full(m, -1, dtype=int)
         run_v, run_a = NEG, -1
         for j in range(m):
             jp = j - 1 if strict else j
             if jp >= 0 and dp[i - 1, jp] > run_v:
                 run_v, run_a = dp[i - 1, jp], jp
             best[j], arg[j] = run_v, run_a
-        dp[i] = S[i] + best; bk[i] = arg
+        dp[i] = S[i] + best
+        bk[i] = arg
         dp[i][best <= NEG / 2] = NEG
-    j = int(np.argmax(dp[n - 1])); out = [j]
+    j = int(np.argmax(dp[n - 1]))
+    out = [j]
     for i in range(n - 1, 0, -1):
-        j = int(bk[i, j]); out.append(j)
+        j = int(bk[i, j])
+        out.append(j)
     return out[::-1], float(dp[n - 1].max())
 ```
 
@@ -484,9 +504,11 @@ usable standalone, offline, with **no new dependency and no download**:
 ```python
 from faster_whisper.vad import get_speech_timestamps, VadOptions
 import soundfile as sf
-audio, sr = sf.read("audio16k.wav", dtype="float32")     # must be 16 kHz mono
-ts = get_speech_timestamps(audio, VadOptions(
-        threshold=0.5, min_silence_duration_ms=300, speech_pad_ms=100))
+
+audio, sr = sf.read("audio16k.wav", dtype="float32")  # must be 16 kHz mono
+ts = get_speech_timestamps(
+    audio, VadOptions(threshold=0.5, min_silence_duration_ms=300, speech_pad_ms=100)
+)
 # -> [{'start': 30720, 'end': 149120}, ...]   SAMPLE indices; divide by sr
 ```
 
@@ -520,8 +542,9 @@ silence | 4 s synthetic bass-heavy "music" | 2 s silence | 7.2 s speech):
 ORIGINAL media clock** — no offset arithmetic, which is the thing that usually goes wrong:
 
 ```python
-segs, _ = m.transcribe("mixed.wav", language="fr",
-                       clip_timestamps=[2.0, 9.3, 17.2, 24.4])   # [s0,e0,s1,e1,...]
+segs, _ = m.transcribe(
+    "mixed.wav", language="fr", clip_timestamps=[2.0, 9.3, 17.2, 24.4]
+)  # [s0,e0,s1,e1,...]
 # -> [2.00-9.24] "...", [17.20-24.48] "..."   <- absolute, already correct
 ```
 
@@ -553,8 +576,10 @@ pip install pyannote.audio            # pulls torch, torch-audiomentations, spee
 ```
 ```python
 from pyannote.audio import Pipeline
-pipe = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1",
-                                use_auth_token=HF_TOKEN)          # token REQUIRED
+
+pipe = Pipeline.from_pretrained(
+    "pyannote/speaker-diarization-3.1", use_auth_token=HF_TOKEN
+)  # token REQUIRED
 diar = pipe("audio16k.wav")
 for turn, _, spk in diar.itertracks(yield_label=True):
     print(f"{turn.start:.2f}-{turn.end:.2f} {spk}")
@@ -592,11 +617,12 @@ Every method in this file either produces or consumes "text with times". Name it
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TimedText:
     """Text on a media clock. The universal intermediate of §1-§3."""
+
     text: str
-    span: tuple[float, float]              # seconds, half-open, media clock
-    confidence: float = 1.0                # word conf, ASR prob, or similarity
-    speaker: str | None = None             # from §5; None when undiarized
-    children: tuple["TimedText", ...] = () # words under a line, lines under a section
+    span: tuple[float, float]  # seconds, half-open, media clock
+    confidence: float = 1.0  # word conf, ASR prob, or similarity
+    speaker: str | None = None  # from §5; None when undiarized
+    children: tuple["TimedText", ...] = ()  # words under a line, lines under a section
 ```
 
 One recursive type covers word / line / section, so a method declares its granularity by what
@@ -608,9 +634,12 @@ text-shaped hierarchy"*).
 ### 6.2 Two verbs under the seam
 
 ```python
-def transcribe(media, *, language=None, within=None, words=True, **kw) -> list[TimedText]:
+def transcribe(
+    media, *, language=None, within=None, words=True, **kw
+) -> list[TimedText]:
     """Audio -> timed text (problem P2).  `within` gates to spans (the music-gate rule);
     implementations that lack native clipping slice and re-offset internally."""
+
 
 def force_align(media, text, *, language, within=None, **kw) -> list[TimedText]:
     """Known-verbatim text -> word times (problem P1).
@@ -638,7 +667,9 @@ dependencies.** That is the headline of this file.
 ### 6.4 One non-negotiable guard
 
 ```python
-def alignment_is_trustworthy(words: list[TimedText], *, max_low_frac=0.35, low=0.5) -> bool:
+def alignment_is_trustworthy(
+    words: list[TimedText], *, max_low_frac=0.35, low=0.5
+) -> bool:
     """§0's detector. Below `low` confidence for more than `max_low_frac` of words means the
     text was not spoken in this audio -- return span=None, do not return a confident lie."""
     if not words:

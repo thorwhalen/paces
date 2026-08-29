@@ -36,34 +36,41 @@ print(c)"
 
 ```python
 import json
-PATH = '/Users/thorwhalen/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl'
 
-def blocks(kinds=('text',)):
+PATH = "/Users/thorwhalen/.claude-iq/projects/-Users-thorwhalen-Downloads/0f75703c-6761-4aa0-b796-aafe02c94155.jsonl"
+
+
+def blocks(kinds=("text",)):
     """Yield (line_no, role, block) for the block types you care about."""
     for i, line in enumerate(open(PATH)):
-        try: d = json.loads(line)
-        except Exception: continue
-        m = d.get('message') or {}
-        for b in (m.get('content') or []):
-            if isinstance(b, dict) and b.get('type') in kinds:
-                yield i, m.get('role'), b
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        m = d.get("message") or {}
+        for b in m.get("content") or []:
+            if isinstance(b, dict) and b.get("type") in kinds:
+                yield i, m.get("role"), b
+
 
 # every bash command that was run, in order — the real recipe log
-for i, role, b in blocks(('tool_use',)):
-    if b.get('name') == 'Bash':
-        print(i, b['input'].get('description'), '::', b['input']['command'][:160])
+for i, role, b in blocks(("tool_use",)):
+    if b.get("name") == "Bash":
+        print(i, b["input"].get("description"), "::", b["input"]["command"][:160])
 
 # what the user actually asked for, in their own words
-for i, role, b in blocks(('text',)):
-    if role == 'user':
-        print(f'--- line {i} ---\n{b["text"][:2000]}')
+for i, role, b in blocks(("text",)):
+    if role == "user":
+        print(f"--- line {i} ---\n{b['text'][:2000]}")
 
 # find a parameter you half-remember
 import re
-pat = re.compile(r'sigma_r|det_thresh|ANIME_EVERY|129', re.I)
-for i, role, b in blocks(('text', 'tool_use')):
+
+pat = re.compile(r"sigma_r|det_thresh|ANIME_EVERY|129", re.I)
+for i, role, b in blocks(("text", "tool_use")):
     s = json.dumps(b)
-    if pat.search(s): print(i, s[:300])
+    if pat.search(s):
+        print(i, s[:300])
 ```
 
 ### The best way to use it

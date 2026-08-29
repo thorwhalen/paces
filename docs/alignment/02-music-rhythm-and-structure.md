@@ -80,13 +80,14 @@ into spans against that ruler. Keep those two jobs in different functions. **[in
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Grid:
     """A periodic ruler over media time. `unit_s` is the atom the domain counts in."""
-    phase_s: float            # time of index 0
-    period_s: float           # seconds per beat
-    meter: int = 4            # beats per bar; 0 = unknown
-    beats: np.ndarray = ...   # the raw beat instants, NOT assumed periodic
+
+    phase_s: float  # time of index 0
+    period_s: float  # seconds per beat
+    meter: int = 4  # beats per bar; 0 = unknown
+    beats: np.ndarray = ...  # the raw beat instants, NOT assumed periodic
     downbeats: np.ndarray = ...
-    confidence: float = 0.0   # see §4.1 — this is computable, not decorative
-    source: str = ""          # 'beat-this/final0', 'librosa', 'essentia/multifeature'
+    confidence: float = 0.0  # see §4.1 — this is computable, not decorative
+    source: str = ""  # 'beat-this/final0', 'librosa', 'essentia/multifeature'
 
     def unit_s(self, beats_per_unit: int = 8) -> float:
         return self.period_s * beats_per_unit
@@ -122,8 +123,9 @@ Already installed (librosa 0.11.0). ~**990× realtime** on the 20-minute file (1
 
 ```python
 import librosa
+
 y, sr = librosa.load(path, sr=22050)
-tempo, beats = librosa.beat.beat_track(y=y, sr=sr, units='time', trim=False)
+tempo, beats = librosa.beat.beat_track(y=y, sr=sr, units="time", trim=False)
 ```
 
 **What it gets right.** Tempo. On the synthetic loop it reported 129.199 bpm against a truth of
@@ -160,8 +162,11 @@ pip install beat-this        # 1.1.0; pulls einops, rotary-embedding-torch, soxr
 
 ```python
 from beat_this.inference import File2Beats
-f2b = File2Beats(checkpoint_path="final0", device="mps", dbn=False)   # dbn=False: no madmom
-beats, downbeats = f2b(path)          # two float arrays, seconds
+
+f2b = File2Beats(
+    checkpoint_path="final0", device="mps", dbn=False
+)  # dbn=False: no madmom
+beats, downbeats = f2b(path)  # two float arrays, seconds
 ```
 
 Measured, this session:
@@ -196,9 +201,10 @@ Four things the docs do not tell you, all **[verified]** here:
   ```python
   from beat_this.inference import Audio2Frames
   import torch, librosa, numpy as np
+
   a2f = Audio2Frames(checkpoint_path="small0", device="mps")
   y, sr = librosa.load(path, sr=22050)
-  beat_logits, downbeat_logits = a2f(y.astype(np.float64), sr)   # (T,) at 50 fps
+  beat_logits, downbeat_logits = a2f(y.astype(np.float64), sr)  # (T,) at 50 fps
   conf = torch.sigmoid(beat_logits)
   ```
 - **A fresh install cannot read audio.** `beat_this.preprocessing.load_audio` tries
@@ -248,8 +254,11 @@ pip install --pre essentia          # works on py3.12 / arm64
 
 ```python
 import essentia.standard as es
+
 audio = es.MonoLoader(filename=path, sampleRate=44100)()
-bpm, ticks, confidence, estimates, intervals = es.RhythmExtractor2013(method="multifeature")(audio)
+bpm, ticks, confidence, estimates, intervals = es.RhythmExtractor2013(
+    method="multifeature"
+)(audio)
 ```
 
 | file | multifeature | degara | truth |
@@ -402,9 +411,11 @@ def meter_and_phase(beats, downbeats):
     """Robust meter + bar phase from a possibly-ragged downbeat list.
     Returns (meter, phase_index, confidence in [0,1]). Confidence is the fraction of
     downbeats agreeing on one bar phase — the honest answer to 'is a constant bar grid valid'."""
-    idx = np.abs(downbeats[:, None] - beats[None, :]).argmin(axis=1)   # snap to beat indices
+    idx = np.abs(downbeats[:, None] - beats[None, :]).argmin(
+        axis=1
+    )  # snap to beat indices
     gaps = np.diff(idx)
-    meter = int(np.bincount(gaps).argmax())                            # modal spacing
+    meter = int(np.bincount(gaps).argmax())  # modal spacing
     hist = np.bincount(idx % meter, minlength=meter)
     return meter, int(hist.argmax()), float(hist.max() / hist.sum())
 ```
@@ -479,9 +490,11 @@ structural boundaries survive the sweep, spurious ones do not.
 ```python
 votes = {}
 for k in range(2, 10):
-    X = evecs[:, :k] / (Cnorm[:, k-1:k] + 1e-12)
+    X = evecs[:, :k] / (Cnorm[:, k - 1 : k] + 1e-12)
     ids = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(X)
-    ids = scipy.ndimage.median_filter(ids, size=9, mode='nearest')   # ← 9 beats; do not skip
+    ids = scipy.ndimage.median_filter(
+        ids, size=9, mode="nearest"
+    )  # ← 9 beats; do not skip
     for b in 1 + np.flatnonzero(ids[:-1] != ids[1:]):
         votes[beat_times[b]] = votes.get(beat_times[b], 0) + 1
 # merge votes within 2 s, keep boundaries with >= 6/8 votes
@@ -551,14 +564,16 @@ cheaper than any model in this document. **[verified]**
 ```python
 def bass_ratio(y, sr=16000, *, lo=20.0, hi=120.0, frame_s=1.0, smooth_s=9.0):
     """Per-frame low-band energy ratio. Music ≫ speech. AUC ≈ 0.99 after smoothing."""
-    n = int(sr * frame_s); k = len(y) // n
-    fr = y[:k*n].reshape(k, n)
+    n = int(sr * frame_s)
+    k = len(y) // n
+    fr = y[: k * n].reshape(k, n)
     X = np.abs(np.fft.rfft(fr * np.hanning(n)[None, :], axis=1)) + 1e-10
-    f = np.fft.rfftfreq(n, 1/sr); band = (f >= lo) & (f <= hi)
+    f = np.fft.rfftfreq(n, 1 / sr)
+    band = (f >= lo) & (f <= hi)
     ratio = X[:, band].sum(1) / X.sum(1)
-    rms = np.sqrt((fr ** 2).mean(1))                       # gate: the ratio is meaningless in silence
+    rms = np.sqrt((fr**2).mean(1))  # gate: the ratio is meaningless in silence
     w = max(1, int(smooth_s / frame_s))
-    return np.convolve(ratio, np.ones(w) / w, mode='same'), rms
+    return np.convolve(ratio, np.ones(w) / w, mode="same"), rms
 ```
 
 **Does it generalise? Honestly: mostly, with two named failure modes.** It will call
@@ -629,12 +644,16 @@ Costs, 155 s reference × 18 s query, on CPU: `chroma_cqt` **0.72 s**, `librosa.
 
 ```python
 # (a) find a known excerpt inside a long recording
-C  = librosa.util.normalize(librosa.feature.chroma_cqt(y=full,  sr=sr, hop_length=512), axis=0)
-Cq = librosa.util.normalize(librosa.feature.chroma_cqt(y=query, sr=sr, hop_length=512), axis=0)
-D, wp = librosa.sequence.dtw(X=Cq, Y=C, metric='cosine', subseq=True, backtrack=True)
+C = librosa.util.normalize(
+    librosa.feature.chroma_cqt(y=full, sr=sr, hop_length=512), axis=0
+)
+Cq = librosa.util.normalize(
+    librosa.feature.chroma_cqt(y=query, sr=sr, hop_length=512), axis=0
+)
+D, wp = librosa.sequence.dtw(X=Cq, Y=C, metric="cosine", subseq=True, backtrack=True)
 wp = wp[::-1]
-start = librosa.frames_to_time(wp[0, 1],  sr=sr, hop_length=512)
-end   = librosa.frames_to_time(wp[-1, 1], sr=sr, hop_length=512)
+start = librosa.frames_to_time(wp[0, 1], sr=sr, hop_length=512)
+end = librosa.frames_to_time(wp[-1, 1], sr=sr, hop_length=512)
 ```
 
 **When NOT to use DTW.** Low SNR (it failed at −3 dB where xcorr also failed), pitch-shifted
@@ -673,21 +692,29 @@ them by hand. Extending the `Method` protocol from `00-existing-in-fleet.md` §5
 ```python
 # --- 1. Grid producers: audio -> a ruler. No artifacts involved. ------------------
 class GridMethod(Protocol):
-    name: str                          # 'beat-this', 'librosa-beats', 'essentia-multifeature'
-    requires: tuple[str, ...] = ()      # importable modules; preflighted before dispatch
-    licence: str = "MIT"                # first-class — this is what excludes madmom
+    name: str  # 'beat-this', 'librosa-beats', 'essentia-multifeature'
+    requires: tuple[str, ...] = ()  # importable modules; preflighted before dispatch
+    licence: str = "MIT"  # first-class — this is what excludes madmom
     cost: str = "cheap"
+
     def __call__(self, media: Media, *, span: Span | None = None, **kw) -> Grid: ...
+
 
 def beat_grid(media, *, method: str = "auto", span=None, **kw) -> Grid: ...
 
+
 # --- 2. Region producers: audio -> labelled spans. Also no artifacts. -------------
 class RegionMethod(Protocol):
-    name: str                          # 'bass-ratio', 'speech-music', 'laplacian', 'silero'
-    labels: tuple[str, ...]             # ('music','speech'), ('A','B','C'), ('speech','silence')
-    def __call__(self, media: Media, **kw) -> list[Region]: ...   # Region = (start, end, label, score)
+    name: str  # 'bass-ratio', 'speech-music', 'laplacian', 'silero'
+    labels: tuple[str, ...]  # ('music','speech'), ('A','B','C'), ('speech','silence')
+
+    def __call__(
+        self, media: Media, **kw
+    ) -> list[Region]: ...  # Region = (start, end, label, score)
+
 
 def regions(media, *, method: str = "auto", **kw) -> list[Region]: ...
+
 
 # --- 3. Locators: "where is THIS audio inside THAT audio" -------------------------
 def locate(query: Media, reference: Media, *, method: str = "auto") -> Placement: ...
