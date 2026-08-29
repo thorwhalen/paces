@@ -232,3 +232,28 @@ def test_zero_total_units_earns_no_fit_bonus(practice_wav):
     measurement = measure_grid(practice_wav, total_units=0)
     assert measurement.confidence == DFLT_MEASURED_CONFIDENCE
     assert "routine_s" not in measurement.evidence
+
+
+def test_known_values_round_trip_verbatim(practice_wav):
+    """Round 2 F1: an explicitly supplied string is never reformatted."""
+    measurement = measure_grid(practice_wav, tempo_bpm="129.25", origin="12.345")
+    assert measurement.grid.tempo_bpm == "129.25"
+    assert measurement.grid.origin == "12.345"
+
+
+def test_known_origin_on_no_music_media_stays_low_confidence(speech_wav):
+    """Round 2 F2: a speech-rhythm tempo must not earn origin-level trust."""
+    measurement = measure_grid(speech_wav, origin="3.0")
+    assert measurement.grid.origin == "3.0"
+    assert measurement.confidence <= 0.2
+    if measurement.grid.tempo_bpm is not None:
+        assert "no-music-region" in measurement.flags
+
+
+def test_tempo_unmeasured_wording_acknowledges_a_caller_tempo(silence_wav):
+    measurement = measure_grid(silence_wav, tempo_bpm="120")
+    assert measurement.grid.tempo_bpm == "120"
+    assert any(
+        "tempo-unmeasured" in flag and "using your tempoBpm" in flag
+        for flag in measurement.flags
+    )

@@ -132,8 +132,23 @@ def measure_grid(
             f"measure_grid needs a local media file; {media!r} is not one "
             "(download first — e.g. with yb — or supply grid= yourself)"
         )
-    known_tempo = None if tempo_bpm is None else _dec(float(tempo_bpm), places=1)
-    known_origin = None if origin is None else _dec(float(origin))
+    # A caller-supplied string is already a valid wire decimal: pass it
+    # through untouched so the declared value round-trips verbatim; only
+    # numbers get formatted.
+    known_tempo = (
+        tempo_bpm
+        if isinstance(tempo_bpm, str)
+        else None
+        if tempo_bpm is None
+        else _dec(float(tempo_bpm), places=1)
+    )
+    known_origin = (
+        origin
+        if isinstance(origin, str)
+        else None
+        if origin is None
+        else _dec(float(origin))
+    )
 
     try:
         segments = find_segments(str(path), strategy="speech_music")
@@ -168,8 +183,9 @@ def measure_grid(
         if measured_tempo is not None:
             evidence["tempo_bpm"] = tempo_value
             measured_origin = _dec(region.start + float(bg.beat_times[0]))
+            tempo_unmeasured_note = None
         else:
-            flags += ("tempo-unmeasured: no beat structure in the music region",)
+            tempo_unmeasured_note = "no beat structure in the music region"
             measured_origin = None
     else:
         region = None
@@ -178,9 +194,13 @@ def measure_grid(
         measured_origin = None
         if measured_tempo is not None:
             evidence["tempo_bpm"] = tempo_value
+            tempo_unmeasured_note = None
         else:
-            flags += ("tempo-unmeasured: no beat structure found",)
+            tempo_unmeasured_note = "no beat structure found"
         flags += ("no-music-region",)
+    if tempo_unmeasured_note is not None:
+        suffix = " — using your tempoBpm" if known_tempo is not None else ""
+        flags += (f"tempo-unmeasured: {tempo_unmeasured_note}{suffix}",)
 
     # Explicit beats inferred — but a disagreement is a finding, not a secret.
     final_tempo = known_tempo or measured_tempo
@@ -211,6 +231,11 @@ def measure_grid(
     )
     if final_origin is None:
         flags += ("origin-unknown: pass grid= with an origin, or boundaries=",)
+        confidence = UNMEASURED_CONFIDENCE
+    elif region is None:
+        # The grid is only complete because the caller supplied the origin,
+        # and any tempo here was measured from a no-music recording (speech
+        # rhythm) — a placement can proceed, but not with real confidence.
         confidence = UNMEASURED_CONFIDENCE
     else:
         confidence = (
