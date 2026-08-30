@@ -33,9 +33,18 @@ rule ("an app directory contains only code + build output") targets
   (the future HTTP surface, issue #8), deployments must inject a non-doc
   store root plus a serve mapping. *That* is the scenario where docs/06 §8's
   `~/.local/share` recommendation is correct.
-- Artifact filenames are **step/role-derived, never hash-derived** — the uri
-  is merge identity and must be stable across regenerations; `asset_id`
-  records content change.
+- Artifact filenames come from **span identity, never position or hash** —
+  the uri is merge identity and must be stable across regenerations;
+  `asset_id` records content change. A single-excerpt step gets the bare
+  step id (`media/b4.mp4`); a multi-excerpt step suffixes each span's
+  identity (`media/b8--instruction--0.2.mp4`). Ordinals were rejected by
+  adversarial review: inserting or deleting a span reassigned neighbours'
+  uris and — combined with byte reuse — served one span another span's
+  media. The one accepted rename (a step growing from one excerpt to
+  several re-stems the first) is flagged via `stale-artifact`. Derive
+  refuses, before any encode, a document where two spans would claim one
+  uri or share a `(source, role, start)` identity (`validate_document`
+  reports the latter too).
 - A document that arrives as a dict/JSON string has no directory: `derive`
   then **requires** an explicit media root (and recipes path) and refuses
   loudly — never a silent default to cwd. An unwritable doc dir raises an
@@ -135,10 +144,22 @@ applies), `locked`.
 
 **Re-run semantics (lock precedence stated, not implied):**
 
-- entry exists, inputs match (window, frame size, and asset id when both
-  known) → reuse `box`, skip the locator entirely.
-- inputs drifted, not locked → re-locate, overwrite, flag
+- entry exists, not locked, inputs match (window, frame size, and asset id
+  when both known) AND the policy matches (`locator` identity and `params`
+  — the fingerprint has a reader: a locator upgrade or an aspect/pad change
+  re-locates) → reuse `box`, skip the locator entirely. A matching entry
+  with no recorded asset id adopts the now-verified hash
+  (`recipe-identity-recorded:`), so the unverified state retires instead of
+  nagging forever.
+- inputs or policy drifted, not locked → re-locate, overwrite, flag
   `recipe-refreshed:`.
+- **The byte-reuse gate is the recipe's `media_digest`** — a stamp of what
+  the stored media was actually cut with (box + window + source hash),
+  written at encode time. Media is reused only when the uris exist AND the
+  digest still matches; uri existence alone proves nothing about WHICH
+  bytes the store holds, which is how the review's measured blocker served
+  a hand-locked crop stale forever (crops.json's failure, reborn once —
+  never again).
 - drifted **and locked** → keep the box, flag `recipe-drift-locked:` —
   acknowledged ≠ approved.
 - **A locked box is used verbatim** — never re-padded, re-aspected, or
@@ -148,6 +169,12 @@ applies), `locked`.
 - An entry whose address matches no current excerpt-bearing span is flagged
   `recipe-orphaned:` by name, never silently dropped — a step-id rename
   (which `edits.py` supports) must surface, not discard, a hand-locked box.
+- A span skipped this run (missing media, invalid excerpt) keeps its whole
+  artifact-name family out of the `stale-artifact` sweep — a false honesty
+  flag is the failure mode, since a reader would regenerate healthy media.
+- The sidecar serializes `box: null` and `sourceAssetId: null` explicitly
+  (no `exclude_none`): they are recorded decisions a hand-editor must be
+  able to see and override.
 - Hand-override = edit `box`, set `locked: true`. Sidecar locks are
   deliberately weaker than document `Lock`s (no by/at/was) until #4 re-keys
   them into the lacing evidence layer; git history carries reversibility

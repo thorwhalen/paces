@@ -363,9 +363,19 @@ def validate_document(doc: StepDocument) -> list[str]:
         if step.id in step_ids:
             issues.append(f"{path}: duplicate step id {step.id!r}")
         step_ids.add(step.id)
+        seen_spans: set[tuple[str, str, str]] = set()
         for i, span in enumerate(step.spans):
             if span.source not in source_ids:
                 issues.append(f"{path}/spans/{i}: unknown source {span.source!r}")
+            identity = (span.source, span.role, span.start)
+            if identity in seen_spans:
+                issues.append(
+                    f"{path}/spans/{i}: duplicate span identity "
+                    f"(source, role, start) = {identity} — lock "
+                    "re-application and media derivation cannot tell "
+                    "these spans apart"
+                )
+            seen_spans.add(identity)
         if step.steps:
             child_sum = sum(Fraction(c.duration.value) for c in step.steps)
             expected = Fraction(step.duration.value)

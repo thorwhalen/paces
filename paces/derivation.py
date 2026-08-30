@@ -212,9 +212,14 @@ class _WireBase(BaseModel):
 class CropRecipe(_WireBase):
     """One span's derivation parameters: the resolved ``box`` (the *final*
     post-policy crop; ``None`` = full frame, a recorded decision) plus the
-    input fingerprint that makes drift detectable. ``params`` are decimal
-    strings (the sidecar is committed — no floats on the wire) and are a
-    fingerprint only: a stored box is never re-run through the policy."""
+    input fingerprint that makes drift detectable. ``params`` and ``locator``
+    are read on reconcile — a locator upgrade or an aspect/pad change
+    re-locates an unlocked entry; a stored box is never re-run through the
+    policy. ``media_digest`` stamps what the stored media was actually cut
+    with (box + window + source hash), so a hand-edited box or a re-timed
+    window forces a re-encode instead of silently serving stale bytes —
+    the POC's crops.json failure, kept dead. ``params`` values are decimal
+    strings (the sidecar is committed — no floats on the wire)."""
 
     box: Box | None = None
     window: tuple[Decimal, Decimal]
@@ -224,6 +229,7 @@ class CropRecipe(_WireBase):
     locator: str
     params: dict[str, Decimal] = Field(default_factory=dict)
     locked: bool = False
+    media_digest: str | None = None  # what the stored media was cut with
 
 
 class RecipesFile(_WireBase):
@@ -243,10 +249,14 @@ def load_recipes(path: str | Path) -> RecipesFile:
 
 
 def save_recipes(recipes: RecipesFile, path: str | Path) -> None:
-    """Write the sidecar in the document's canonical wire style."""
+    """Write the sidecar in the document's canonical wire style.
+
+    Deliberately NOT ``exclude_none``: ``box: null`` (full frame) and
+    ``sourceAssetId: null`` (identity unverified) are recorded decisions a
+    hand-editor must be able to see and override (ADR-0005 §3)."""
     import json
 
-    payload = recipes.model_dump(mode="json", by_alias=True, exclude_none=True)
+    payload = recipes.model_dump(mode="json", by_alias=True)
     Path(path).write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -282,7 +292,10 @@ class DirStore(MutableMapping):
 
     def _path(self, key: str) -> Path:
         pure = PurePosixPath(key)
-        if pure.is_absolute() or ".." in pure.parts:
+        # '\\' is refused outright: PurePosixPath treats it as an ordinary
+        # character, but Windows' joinpath re-splits on it — the same key
+        # would name different files per platform (and '..\\' would escape).
+        if "\\" in key or pure.is_absolute() or ".." in pure.parts:
             raise ValueError(f"store keys are relative POSIX paths, got {key!r}")
         return self.rootdir.joinpath(*pure.parts)
 
@@ -398,12 +411,19 @@ def _excerpt_spans(step: Step) -> list:
     return [span for span in step.spans if span.excerpt is not None]
 
 
-def _artifact_base(step: Step, ordinal: int, count: int) -> str:
-    """Deterministic, step-derived artifact stem: ``b4`` for the common
-    single-excerpt step, ``b8.1``/``b8.2`` when a step carries several.
-    Step/role-derived — never hash-derived: the uri is the artifact's merge
-    identity in ``edits.py`` and must survive regeneration."""
-    return step.id if count == 1 else f"{step.id}.{ordinal}"
+def _artifact_base(step: Step, span, count: int) -> str:
+    """Deterministic artifact stem from SPAN IDENTITY, never position: ``b4``
+    for the common single-excerpt step, ``b8--instruction--0.2`` when a step
+    carries several. Ordinal-based names were positional identity wearing a
+    costume — inserting or deleting a span reassigned every neighbour's uri,
+    and (with the reuse gate) served one span another span's bytes. The uri
+    is the artifact's merge identity in ``edits.py``; identity must come
+    from the same ``(source, role, start)`` triple everything else keys on.
+    (A step's transition from one excerpt span to several renames its bare
+    stem — that rename is flagged via ``stale-artifact``, never silent.)"""
+    if count == 1:
+        return step.id
+    return f"{step.id}--{span.role}--{span.start}"
 
 
 _ARTIFACT_LOCK = re.compile(r"^/artifacts/(\d+)(/|$)")
@@ -419,26 +439,33 @@ def _locked_artifact_indices(step: Step) -> set[int]:
 
 def _upsert_artifact(step: Step, ref: ArtifactRef, flags: list[str]) -> None:
     """Update-by-uri or append; never reorder, never delete — index-form
-    artifact locks stay valid, and a locked entry is kept verbatim."""
+    artifact locks stay valid, and a locked entry is kept verbatim. A ref
+    with unknown dimensions never erases known ones (a byte-stable reuse of
+    a poster-only run cannot re-probe what it did not decode)."""
     locked = _locked_artifact_indices(step)
     for i, existing in enumerate(step.artifacts):
         if existing.uri == ref.uri:
             if i in locked:
                 flags.append(f"locked-artifact-kept:{step.id}:{ref.uri}")
             else:
+                if ref.width is None and existing.width is not None:
+                    ref = ref.model_copy(
+                        update={"width": existing.width, "height": existing.height}
+                    )
                 step.artifacts[i] = ref
             return
     step.artifacts.append(ref)
 
 
-def _stale_artifact_flags(
-    step: Step, produced_uris: set[str], flags: list[str]
-) -> None:
+def _stale_artifact_flags(step: Step, keep_uris: set[str], flags: list[str]) -> None:
     """Flag (never remove) derived-looking artifacts this run no longer
-    produces — report, don't repair."""
-    family = re.compile(rf"^{MEDIA_PREFIX}/{re.escape(step.id)}(\.\d+)?\.[a-z0-9]+$")
+    accounts for — report, don't repair. ``keep_uris`` carries both what was
+    produced AND what a skipped span (missing media, invalid excerpt) would
+    have produced: a span we could not process must not have its healthy
+    artifacts smeared as stale."""
+    family = re.compile(rf"^{MEDIA_PREFIX}/{re.escape(step.id)}(--[^/]+)?\.[a-z0-9]+$")
     for artifact in step.artifacts:
-        if artifact.uri in produced_uris:
+        if artifact.uri in keep_uris:
             continue
         if artifact.derived_from and family.match(artifact.uri):
             flags.append(f"stale-artifact:{step.id}:{artifact.uri}")
@@ -506,6 +533,16 @@ def _verify_media_identity(
     return hashes
 
 
+def _policy_params(aspect: float, pad: float) -> dict[str, str]:
+    """The policy fingerprint recorded per entry — and READ on reconcile."""
+    return {
+        "lo": decimal_str(ENVELOPE_LO),
+        "hi": decimal_str(ENVELOPE_HI),
+        "pad": decimal_str(pad),
+        "aspect": decimal_str(aspect),
+    }
+
+
 def _reconcile_recipe(
     recipes: RecipesFile,
     key: str,
@@ -518,42 +555,54 @@ def _reconcile_recipe(
     aspect: float,
     pad: float,
     flags: list[str],
-) -> Box | None:
-    """ADR-0005 §3's re-run semantics. Returns the box to cut with."""
+) -> CropRecipe:
+    """ADR-0005 §3's re-run semantics. Returns the governing recipe entry
+    (its ``box`` is the crop; its ``media_digest`` gates the re-encode).
+
+    A LOCKED entry's box wins whenever the entry exists — used verbatim,
+    never re-located, never re-run through the policy; input drift is
+    flagged, locator/params changes are irrelevant to a human's final box.
+    An UNLOCKED entry is reused only when the inputs (window, frame, media
+    identity) AND the policy (locator identity, params) all still match;
+    any drift re-locates, with a flag.
+    """
     entry = recipes.entries.get(key)
+    params = _policy_params(aspect, pad)
     if entry is not None:
         identity_known = entry.source_asset_id is not None
-        if not identity_known:
-            flags.append(f"recipe-identity-unverified:{key}")
-        matches = (
+        inputs_match = (
             _decimals_equal(entry.window[0], window[0])
             and _decimals_equal(entry.window[1], window[1])
             and (entry.frame_width, entry.frame_height) == frame_size
             and (not identity_known or entry.source_asset_id == media_hash)
         )
         if entry.locked:
-            if not matches:
+            if not identity_known:
+                flags.append(f"recipe-identity-unverified:{key}")
+            if not inputs_match:
                 flags.append(f"recipe-drift-locked:{key}")
-            return entry.box  # verbatim — never re-run through the policy
-        if matches:
-            return entry.box
+            return entry
+        policy_match = entry.locator == locator_name and entry.params == params
+        if inputs_match and policy_match:
+            if not identity_known:
+                # the inputs just matched against verified media — adopt the
+                # hash so drift detection works from here on, and say so
+                entry.source_asset_id = media_hash
+                flags.append(f"recipe-identity-recorded:{key}")
+            return entry
         flags.append(f"recipe-refreshed:{key}")
     box = locate()
-    recipes.entries[key] = CropRecipe(
+    entry = CropRecipe(
         box=box,
         window=window,
         frame_width=frame_size[0],
         frame_height=frame_size[1],
         source_asset_id=media_hash,
         locator=locator_name,
-        params={
-            "lo": decimal_str(ENVELOPE_LO),
-            "hi": decimal_str(ENVELOPE_HI),
-            "pad": decimal_str(pad),
-            "aspect": decimal_str(aspect),
-        },
+        params=params,
     )
-    return box
+    recipes.entries[key] = entry
+    return entry
 
 
 def derive_document(
@@ -593,6 +642,8 @@ def derive_document(
         roles: which artifact roles to produce, of ``("clip", "gif",
             "poster")``.
     """
+    if not roles:
+        raise ValueError(f"roles must name at least one of {DFLT_ROLES}")
     unknown_roles = set(roles) - set(DFLT_ROLES)
     if unknown_roles:
         raise ValueError(
@@ -610,6 +661,17 @@ def derive_document(
             "or both media_store= and recipes_path= explicitly — a document "
             "given as data has no directory to put media/ next to"
         )
+    if isinstance(media_store, DirStore) and media_store.rootdir.is_dir():
+        import os
+
+        if not os.access(media_store.rootdir, os.W_OK):
+            # refuse BEFORE spending encode work (ADR-0005 §1: informative,
+            # naming the path and the override — never silent relocation)
+            raise ValueError(
+                f"cannot write media under {media_store.rootdir} (directory "
+                "not writable); make it writable, or pass media_store= / "
+                "recipes_path= pointing somewhere writable"
+            )
     requirements = check_media_requirements()
     if not requirements["ok"]:
         raise RuntimeError(
@@ -633,18 +695,29 @@ def derive_document(
         for source_id, path in media_paths.items()
     }
 
+    _refuse_ambiguous_identities(doc)
+    sources_by_id = {source.id: source for source in doc.sources}
     recipes = load_recipes(recipes_path)
     current_keys: set[str] = set()
 
     for step in _walk_steps(doc.steps):
         spans = _excerpt_spans(step)
-        produced: set[str] = set()
-        for ordinal, span in enumerate(spans, start=1):
+        produced_any = False
+        keep_uris: set[str] = set()
+        for span in spans:
             key = _span_key(step.id, span)
             current_keys.add(key)
+            base = _artifact_base(step, span, len(spans))
+            # every current span's whole name family is accounted for — a
+            # skipped span, or a roles= subset, must not smear the rest
+            keep_uris.update(f"{MEDIA_PREFIX}/{base}{ext}" for ext in _EXT.values())
             if span.source not in media_paths:
                 flags.append(f"no-media:{step.id}/{span.source}")
                 continue
+            source = sources_by_id.get(span.source)
+            if source is not None and source.kind in ("document", "image"):
+                # an excerpt is a temporal sub-window; these kinds have none
+                flags.append(f"non-temporal-source:{step.id}/{span.source}")
             start_str, end_str = span.excerpt
             start_s = float(Fraction(start_str))
             end_s = float(Fraction(end_str))
@@ -670,7 +743,7 @@ def derive_document(
                     observation, frame_size=frame_size, aspect=aspect, pad=pad
                 )
 
-            box = _reconcile_recipe(
+            entry = _reconcile_recipe(
                 recipes,
                 key,
                 window=(start_str, end_str),
@@ -682,43 +755,93 @@ def derive_document(
                 pad=pad,
                 flags=flags,
             )
-
-            base = _artifact_base(step, ordinal, len(spans))
-            refs = _derive_span_media(
+            digest = _media_digest(
+                entry.box, (start_str, end_str), media_hashes[span.source]
+            )
+            refs, encoded = _derive_span_media(
                 media_path,
                 start_s=start_s,
                 end_s=end_s,
-                box=box,
+                box=entry.box,
                 base=base,
                 roles=roles,
                 span_role=span.role,
                 window=(start_str, end_str),
                 store=media_store,
+                reuse_ok=entry.media_digest == digest,
                 flags=flags,
             )
+            if encoded:
+                entry.media_digest = digest
             for ref in refs:
                 _upsert_artifact(step, ref, flags)
-                produced.add(ref.uri)
+            produced_any = True
             result.derived.append(
                 {
                     "step": step.id,
                     "span": key,
                     "uris": sorted(ref.uri for ref in refs),
-                    "box": list(box) if box else None,
+                    "box": list(entry.box) if entry.box else None,
                 }
             )
-        if produced:
-            # only when this run actually derived for the step — a span
-            # skipped for missing media must not smear its existing
-            # artifacts as stale
-            _stale_artifact_flags(step, produced, flags)
+        if produced_any:
+            _stale_artifact_flags(step, keep_uris, flags)
 
     for key in sorted(set(recipes.entries) - current_keys):
         flags.append(f"recipe-orphaned:{key}")
 
     if recipes.entries or Path(recipes_path).exists():
-        save_recipes(recipes, recipes_path)
+        try:
+            save_recipes(recipes, recipes_path)
+        except OSError as error:
+            raise RuntimeError(
+                f"derived media was written but the recipes sidecar could "
+                f"not be ({recipes_path}: {error}); make it writable or pass "
+                "recipes_path= pointing somewhere writable"
+            ) from error
     return result
+
+
+def _media_digest(box: Box | None, window: tuple[str, str], media_hash: str) -> str:
+    """What the stored media was cut with — the reuse gate's key. A recipe
+    whose digest differs from the current (box, window, media identity) must
+    re-encode; uri existence alone proved nothing about WHICH bytes the
+    store holds (the review's measured blocker)."""
+    import json
+
+    payload = json.dumps([list(box) if box else None, list(window), media_hash])
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _refuse_ambiguous_identities(doc: StepDocument) -> None:
+    """Refuse, before any encode, a document derive cannot address honestly:
+    two spans sharing the ``(source, role, start)`` identity in one step
+    (edits.py's lock matching cannot tell them apart either), or two spans
+    whose artifact names collide (uri is merge identity — one uri must mean
+    one span)."""
+    claimed_keys: set[str] = set()
+    claimed_uris: dict[str, str] = {}
+    for step in _walk_steps(doc.steps):
+        spans = _excerpt_spans(step)
+        for span in spans:
+            key = _span_key(step.id, span)
+            if key in claimed_keys:
+                raise ValueError(
+                    f"two excerpt spans share the identity {key!r} "
+                    "(step/source/role/start) — derive, and edits.py's lock "
+                    "matching, cannot tell them apart; change one span's "
+                    "start or role"
+                )
+            claimed_keys.add(key)
+            uri = f"{MEDIA_PREFIX}/{_artifact_base(step, span, len(spans))}"
+            if uri in claimed_uris:
+                raise ValueError(
+                    f"artifact name collision: spans {claimed_uris[uri]!r} "
+                    f"and {key!r} would both write {uri}.* — the uri is an "
+                    "artifact's merge identity, so one uri must mean one "
+                    "span; rename one of the steps"
+                )
+            claimed_uris[uri] = key
 
 
 def _derive_span_media(
@@ -732,12 +855,16 @@ def _derive_span_media(
     span_role: str,
     window: tuple[str, str],
     store: MutableMapping,
+    reuse_ok: bool,
     flags: list[str],
-) -> list[ArtifactRef]:
+) -> tuple[list[ArtifactRef], bool]:
     """Cut/encode one span's artifacts through mixing, write bytes through
-    the store, and return the refs. Re-encoding is skipped when every
-    requested uri already exists in the store (byte-stable re-runs: x264 is
-    not deterministic, so re-encoding would churn every ``asset_id``)."""
+    the store, and return ``(refs, encoded)``. Re-encoding is skipped only
+    when every requested uri already exists in the store AND the caller's
+    ``reuse_ok`` says the recipe's ``media_digest`` still matches what those
+    bytes were cut with — uri existence alone proved nothing about WHICH
+    bytes the store holds. Byte-stable re-runs are the point: x264 is not
+    deterministic, so a gratuitous re-encode would churn every ``asset_id``."""
     import mixing
 
     uris = {role: f"{MEDIA_PREFIX}/{base}{_EXT[role]}" for role in roles}
@@ -749,7 +876,7 @@ def _derive_span_media(
     duration = decimal_str(float(Fraction(window[1]) - Fraction(window[0])))
     refs: list[ArtifactRef] = []
 
-    if all_present:
+    if all_present and reuse_ok:
         flags.append(f"reused-media:{base}")
         payloads = {role: store[uri] for role, uri in uris.items()}
         clip_dims = (None, None)
@@ -803,7 +930,14 @@ def _derive_span_media(
                 "gif": (None, None),  # scaled by make_gif; honesty over guess
             }
         for role in roles:
-            store[uris[role]] = payloads[role]
+            try:
+                store[uris[role]] = payloads[role]
+            except OSError as error:
+                raise RuntimeError(
+                    f"could not write {uris[role]} to the media store "
+                    f"({error}); make the location writable or pass "
+                    "media_store= pointing somewhere writable"
+                ) from error
 
     for role in roles:
         data = payloads[role]
@@ -820,4 +954,4 @@ def _derive_span_media(
                 derived_from=span_role,
             )
         )
-    return refs
+    return refs, not (all_present and reuse_ok)

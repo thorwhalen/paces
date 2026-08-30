@@ -91,6 +91,27 @@ def test_unpaired_clip_gets_no_poster_or_gif_chrome():
     assert "download" not in html_page
 
 
+def test_render_does_not_warn_for_absolute_media_uris(tmp_path):
+    import warnings
+
+    from paces import tools
+
+    doc = _doc(
+        step_artifacts=[
+            ArtifactRef(
+                role="clip", uri="https://cdn.example.com/b4.mp4", mime="video/mp4"
+            )
+        ]
+    )
+    doc_path = tmp_path / "document.json"
+    doc_path.write_text(dumps_document(doc), encoding="utf-8")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # an http-only page moves freely
+        tools.render(str(doc_path), output=str(elsewhere / "page.html"))
+
+
 def test_render_warns_when_page_leaves_relative_media_behind(tmp_path):
     from paces import tools
 

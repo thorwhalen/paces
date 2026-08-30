@@ -325,8 +325,8 @@ def derive(
     output: str | None = None,
     subject_locator: str | None = None,
     roles: str = "clip,gif,poster",
-    aspect: float = 0.8,
-    pad: float = 0.16,
+    aspect: float | None = None,
+    pad: float | None = None,
 ) -> dict:
     """Derive real media (clip + gif + poster) for every excerpt-bearing
     span and write the refs into the document. Needs the [media] extra.
@@ -367,18 +367,34 @@ def derive(
         media.lstrip().startswith("{") or media.endswith(".json")
     ):
         media = _structured(media, what="media")
+        if not isinstance(media, dict):
+            raise ValueError(
+                "a JSON media argument must be a mapping "
+                '{"<source-id>": "<path>"}; got '
+                f"{type(media).__name__}"
+            )
     doc_path = Path(document)
     result = derivation.derive_document(
         model.loads_document(doc_path.read_text(encoding="utf-8")),
         media=media,
         doc_path=doc_path,
         subject_locator=locator,
-        aspect=aspect,
-        pad=pad,
+        aspect=derivation.DFLT_ASPECT if aspect is None else aspect,
+        pad=derivation.DFLT_PAD if pad is None else pad,
         roles=tuple(role.strip() for role in roles.split(",") if role.strip()),
     )
     text = model.dumps_document(result.document)
-    Path(output or doc_path).write_text(text, encoding="utf-8")
+    out_path = Path(output or doc_path)
+    if out_path.resolve().parent != doc_path.resolve().parent:
+        import warnings
+
+        warnings.warn(
+            f"writing the derived document to {out_path.parent} while its "
+            f"media/ and recipes sidecar stay in {doc_path.parent} — the "
+            "written document's relative media uris will not resolve there",
+            stacklevel=2,
+        )
+    out_path.write_text(text, encoding="utf-8")
     return {
         "document": json.loads(text),
         "flags": result.flags,
