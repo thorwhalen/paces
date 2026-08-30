@@ -51,6 +51,14 @@ audio = [
     # Python 3.13; the official backport keeps 3.13+ installs working.
     "audioop-lts; python_version>='3.13'",
 ]
+media = [
+    # Media derivation (issue #1, ADR-0005): clip cutting (crop_video +
+    # crop_box), palette-quality gifs (make_gif) and posters (save_frame)
+    # all run on the pip-bundled imageio-ffmpeg binary — no system ffmpeg.
+    # Floor 0.0.39: make_gif, crop_box= and path-accepting
+    # get_video_dimensions ship there.
+    "mixing>=0.0.39",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -60,7 +68,9 @@ dev = [
     "argh>=0.30",
     # The grid-measurement tests exercise the real mixing/librosa path on
     # synthesized audio; mirrored with [audio] so they run rather than skip.
-    "mixing[beats,audio]>=0.0.36",
+    # The derivation tests do the same on synthetic video — mirrored with
+    # [media] (the >=0.0.39 floor wins over [audio]'s >=0.0.36).
+    "mixing[beats,audio]>=0.0.39",
     "numba>=0.59",
 ]
 docs = [

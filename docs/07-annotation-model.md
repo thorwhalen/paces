@@ -602,8 +602,10 @@ holds at the document layer too), and that append to the op-log.
   `Lock.at` is the only timestamp, and it changes only when a human edits.
 - `ArtifactRef.uri` is relative to the document. `asset_id` is the durable identity.
 - Sidecars: `project.annot` (SQLite lacing store, **gitignored**), `media/` (artifacts, either
-  gitignored or LFS), `document.json` (committed). Per `~/.claude/skills/app-data-lifecycle`,
-  the store and media belong under `~/.local/share/stepped/<project>/`, not next to the code.
+  gitignored or LFS), `<stem>.recipes.json` (crop recipes, committed), `document.json`
+  (committed). Media lands next to the document by default (ADR-0005 §1 — the ruling on
+  the tension this bullet used to carry); a deploy-managed tree injects a non-doc store
+  root instead. The SQLite store is the one sidecar to keep OUT of cloud-synced dirs.
 - Export adapters ship from day one (the survey's *"custom format with no adapter story"*
   pitfall): **WebVTT chapters**, **YouTube chapter block**, W3C Web Annotation, and `.annot`.
   The first three are ~20 lines each and prove the AST/renderer split immediately.

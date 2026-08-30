@@ -192,11 +192,43 @@ def render(document, *, output: str | None = None, renderer: str = "html") -> st
         raise ValueError(
             f"unknown renderer {renderer!r}; available: {sorted(renderers)}"
         )
-    text = renderers[renderer](_as_document(document))
+    doc = _as_document(document)
+    text = renderers[renderer](doc)
     if output:
+        _warn_if_page_leaves_media_behind(doc, document, output)
         Path(output).write_text(text, encoding="utf-8")
         return output
     return text
+
+
+def _warn_if_page_leaves_media_behind(doc, document, output) -> None:
+    """A page rendered away from the document's directory shows dead clips:
+    ``ArtifactRef.uri`` is document-relative (ADR-0005 §1). Warn, loudly."""
+    import warnings
+
+    def _steps(steps):
+        for step in steps:
+            yield step
+            yield from _steps(step.steps)
+
+    has_relative_media = any(
+        not artifact.uri.startswith(("http://", "https://", "/"))
+        for step in _steps(doc.steps)
+        for artifact in step.artifacts
+    )
+    if not has_relative_media:
+        return
+    if not (isinstance(document, str) and Path(document).is_file()):
+        return
+    doc_dir = Path(document).resolve().parent
+    out_dir = Path(output).resolve().parent
+    if doc_dir != out_dir:
+        warnings.warn(
+            f"rendering to {out_dir} but the document (and its media/) live "
+            f"in {doc_dir} — the page's relative media uris will not "
+            "resolve there",
+            stacklevel=3,
+        )
 
 
 def resolve(document) -> dict:
@@ -286,6 +318,90 @@ def measure_grid(
     return payload
 
 
+def derive(
+    document,
+    *,
+    media,
+    output: str | None = None,
+    subject_locator: str | None = None,
+    roles: str = "clip,gif,poster",
+    aspect: float | None = None,
+    pad: float | None = None,
+) -> dict:
+    """Derive real media (clip + gif + poster) for every excerpt-bearing
+    span and write the refs into the document. Needs the [media] extra.
+
+    ``document`` must be a *path* here (the anchor for the ``media/`` dir
+    and the crop-recipes sidecar — ADR-0005 §1); library callers with an
+    in-memory document use :func:`paces.derivation.derive_document` with an
+    explicit store. ``media`` is one local file, or ``{"<source-id>":
+    "<path>"}`` when several sources carry excerpts. ``subject_locator`` is
+    a lazy ``"module:attr"`` ref to an ADR-0005 §3 locator; the default is
+    no crop. The updated document is written back to ``output`` (default:
+    the document path itself — derive's media side effects and the refs
+    pointing at them must not go out of sync); the returned payload carries
+    ``flags`` — read them, they are the honesty report.
+    """
+    from paces import derivation
+
+    if not isinstance(document, str) or not Path(document).is_file():
+        raise ValueError(
+            "derive takes the document as a file path — the document's "
+            "directory anchors media/ and the recipes sidecar (ADR-0005); "
+            "for in-memory documents use paces.derivation.derive_document "
+            "with media_store= and recipes_path="
+        )
+    locator = None
+    if subject_locator is not None:
+        import importlib
+
+        module_name, _, attr = subject_locator.partition(":")
+        if not module_name or not attr:
+            raise ValueError(
+                f"subject_locator must be a 'module:attr' ref, got {subject_locator!r}"
+            )
+        locator = getattr(importlib.import_module(module_name), attr)
+    # media: a dict passes through; a string is a JSON mapping (inline or
+    # .json file) or, most commonly, the media file's own path.
+    if isinstance(media, str) and (
+        media.lstrip().startswith("{") or media.endswith(".json")
+    ):
+        media = _structured(media, what="media")
+        if not isinstance(media, dict):
+            raise ValueError(
+                "a JSON media argument must be a mapping "
+                '{"<source-id>": "<path>"}; got '
+                f"{type(media).__name__}"
+            )
+    doc_path = Path(document)
+    result = derivation.derive_document(
+        model.loads_document(doc_path.read_text(encoding="utf-8")),
+        media=media,
+        doc_path=doc_path,
+        subject_locator=locator,
+        aspect=derivation.DFLT_ASPECT if aspect is None else aspect,
+        pad=derivation.DFLT_PAD if pad is None else pad,
+        roles=tuple(role.strip() for role in roles.split(",") if role.strip()),
+    )
+    text = model.dumps_document(result.document)
+    out_path = Path(output or doc_path)
+    if out_path.resolve().parent != doc_path.resolve().parent:
+        import warnings
+
+        warnings.warn(
+            f"writing the derived document to {out_path.parent} while its "
+            f"media/ and recipes sidecar stay in {doc_path.parent} — the "
+            "written document's relative media uris will not resolve there",
+            stacklevel=2,
+        )
+    out_path.write_text(text, encoding="utf-8")
+    return {
+        "document": json.loads(text),
+        "flags": result.flags,
+        "derived": result.derived,
+    }
+
+
 def list_segmenters() -> dict:
     """The registered segmentation capabilities: name → what it needs/gives."""
     return {
@@ -304,6 +420,7 @@ _dispatch_funcs = [
     segment,
     to_document,
     render,
+    derive,
     edit,
     merge,
     resolve,

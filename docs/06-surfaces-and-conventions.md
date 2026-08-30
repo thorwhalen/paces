@@ -25,7 +25,7 @@ is marked VERIFIED.
 | Surface 3 | **Shipped agent skills** in `stepped/data/skills/<name>/SKILL.md` | `i/enlace/enlace/data/skills/`, `t/yb/yb/data/skills/` |
 | Surface 4 | **HTTP** via `qh.mk_app(routes, config=AppConfig(path_prefix="/api"))` | `$PP/tt/reelee/reelee/server.py:283` |
 | Surface 5 | **Frontend** Vite+React+TS, `@zodal/*` collections + `acture` commands | `$PP/tt/reelee-web` |
-| Data | Media **never** in the repo/app dir. `~/.local/share/stepped/<kind>/`, addressed via a `dol` store | `~/.claude/skills/app-data-lifecycle/SKILL.md` |
+| Data | Derived media in `media/` **next to the document** (ADR-0005 §1), addressed via the injected store seam; deploy-managed trees inject a non-doc root | `docs/adr/0005-media-derivation.md` |
 | Deploy | `tw_platform/deploy.py`, app registered with an `app.toml` + an enlace `server.py` | `~/.claude/skills/tw-deploy/SKILL.md` → `twp-deploy` |
 
 **Build ONE surface in v1.** Ask the other four's question ("would this surface need the core
@@ -67,7 +67,7 @@ Template to emit before writing code:
 ```
 | # | Seam (the boundary) | v1 default (no new dependency) | Replacement you can point at |
 |---|---|---|---|
-| 1 | where step media lands | dol.Files under ~/.local/share/stepped/clips | s3dol.S3Store (in the manifest) |
+| 1 | where step media lands | stdlib `DirStore` at `<doc dir>/media/` (ADR-0005 §1) | dol.Files / s3dol.S3Store injected via `media_store=` |
 | 2 | how the video is segmented | <the POC's method>            | <point at it or delete the row>  |
 
 Surface for v1: CLI only (MCP/HTTP/frontend/skills: questions answered, not built)
@@ -581,7 +581,9 @@ Four categories, each with a different source of truth: (1) code/build output �
 deploy *should* mirror and `--delete`; (2) large/binary media; (3) confidential data;
 (4) mutable runtime state — the deploy must never touch 2–4.
 
-**Where `stepped`'s bytes go:**
+**Where `stepped`'s bytes go** (superseded for *derived media* by ADR-0005 §1: the
+default is `media/` next to the user-owned document; the sketch below remains the rule
+for the server-side clause — documents inside a deploy-managed tree):
 
 ```
 ~/.local/share/stepped/          # the project data ROOT, never written to directly
