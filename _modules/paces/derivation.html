@@ -1,0 +1,1108 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.derivation &mdash; paces 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.derivation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.derivation</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Media derivation: fill ``ArtifactRef``s with real clips, gifs and posters.</span>
+
+<span class="sd">For every excerpt-bearing :class:`~paces.model.SourceSpan`, cut a loopable</span>
+<span class="sd">mp4, a palette-quality gif and a poster frame from the local media, write</span>
+<span class="sd">them through a store keyed by document-relative uri, and upsert the</span>
+<span class="sd">resulting :class:`~paces.model.ArtifactRef`\\ s onto the owning step. The</span>
+<span class="sd">design — where media lands, why CI needs no system ffmpeg, and the</span>
+<span class="sd">``subject_locator=`` seam — is ADR-0005 (``docs/adr/0005-media-derivation.md``);</span>
+<span class="sd">this docstring only summarises the contracts.</span>
+
+<span class="sd">**The locator seam (Shape B — locator observes, core decides).** A</span>
+<span class="sd">``subject_locator`` is a callable receiving a :class:`LocateQuery` and</span>
+<span class="sd">returning a :class:`SubjectObservation` — timed raw region evidence — or</span>
+<span class="sd">``None``, which means "no crop" and is both the default locator's honest</span>
+<span class="sd">answer (:func:`full_frame`) and the zero-detections fallback. The *core*</span>
+<span class="sd">owns the one policy pipeline (:func:`resolve_crop_box`): union regions per</span>
+<span class="sd">sample → robust percentile envelope → pad → force aspect → clamp → **one</span>
+<span class="sd">static box per excerpt window** (measured on 2.5–6 s loops; per-frame crops</span>
+<span class="sd">are unstable). A ``None`` observation gets no policy: no crop means</span>
+<span class="sd">genuinely uncropped, not letterboxed.</span>
+
+<span class="sd">**Crop recipes** persist in a sidecar (``&lt;document-stem&gt;.recipes.json``,</span>
+<span class="sd">next to the document, committed and diffable) keyed by the span address</span>
+<span class="sd">``{step_id}/{source}/{role}/{start}``. A recipe whose inputs still match is</span>
+<span class="sd">reused (the locator is skipped); a **locked** recipe's box is used verbatim</span>
+<span class="sd">— never re-padded, re-aspected or clamped — and survives drift with a loud</span>
+<span class="sd">flag. Hand-override = edit ``box``, set ``locked: true``.</span>
+
+<span class="sd">**Honesty flags over silence.** Every skipped span, unverifiable identity,</span>
+<span class="sd">kept lock, refreshed or orphaned recipe, and stale artifact is a named flag</span>
+<span class="sd">in the result — never a silent drop.</span>
+
+<span class="sd">All media I/O goes through ``mixing`` (behind the ``[media]`` extra) — never</span>
+<span class="sd">moviepy/ffmpeg directly.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">MutableMapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePosixPath</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic.alias_generators</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_camel</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ArtifactRef</span><span class="p">,</span>
+    <span class="n">Decimal</span><span class="p">,</span>
+    <span class="n">Step</span><span class="p">,</span>
+    <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="n">decimal_str</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1">#: Crop-policy defaults — the POC's shipped production values</span>
+<span class="c1">#: (``docs/poc-reference/tools/build_media.py``): 4th/96th percentile robust</span>
+<span class="c1">#: envelope, 16% padding, 4:5 portrait-ish aspect (width/height).</span>
+<span class="n">ENVELOPE_LO</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">ENVELOPE_HI</span> <span class="o">=</span> <span class="mi">96</span>
+<span class="n">DFLT_PAD</span> <span class="o">=</span> <span class="mf">0.16</span>
+<span class="n">DFLT_ASPECT</span> <span class="o">=</span> <span class="mf">0.8</span>
+
+<span class="c1">#: The artifact roles derive produces, in production order.</span>
+<span class="n">DFLT_ROLES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"clip"</span><span class="p">,</span> <span class="s2">"gif"</span><span class="p">,</span> <span class="s2">"poster"</span><span class="p">)</span>
+
+<span class="c1">#: Uri prefix (and store-key prefix) for derived media — POSIX '/', always.</span>
+<span class="n">MEDIA_PREFIX</span> <span class="o">=</span> <span class="s2">"media"</span>
+
+<span class="n">_MIME</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"clip"</span><span class="p">:</span> <span class="s2">"video/mp4"</span><span class="p">,</span> <span class="s2">"gif"</span><span class="p">:</span> <span class="s2">"image/gif"</span><span class="p">,</span> <span class="s2">"poster"</span><span class="p">:</span> <span class="s2">"image/jpeg"</span><span class="p">}</span>
+<span class="n">_EXT</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"clip"</span><span class="p">:</span> <span class="s2">".mp4"</span><span class="p">,</span> <span class="s2">"gif"</span><span class="p">:</span> <span class="s2">".gif"</span><span class="p">,</span> <span class="s2">"poster"</span><span class="p">:</span> <span class="s2">".jpg"</span><span class="p">}</span>
+
+<span class="n">RECIPES_SCHEMA_VERSION</span> <span class="o">=</span> <span class="s2">"0.1.0"</span>
+
+<span class="c1">#: A pixel box: (x, y, w, h) from the frame's top-left.</span>
+<span class="n">Box</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+
+
+<span class="c1"># ── the locator seam ────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="LocateQuery">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.LocateQuery">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LocateQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a ``subject_locator`` is asked: one excerpt window of one media</span>
+<span class="sd">    file, with read-only hints. Times are float seconds — a computed view,</span>
+<span class="sd">    like :func:`paces.model.resolve`'s output, never the stored document."""</span>
+
+    <span class="n">media_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">end_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">frame_width</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">frame_height</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">step_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">tags</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="SubjectObservation">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.SubjectObservation">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SubjectObservation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Timed raw region evidence: ``samples[i] = (t_s, (box, box, ...))`` —</span>
+<span class="sd">    one region tuple per probed instant. Deliberately not person-shaped: one</span>
+<span class="sd">    box for a dancer, two for judo, hands + workpiece for cooking. Samples</span>
+<span class="sd">    are transient locator output; only the resolved box is ever persisted."""</span>
+
+    <span class="n">samples</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Box</span><span class="p">,</span> <span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]</span></div>
+
+
+
+<span class="c1">#: The seam: returns an observation, or ``None`` meaning "no crop".</span>
+<span class="n">SubjectLocator</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">LocateQuery</span><span class="p">],</span> <span class="s2">"SubjectObservation | None"</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="full_frame">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.full_frame">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">full_frame</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="n">LocateQuery</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The default locator: no crop, ever — a real implementation of the</span>
+<span class="sd">    contract whose honest answer is ``None`` (docs/09: the seam must be</span>
+<span class="sd">    "genuinely pluggable and nullable"). Pointable replacement: rtmlib pose</span>
+<span class="sd">    boxes (Apache-2.0; never YOLO/ultralytics — AGPL, see ADR-0005 §3)."""</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<span class="n">full_frame</span><span class="o">.</span><span class="n">locator_name</span> <span class="o">=</span> <span class="s2">"full-frame"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_percentile</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">q</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Linear-interpolated percentile (numpy's default method), pure python."""</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">q</span> <span class="o">/</span> <span class="mi">100</span>
+    <span class="n">f</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">f</span> <span class="o">==</span> <span class="n">c</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">xs</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">xs</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">xs</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">-</span> <span class="n">xs</span><span class="p">[</span><span class="n">f</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="n">f</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="resolve_crop_box">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.resolve_crop_box">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_crop_box</span><span class="p">(</span>
+    <span class="n">observation</span><span class="p">:</span> <span class="n">SubjectObservation</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">frame_size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">aspect</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_ASPECT</span><span class="p">,</span>
+    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PAD</span><span class="p">,</span>
+    <span class="n">lo</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">ENVELOPE_LO</span><span class="p">,</span>
+    <span class="n">hi</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">ENVELOPE_HI</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The locator-agnostic crop policy: observation → ONE static box.</span>
+
+<span class="sd">    Union regions per sample → robust percentile envelope (``lo``/``hi``) →</span>
+<span class="sd">    pad → force ``aspect`` (w/h, expanding the deficient dimension) → clamp</span>
+<span class="sd">    into the frame (shrinking aspect-true when the padded box exceeds it).</span>
+<span class="sd">    ``None`` in (no observation, or no sample carried a region) → ``None``</span>
+<span class="sd">    out: full frame, no policy — no crop is genuinely uncropped.</span>
+
+<span class="sd">    &gt;&gt;&gt; obs = SubjectObservation(samples=((0.0, ((40, 40, 20, 40),)),))</span>
+<span class="sd">    &gt;&gt;&gt; resolve_crop_box(obs, frame_size=(200, 200), pad=0.0, aspect=0.5)</span>
+<span class="sd">    (40, 40, 20, 40)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">observation</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">unions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_t</span><span class="p">,</span> <span class="n">boxes</span> <span class="ow">in</span> <span class="n">observation</span><span class="o">.</span><span class="n">samples</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">boxes</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">lefts</span><span class="p">,</span> <span class="n">tops</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">_w</span><span class="p">,</span> <span class="n">_h</span> <span class="ow">in</span> <span class="n">boxes</span><span class="p">))</span>
+        <span class="n">rights</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">w</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">_h</span> <span class="ow">in</span> <span class="n">boxes</span><span class="p">)</span>
+        <span class="n">bottoms</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="n">h</span> <span class="k">for</span> <span class="n">_x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">_w</span><span class="p">,</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">boxes</span><span class="p">)</span>
+        <span class="n">unions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">min</span><span class="p">(</span><span class="n">lefts</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">tops</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rights</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">bottoms</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">unions</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">_percentile</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unions</span><span class="p">],</span> <span class="n">lo</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">_percentile</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unions</span><span class="p">],</span> <span class="n">lo</span><span class="p">)</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="n">_percentile</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unions</span><span class="p">],</span> <span class="n">hi</span><span class="p">)</span>
+    <span class="n">bottom</span> <span class="o">=</span> <span class="n">_percentile</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unions</span><span class="p">],</span> <span class="n">hi</span><span class="p">)</span>
+    <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">right</span> <span class="o">-</span> <span class="n">left</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">-</span> <span class="n">top</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">top</span> <span class="o">=</span> <span class="n">left</span> <span class="o">-</span> <span class="n">w</span> <span class="o">*</span> <span class="n">pad</span><span class="p">,</span> <span class="n">top</span> <span class="o">-</span> <span class="n">h</span> <span class="o">*</span> <span class="n">pad</span>
+    <span class="n">right</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">=</span> <span class="n">right</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">pad</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">+</span> <span class="n">h</span> <span class="o">*</span> <span class="n">pad</span>
+    <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">right</span> <span class="o">-</span> <span class="n">left</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">-</span> <span class="n">top</span>
+    <span class="n">cx</span><span class="p">,</span> <span class="n">cy</span> <span class="o">=</span> <span class="p">(</span><span class="n">left</span> <span class="o">+</span> <span class="n">right</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">top</span> <span class="o">+</span> <span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="n">h</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">w</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">w</span> <span class="o">/</span> <span class="n">h</span> <span class="o">&gt;</span> <span class="n">aspect</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">aspect</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">aspect</span>
+    <span class="n">frame_w</span><span class="p">,</span> <span class="n">frame_h</span> <span class="o">=</span> <span class="n">frame_size</span>
+    <span class="k">if</span> <span class="n">w</span> <span class="o">&gt;</span> <span class="n">frame_w</span><span class="p">:</span>
+        <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">frame_w</span><span class="p">,</span> <span class="n">frame_w</span> <span class="o">/</span> <span class="n">aspect</span>
+    <span class="k">if</span> <span class="n">h</span> <span class="o">&gt;</span> <span class="n">frame_h</span><span class="p">:</span>
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">frame_h</span><span class="p">,</span> <span class="n">frame_h</span> <span class="o">*</span> <span class="n">aspect</span>
+    <span class="n">cx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">cx</span><span class="p">,</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">frame_w</span> <span class="o">-</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">cy</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">cy</span><span class="p">,</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">frame_h</span> <span class="o">-</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">h</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">cx</span> <span class="o">-</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">cy</span> <span class="o">-</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">w</span><span class="p">)),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">h</span><span class="p">)),</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ── crop recipes (the sidecar) ──────────────────────────────────────────────</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_WireBase</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""camelCase wire, strict fields — the document's conventions, locally."""</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span>
+        <span class="n">alias_generator</span><span class="o">=</span><span class="n">to_camel</span><span class="p">,</span> <span class="n">populate_by_name</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="CropRecipe">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.CropRecipe">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CropRecipe</span><span class="p">(</span><span class="n">_WireBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One span's derivation parameters: the resolved ``box`` (the *final*</span>
+<span class="sd">    post-policy crop; ``None`` = full frame, a recorded decision) plus the</span>
+<span class="sd">    input fingerprint that makes drift detectable. ``params`` and ``locator``</span>
+<span class="sd">    are read on reconcile — a locator upgrade or an aspect/pad change</span>
+<span class="sd">    re-locates an unlocked entry; a stored box is never re-run through the</span>
+<span class="sd">    policy. ``media_digest`` stamps what the stored media was actually cut</span>
+<span class="sd">    with (box + window + source hash), so a hand-edited box or a re-timed</span>
+<span class="sd">    window forces a re-encode instead of silently serving stale bytes —</span>
+<span class="sd">    the POC's crops.json failure, kept dead. ``params`` values are decimal</span>
+<span class="sd">    strings (the sidecar is committed — no floats on the wire)."""</span>
+
+    <span class="n">box</span><span class="p">:</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Decimal</span><span class="p">,</span> <span class="n">Decimal</span><span class="p">]</span>
+    <span class="n">frame_width</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">frame_height</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">source_asset_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># None = media identity unverified</span>
+    <span class="n">locator</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Decimal</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">locked</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">media_digest</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># what the stored media was cut with</span></div>
+
+
+
+<div class="viewcode-block" id="RecipesFile">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.RecipesFile">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RecipesFile</span><span class="p">(</span><span class="n">_WireBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The sidecar document: span address → :class:`CropRecipe`."""</span>
+
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"paces.crop-recipes"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"paces.crop-recipes"</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">RECIPES_SCHEMA_VERSION</span>
+    <span class="n">entries</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">CropRecipe</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_recipes">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.load_recipes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_recipes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RecipesFile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read the sidecar (missing file → an empty one)."""</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">RecipesFile</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">RecipesFile</span><span class="o">.</span><span class="n">model_validate_json</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="save_recipes">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.save_recipes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_recipes</span><span class="p">(</span><span class="n">recipes</span><span class="p">:</span> <span class="n">RecipesFile</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Write the sidecar in the document's canonical wire style.</span>
+
+<span class="sd">    Deliberately NOT ``exclude_none``: ``box: null`` (full frame) and</span>
+<span class="sd">    ``sourceAssetId: null`` (identity unverified) are recorded decisions a</span>
+<span class="sd">    hand-editor must be able to see and override (ADR-0005 §3)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">recipes</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_span_key</span><span class="p">(</span><span class="n">step_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">span</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The span address — ``{step_id}/{source}/{role}/{start}`` (start is the</span>
+<span class="sd">    span's exact wire decimal). ``(step, source, role)`` alone collides on</span>
+<span class="sd">    the POC fixture (step b8 carries two ``instruction`` excerpts on one</span>
+<span class="sd">    source); adding ``start`` matches ``edits.py``'s span identity triple."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_decimals_equal</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+
+<span class="c1"># ── the default media store ─────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="DirStore">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.DirStore">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DirStore</span><span class="p">(</span><span class="n">MutableMapping</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Minimal ``MutableMapping[str, bytes]`` over files under a root</span>
+<span class="sd">    directory, keyed by relative POSIX paths (``media/b4.mp4``).</span>
+
+<span class="sd">    The default backend of the ADR-0005 store seam — stdlib-only so the</span>
+<span class="sd">    pydantic-only core stays intact (ADR-0004). Inject a ``dol``/``s3dol``</span>
+<span class="sd">    store for other backends; the key contract (document-relative POSIX uri)</span>
+<span class="sd">    is backend-independent.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+        <span class="n">pure</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="c1"># '\\' is refused outright: PurePosixPath treats it as an ordinary</span>
+        <span class="c1"># character, but Windows' joinpath re-splits on it — the same key</span>
+        <span class="c1"># would name different files per platform (and '..\\' would escape).</span>
+        <span class="k">if</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">key</span> <span class="ow">or</span> <span class="n">pure</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">".."</span> <span class="ow">in</span> <span class="n">pure</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"store keys are relative POSIX paths, got </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">pure</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"*"</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">yield</span> <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── preflight ───────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="check_media_requirements">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.check_media_requirements">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_media_requirements</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Two-channel media preflight (ADR-0005 §2), reported distinctly:</span>
+
+<span class="sd">    - ``bundled_ffmpeg`` — the pip-bundled imageio-ffmpeg binary, which is</span>
+<span class="sd">      all `derive` needs (mp4/gif via mixing; posters via cv2).</span>
+<span class="sd">    - ``system_ffmpeg`` — a PATH ffmpeg, which `derive` does NOT need but</span>
+<span class="sd">      ``measure_grid`` on non-wav input does (pydub knows nothing of the</span>
+<span class="sd">      bundled binary). A bundled-only check would report healthy on a</span>
+<span class="sd">      machine where ``measure_grid("video.mp4")`` fails.</span>
+<span class="sd">    """</span>
+    <span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">mixing</span>  <span class="c1"># noqa: F401</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"ok"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">"bundled_ffmpeg"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"system_ffmpeg"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"notes"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">"mixing is not installed — install the media extra: "</span>
+                <span class="s2">"pip install paces[media]"</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+
+    <span class="n">bundled</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">ffmpeg_exe</span>
+
+        <span class="n">bundled</span> <span class="o">=</span> <span class="n">ffmpeg_exe</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no bundled ffmpeg (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">); derive cannot encode"</span><span class="p">)</span>
+    <span class="n">system</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"ffmpeg"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">system</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"no system ffmpeg on PATH: derive is unaffected, but "</span>
+            <span class="s2">"measure_grid on non-wav media (e.g. an .mp4) will fail — "</span>
+            <span class="s2">"pydub needs a PATH ffmpeg"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"ok"</span><span class="p">:</span> <span class="n">bundled</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"bundled_ffmpeg"</span><span class="p">:</span> <span class="n">bundled</span><span class="p">,</span>
+        <span class="s2">"system_ffmpeg"</span><span class="p">:</span> <span class="n">system</span><span class="p">,</span>
+        <span class="s2">"notes"</span><span class="p">:</span> <span class="n">notes</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="c1"># ── derivation ──────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="DeriveResult">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.DeriveResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeriveResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a derive run did: the updated document, the honesty flags, and</span>
+<span class="sd">    one row per derived (or byte-stably reused) span."""</span>
+
+    <span class="n">document</span><span class="p">:</span> <span class="n">StepDocument</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">derived</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_walk_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Step</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">step</span>
+        <span class="k">yield from</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sha256_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">20</span><span class="p">),</span> <span class="sa">b</span><span class="s2">""</span><span class="p">):</span>
+            <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">digest</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_excerpt_spans</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">span</span> <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span> <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">excerpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_artifact_base</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">count</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Deterministic artifact stem from SPAN IDENTITY, never position: ``b4``</span>
+<span class="sd">    for the common single-excerpt step, ``b8--instruction--0.2`` when a step</span>
+<span class="sd">    carries several. Ordinal-based names were positional identity wearing a</span>
+<span class="sd">    costume — inserting or deleting a span reassigned every neighbour's uri,</span>
+<span class="sd">    and (with the reuse gate) served one span another span's bytes. The uri</span>
+<span class="sd">    is the artifact's merge identity in ``edits.py``; identity must come</span>
+<span class="sd">    from the same ``(source, role, start)`` triple everything else keys on.</span>
+<span class="sd">    (A step's transition from one excerpt span to several renames its bare</span>
+<span class="sd">    stem — that rename is flagged via ``stale-artifact``, never silent.)"""</span>
+    <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">--</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">--</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="n">_ARTIFACT_LOCK</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^/artifacts/(\d+)(/|$)"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_locked_artifact_indices</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">locks</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">match</span> <span class="o">:=</span> <span class="n">_ARTIFACT_LOCK</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_upsert_artifact</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">ArtifactRef</span><span class="p">,</span> <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Update-by-uri or append; never reorder, never delete — index-form</span>
+<span class="sd">    artifact locks stay valid, and a locked entry is kept verbatim. A ref</span>
+<span class="sd">    with unknown dimensions never erases known ones (a byte-stable reuse of</span>
+<span class="sd">    a poster-only run cannot re-probe what it did not decode)."""</span>
+    <span class="n">locked</span> <span class="o">=</span> <span class="n">_locked_artifact_indices</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">existing</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">existing</span><span class="o">.</span><span class="n">uri</span> <span class="o">==</span> <span class="n">ref</span><span class="o">.</span><span class="n">uri</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">locked</span><span class="p">:</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"locked-artifact-kept:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">ref</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">width</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">existing</span><span class="o">.</span><span class="n">width</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">ref</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span>
+                        <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"width"</span><span class="p">:</span> <span class="n">existing</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="s2">"height"</span><span class="p">:</span> <span class="n">existing</span><span class="o">.</span><span class="n">height</span><span class="p">}</span>
+                    <span class="p">)</span>
+                <span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ref</span>
+            <span class="k">return</span>
+    <span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stale_artifact_flags</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">keep_uris</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Flag (never remove) derived-looking artifacts this run no longer</span>
+<span class="sd">    accounts for — report, don't repair. ``keep_uris`` carries both what was</span>
+<span class="sd">    produced AND what a skipped span (missing media, invalid excerpt) would</span>
+<span class="sd">    have produced: a span we could not process must not have its healthy</span>
+<span class="sd">    artifacts smeared as stale."""</span>
+    <span class="n">family</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"^</span><span class="si">{</span><span class="n">MEDIA_PREFIX</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="si">}</span><span class="s2">(--[^/]+)?\.[a-z0-9]+$"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">artifact</span><span class="o">.</span><span class="n">uri</span> <span class="ow">in</span> <span class="n">keep_uris</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">artifact</span><span class="o">.</span><span class="n">derived_from</span> <span class="ow">and</span> <span class="n">family</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">uri</span><span class="p">):</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"stale-artifact:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">artifact</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_media_paths</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span> <span class="n">media</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Resolve ``media`` (one path, or ``{source_id: path}``) to the source</span>
+<span class="sd">    ids that excerpt-bearing spans actually reference."""</span>
+    <span class="n">referenced</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="n">span</span><span class="o">.</span><span class="n">source</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">_excerpt_spans</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">referenced</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">media</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">Path</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">media</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"media maps unknown source ids </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; "</span>
+                <span class="sa">f</span><span class="s2">"document sources: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">referenced</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"one media path was given but excerpt spans reference "</span>
+                <span class="sa">f</span><span class="s2">"several sources </span><span class="si">{</span><span class="n">referenced</span><span class="si">}</span><span class="s2">; pass media as a mapping "</span>
+                <span class="s1">'{"&lt;source-id&gt;": "&lt;path&gt;"}'</span>
+            <span class="p">)</span>
+        <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">referenced</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">Path</span><span class="p">(</span><span class="n">media</span><span class="p">)}</span>
+    <span class="k">for</span> <span class="n">source_id</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"media file for source </span><span class="si">{</span><span class="n">source_id</span><span class="si">!r}</span><span class="s2"> not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mapping</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_verify_media_identity</span><span class="p">(</span>
+    <span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span> <span class="n">media_paths</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""SHA-256 each media file; refuse a mismatch with the document's</span>
+<span class="sd">    recorded ``Source.asset_id`` (the timings were measured on OTHER bytes),</span>
+<span class="sd">    record the hash when the document has none."""</span>
+    <span class="n">hashes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="p">{</span><span class="n">source</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">source</span> <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">source_id</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">media_paths</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">_sha256_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">hashes</span><span class="p">[</span><span class="n">source_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">digest</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">source_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">asset_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">asset_id</span> <span class="o">=</span> <span class="n">digest</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"media-identity-recorded:</span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">source</span><span class="o">.</span><span class="n">asset_id</span> <span class="o">!=</span> <span class="n">digest</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"media file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> has sha256 </span><span class="si">{</span><span class="n">digest</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span><span class="si">}</span><span class="s2">… but the "</span>
+                <span class="sa">f</span><span class="s2">"document records source </span><span class="si">{</span><span class="n">source_id</span><span class="si">!r}</span><span class="s2"> as "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">asset_id</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span><span class="si">}</span><span class="s2">… — the document's timings were "</span>
+                <span class="s2">"measured on different bytes. Point at the right media, or "</span>
+                <span class="s2">"clear the source's assetId to accept this file."</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="n">hashes</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_policy_params</span><span class="p">(</span><span class="n">aspect</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The policy fingerprint recorded per entry — and READ on reconcile."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"lo"</span><span class="p">:</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">ENVELOPE_LO</span><span class="p">),</span>
+        <span class="s2">"hi"</span><span class="p">:</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">ENVELOPE_HI</span><span class="p">),</span>
+        <span class="s2">"pad"</span><span class="p">:</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">pad</span><span class="p">),</span>
+        <span class="s2">"aspect"</span><span class="p">:</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">aspect</span><span class="p">),</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_reconcile_recipe</span><span class="p">(</span>
+    <span class="n">recipes</span><span class="p">:</span> <span class="n">RecipesFile</span><span class="p">,</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">frame_size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">media_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">locate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="n">locator_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">aspect</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CropRecipe</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""ADR-0005 §3's re-run semantics. Returns the governing recipe entry</span>
+<span class="sd">    (its ``box`` is the crop; its ``media_digest`` gates the re-encode).</span>
+
+<span class="sd">    A LOCKED entry's box wins whenever the entry exists — used verbatim,</span>
+<span class="sd">    never re-located, never re-run through the policy; input drift is</span>
+<span class="sd">    flagged, locator/params changes are irrelevant to a human's final box.</span>
+<span class="sd">    An UNLOCKED entry is reused only when the inputs (window, frame, media</span>
+<span class="sd">    identity) AND the policy (locator identity, params) all still match;</span>
+<span class="sd">    any drift re-locates, with a flag.</span>
+<span class="sd">    """</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">recipes</span><span class="o">.</span><span class="n">entries</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">_policy_params</span><span class="p">(</span><span class="n">aspect</span><span class="p">,</span> <span class="n">pad</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">identity_known</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">source_asset_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">inputs_match</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">_decimals_equal</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">window</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">window</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="ow">and</span> <span class="n">_decimals_equal</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">window</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">window</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">frame_width</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">frame_height</span><span class="p">)</span> <span class="o">==</span> <span class="n">frame_size</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">identity_known</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">source_asset_id</span> <span class="o">==</span> <span class="n">media_hash</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">locked</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">identity_known</span><span class="p">:</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"recipe-identity-unverified:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">inputs_match</span><span class="p">:</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"recipe-drift-locked:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">entry</span>
+        <span class="n">policy_match</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">locator</span> <span class="o">==</span> <span class="n">locator_name</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">params</span> <span class="o">==</span> <span class="n">params</span>
+        <span class="k">if</span> <span class="n">inputs_match</span> <span class="ow">and</span> <span class="n">policy_match</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">identity_known</span><span class="p">:</span>
+                <span class="c1"># the inputs just matched against verified media — adopt the</span>
+                <span class="c1"># hash so drift detection works from here on, and say so</span>
+                <span class="n">entry</span><span class="o">.</span><span class="n">source_asset_id</span> <span class="o">=</span> <span class="n">media_hash</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"recipe-identity-recorded:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">entry</span>
+        <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"recipe-refreshed:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">box</span> <span class="o">=</span> <span class="n">locate</span><span class="p">()</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">CropRecipe</span><span class="p">(</span>
+        <span class="n">box</span><span class="o">=</span><span class="n">box</span><span class="p">,</span>
+        <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span>
+        <span class="n">frame_width</span><span class="o">=</span><span class="n">frame_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">frame_height</span><span class="o">=</span><span class="n">frame_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">source_asset_id</span><span class="o">=</span><span class="n">media_hash</span><span class="p">,</span>
+        <span class="n">locator</span><span class="o">=</span><span class="n">locator_name</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">recipes</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span>
+    <span class="k">return</span> <span class="n">entry</span>
+
+
+<div class="viewcode-block" id="derive_document">
+<a class="viewcode-back" href="../../module_docs/paces/derivation.html#paces.derive_document">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">derive_document</span><span class="p">(</span>
+    <span class="n">document</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">media</span><span class="p">,</span>
+    <span class="n">doc_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">media_store</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">recipes_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">subject_locator</span><span class="p">:</span> <span class="n">SubjectLocator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">aspect</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_ASPECT</span><span class="p">,</span>
+    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PAD</span><span class="p">,</span>
+    <span class="n">roles</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">DFLT_ROLES</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DeriveResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Derive media for every excerpt-bearing span and return the updated</span>
+<span class="sd">    document (the caller persists it; media and recipes are written here).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        document: the committed document (worked on a deep copy).</span>
+<span class="sd">        media: local media — one path when exactly one source carries</span>
+<span class="sd">            excerpts, else ``{source_id: path}``.</span>
+<span class="sd">        doc_path: the document's file path — the anchor for the default</span>
+<span class="sd">            media store (``&lt;dir&gt;/media/``) and recipes sidecar</span>
+<span class="sd">            (``&lt;dir&gt;/&lt;stem&gt;.recipes.json``). Without it, ``media_store``</span>
+<span class="sd">            AND ``recipes_path`` must be given explicitly: a document that</span>
+<span class="sd">            arrived as data has no directory, and deriving into cwd</span>
+<span class="sd">            silently would make every written uri a lie (ADR-0005 §1).</span>
+<span class="sd">        media_store: ``MutableMapping[str, bytes]`` keyed by</span>
+<span class="sd">            document-relative POSIX uri. Default: :class:`DirStore` beside</span>
+<span class="sd">            the document.</span>
+<span class="sd">        recipes_path: the crop-recipes sidecar path.</span>
+<span class="sd">        subject_locator: the ADR-0005 §3 seam; default :func:`full_frame`</span>
+<span class="sd">            (no crop).</span>
+<span class="sd">        aspect: crop aspect (w/h) the policy forces — only when a locator</span>
+<span class="sd">            yields regions; never applied to a locked or full-frame box.</span>
+<span class="sd">        pad: padding fraction around the envelope.</span>
+<span class="sd">        roles: which artifact roles to produce, of ``("clip", "gif",</span>
+<span class="sd">            "poster")``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">roles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"roles must name at least one of </span><span class="si">{</span><span class="n">DFLT_ROLES</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">unknown_roles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">roles</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">DFLT_ROLES</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unknown_roles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"unknown roles </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown_roles</span><span class="p">)</span><span class="si">}</span><span class="s2">; choose from </span><span class="si">{</span><span class="n">DFLT_ROLES</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">doc_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">doc_path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+        <span class="k">if</span> <span class="n">media_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">media_store</span> <span class="o">=</span> <span class="n">DirStore</span><span class="p">(</span><span class="n">doc_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">recipes_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">recipes_path</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">doc_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.recipes.json"</span>
+    <span class="k">if</span> <span class="n">media_store</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">recipes_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"derive needs an anchor: pass doc_path (a document file path), "</span>
+            <span class="s2">"or both media_store= and recipes_path= explicitly — a document "</span>
+            <span class="s2">"given as data has no directory to put media/ next to"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">media_store</span><span class="p">,</span> <span class="n">DirStore</span><span class="p">)</span> <span class="ow">and</span> <span class="n">media_store</span><span class="o">.</span><span class="n">rootdir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">media_store</span><span class="o">.</span><span class="n">rootdir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">):</span>
+            <span class="c1"># refuse BEFORE spending encode work (ADR-0005 §1: informative,</span>
+            <span class="c1"># naming the path and the override — never silent relocation)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"cannot write media under </span><span class="si">{</span><span class="n">media_store</span><span class="o">.</span><span class="n">rootdir</span><span class="si">}</span><span class="s2"> (directory "</span>
+                <span class="s2">"not writable); make it writable, or pass media_store= / "</span>
+                <span class="s2">"recipes_path= pointing somewhere writable"</span>
+            <span class="p">)</span>
+    <span class="n">requirements</span> <span class="o">=</span> <span class="n">check_media_requirements</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">requirements</span><span class="p">[</span><span class="s2">"ok"</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">"media requirements not met: "</span> <span class="o">+</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">requirements</span><span class="p">[</span><span class="s2">"notes"</span><span class="p">])</span>
+        <span class="p">)</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">mixing</span>
+
+    <span class="n">locator</span> <span class="o">=</span> <span class="n">subject_locator</span> <span class="k">if</span> <span class="n">subject_locator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">full_frame</span>
+    <span class="n">locator_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">locator</span><span class="p">,</span> <span class="s2">"locator_name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span>
+        <span class="n">locator</span><span class="p">,</span> <span class="s2">"__name__"</span><span class="p">,</span> <span class="s2">"custom"</span>
+    <span class="p">)</span>
+
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">DeriveResult</span><span class="p">(</span><span class="n">document</span><span class="o">=</span><span class="n">doc</span><span class="p">)</span>
+    <span class="n">flags</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">flags</span>
+
+    <span class="n">media_paths</span> <span class="o">=</span> <span class="n">_media_paths</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">media</span><span class="p">)</span>
+    <span class="n">media_hashes</span> <span class="o">=</span> <span class="n">_verify_media_identity</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">media_paths</span><span class="p">,</span> <span class="n">flags</span><span class="p">)</span>
+    <span class="n">frame_sizes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">source_id</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mixing</span><span class="o">.</span><span class="n">get_video_dimensions</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">source_id</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">media_paths</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="n">_refuse_ambiguous_identities</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+    <span class="n">sources_by_id</span> <span class="o">=</span> <span class="p">{</span><span class="n">source</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">source</span> <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">sources</span><span class="p">}</span>
+    <span class="n">recipes</span> <span class="o">=</span> <span class="n">load_recipes</span><span class="p">(</span><span class="n">recipes_path</span><span class="p">)</span>
+    <span class="n">current_keys</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">):</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="n">_excerpt_spans</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">produced_any</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">keep_uris</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_span_key</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">span</span><span class="p">)</span>
+            <span class="n">current_keys</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="n">_artifact_base</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">spans</span><span class="p">))</span>
+            <span class="c1"># every current span's whole name family is accounted for — a</span>
+            <span class="c1"># skipped span, or a roles= subset, must not smear the rest</span>
+            <span class="n">keep_uris</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">MEDIA_PREFIX</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">base</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">_EXT</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">media_paths</span><span class="p">:</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no-media:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">sources_by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">source</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"document"</span><span class="p">,</span> <span class="s2">"image"</span><span class="p">):</span>
+                <span class="c1"># an excerpt is a temporal sub-window; these kinds have none</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"non-temporal-source:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">start_str</span><span class="p">,</span> <span class="n">end_str</span> <span class="o">=</span> <span class="n">span</span><span class="o">.</span><span class="n">excerpt</span>
+            <span class="n">start_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">start_str</span><span class="p">))</span>
+            <span class="n">end_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">end_str</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">end_s</span> <span class="o">&lt;=</span> <span class="n">start_s</span><span class="p">:</span>
+                <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"invalid-excerpt:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">media_path</span> <span class="o">=</span> <span class="n">media_paths</span><span class="p">[</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">]</span>
+            <span class="n">frame_size</span> <span class="o">=</span> <span class="n">frame_sizes</span><span class="p">[</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">]</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">_locate</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">observation</span> <span class="o">=</span> <span class="n">locator</span><span class="p">(</span>
+                    <span class="n">LocateQuery</span><span class="p">(</span>
+                        <span class="n">media_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">media_path</span><span class="p">),</span>
+                        <span class="n">start_s</span><span class="o">=</span><span class="n">start_s</span><span class="p">,</span>
+                        <span class="n">end_s</span><span class="o">=</span><span class="n">end_s</span><span class="p">,</span>
+                        <span class="n">frame_width</span><span class="o">=</span><span class="n">frame_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">frame_height</span><span class="o">=</span><span class="n">frame_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">step_id</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                        <span class="n">tags</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">resolve_crop_box</span><span class="p">(</span>
+                    <span class="n">observation</span><span class="p">,</span> <span class="n">frame_size</span><span class="o">=</span><span class="n">frame_size</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="n">aspect</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="n">pad</span>
+                <span class="p">)</span>
+
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">_reconcile_recipe</span><span class="p">(</span>
+                <span class="n">recipes</span><span class="p">,</span>
+                <span class="n">key</span><span class="p">,</span>
+                <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="n">start_str</span><span class="p">,</span> <span class="n">end_str</span><span class="p">),</span>
+                <span class="n">frame_size</span><span class="o">=</span><span class="n">frame_size</span><span class="p">,</span>
+                <span class="n">media_hash</span><span class="o">=</span><span class="n">media_hashes</span><span class="p">[</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">],</span>
+                <span class="n">locate</span><span class="o">=</span><span class="n">_locate</span><span class="p">,</span>
+                <span class="n">locator_name</span><span class="o">=</span><span class="n">locator_name</span><span class="p">,</span>
+                <span class="n">aspect</span><span class="o">=</span><span class="n">aspect</span><span class="p">,</span>
+                <span class="n">pad</span><span class="o">=</span><span class="n">pad</span><span class="p">,</span>
+                <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">digest</span> <span class="o">=</span> <span class="n">_media_digest</span><span class="p">(</span>
+                <span class="n">entry</span><span class="o">.</span><span class="n">box</span><span class="p">,</span> <span class="p">(</span><span class="n">start_str</span><span class="p">,</span> <span class="n">end_str</span><span class="p">),</span> <span class="n">media_hashes</span><span class="p">[</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">refs</span><span class="p">,</span> <span class="n">encoded</span> <span class="o">=</span> <span class="n">_derive_span_media</span><span class="p">(</span>
+                <span class="n">media_path</span><span class="p">,</span>
+                <span class="n">start_s</span><span class="o">=</span><span class="n">start_s</span><span class="p">,</span>
+                <span class="n">end_s</span><span class="o">=</span><span class="n">end_s</span><span class="p">,</span>
+                <span class="n">box</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">box</span><span class="p">,</span>
+                <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">,</span>
+                <span class="n">roles</span><span class="o">=</span><span class="n">roles</span><span class="p">,</span>
+                <span class="n">span_role</span><span class="o">=</span><span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="p">,</span>
+                <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="n">start_str</span><span class="p">,</span> <span class="n">end_str</span><span class="p">),</span>
+                <span class="n">store</span><span class="o">=</span><span class="n">media_store</span><span class="p">,</span>
+                <span class="n">reuse_ok</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">media_digest</span> <span class="o">==</span> <span class="n">digest</span><span class="p">,</span>
+                <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">encoded</span><span class="p">:</span>
+                <span class="n">entry</span><span class="o">.</span><span class="n">media_digest</span> <span class="o">=</span> <span class="n">digest</span>
+            <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">refs</span><span class="p">:</span>
+                <span class="n">_upsert_artifact</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">flags</span><span class="p">)</span>
+            <span class="n">produced_any</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">derived</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">"step"</span><span class="p">:</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="s2">"span"</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span>
+                    <span class="s2">"uris"</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">uri</span> <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">refs</span><span class="p">),</span>
+                    <span class="s2">"box"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">box</span><span class="p">)</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">box</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">produced_any</span><span class="p">:</span>
+            <span class="n">_stale_artifact_flags</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">keep_uris</span><span class="p">,</span> <span class="n">flags</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">recipes</span><span class="o">.</span><span class="n">entries</span><span class="p">)</span> <span class="o">-</span> <span class="n">current_keys</span><span class="p">):</span>
+        <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"recipe-orphaned:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">recipes</span><span class="o">.</span><span class="n">entries</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">recipes_path</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">save_recipes</span><span class="p">(</span><span class="n">recipes</span><span class="p">,</span> <span class="n">recipes_path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"derived media was written but the recipes sidecar could "</span>
+                <span class="sa">f</span><span class="s2">"not be (</span><span class="si">{</span><span class="n">recipes_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">); make it writable or pass "</span>
+                <span class="s2">"recipes_path= pointing somewhere writable"</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_media_digest</span><span class="p">(</span><span class="n">box</span><span class="p">:</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">media_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What the stored media was cut with — the reuse gate's key. A recipe</span>
+<span class="sd">    whose digest differs from the current (box, window, media identity) must</span>
+<span class="sd">    re-encode; uri existence alone proved nothing about WHICH bytes the</span>
+<span class="sd">    store holds (the review's measured blocker)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">box</span><span class="p">)</span> <span class="k">if</span> <span class="n">box</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">window</span><span class="p">),</span> <span class="n">media_hash</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_refuse_ambiguous_identities</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse, before any encode, a document derive cannot address honestly:</span>
+<span class="sd">    two spans sharing the ``(source, role, start)`` identity in one step</span>
+<span class="sd">    (edits.py's lock matching cannot tell them apart either), or two spans</span>
+<span class="sd">    whose artifact names collide (uri is merge identity — one uri must mean</span>
+<span class="sd">    one span)."""</span>
+    <span class="n">claimed_keys</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">claimed_uris</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">):</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="n">_excerpt_spans</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_span_key</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">span</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">claimed_keys</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"two excerpt spans share the identity </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> "</span>
+                    <span class="s2">"(step/source/role/start) — derive, and edits.py's lock "</span>
+                    <span class="s2">"matching, cannot tell them apart; change one span's "</span>
+                    <span class="s2">"start or role"</span>
+                <span class="p">)</span>
+            <span class="n">claimed_keys</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">uri</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">MEDIA_PREFIX</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">_artifact_base</span><span class="p">(</span><span class="n">step</span><span class="p">,</span><span class="w"> </span><span class="n">span</span><span class="p">,</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">spans</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">uri</span> <span class="ow">in</span> <span class="n">claimed_uris</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"artifact name collision: spans </span><span class="si">{</span><span class="n">claimed_uris</span><span class="p">[</span><span class="n">uri</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"and </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> would both write </span><span class="si">{</span><span class="n">uri</span><span class="si">}</span><span class="s2">.* — the uri is an "</span>
+                    <span class="s2">"artifact's merge identity, so one uri must mean one "</span>
+                    <span class="s2">"span; rename one of the steps"</span>
+                <span class="p">)</span>
+            <span class="n">claimed_uris</span><span class="p">[</span><span class="n">uri</span><span class="p">]</span> <span class="o">=</span> <span class="n">key</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_derive_span_media</span><span class="p">(</span>
+    <span class="n">media_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">end_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">box</span><span class="p">:</span> <span class="n">Box</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">base</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">roles</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">span_role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">store</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">,</span>
+    <span class="n">reuse_ok</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">ArtifactRef</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Cut/encode one span's artifacts through mixing, write bytes through</span>
+<span class="sd">    the store, and return ``(refs, encoded)``. Re-encoding is skipped only</span>
+<span class="sd">    when every requested uri already exists in the store AND the caller's</span>
+<span class="sd">    ``reuse_ok`` says the recipe's ``media_digest`` still matches what those</span>
+<span class="sd">    bytes were cut with — uri existence alone proved nothing about WHICH</span>
+<span class="sd">    bytes the store holds. Byte-stable re-runs are the point: x264 is not</span>
+<span class="sd">    deterministic, so a gratuitous re-encode would churn every ``asset_id``."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">mixing</span>
+
+    <span class="n">uris</span> <span class="o">=</span> <span class="p">{</span><span class="n">role</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">MEDIA_PREFIX</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">base</span><span class="si">}{</span><span class="n">_EXT</span><span class="p">[</span><span class="n">role</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">all_present</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">uri</span> <span class="ow">in</span> <span class="n">store</span> <span class="k">for</span> <span class="n">uri</span> <span class="ow">in</span> <span class="n">uris</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">NotImplementedError</span><span class="p">):</span>
+        <span class="n">all_present</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># a write-only store: always encode</span>
+
+    <span class="n">duration</span> <span class="o">=</span> <span class="n">decimal_str</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">window</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">window</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+    <span class="n">refs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ArtifactRef</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">all_present</span> <span class="ow">and</span> <span class="n">reuse_ok</span><span class="p">:</span>
+        <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reused-media:</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">payloads</span> <span class="o">=</span> <span class="p">{</span><span class="n">role</span><span class="p">:</span> <span class="n">store</span><span class="p">[</span><span class="n">uri</span><span class="p">]</span> <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">uri</span> <span class="ow">in</span> <span class="n">uris</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">clip_dims</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"clip"</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+            <span class="c1"># probe dims from the stored bytes (backend-agnostic), so a</span>
+            <span class="c1"># byte-stable re-run does not erase width/height from the refs</span>
+            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+                <span class="n">probe_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">.mp4"</span>
+                <span class="n">probe_path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">payloads</span><span class="p">[</span><span class="s2">"clip"</span><span class="p">])</span>
+                <span class="n">clip_dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mixing</span><span class="o">.</span><span class="n">get_video_dimensions</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">probe_path</span><span class="p">)))</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"clip"</span><span class="p">:</span> <span class="n">clip_dims</span><span class="p">,</span> <span class="s2">"poster"</span><span class="p">:</span> <span class="n">clip_dims</span><span class="p">,</span> <span class="s2">"gif"</span><span class="p">:</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+            <span class="n">tmp_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+            <span class="n">produced</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="s2">"clip"</span> <span class="ow">in</span> <span class="n">roles</span> <span class="ow">or</span> <span class="s2">"poster"</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+                <span class="n">clip_path</span> <span class="o">=</span> <span class="n">tmp_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">.mp4"</span>
+                <span class="n">mixing</span><span class="o">.</span><span class="n">crop_video</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">media_path</span><span class="p">),</span>
+                    <span class="n">start_s</span><span class="p">,</span>
+                    <span class="n">end_s</span><span class="p">,</span>
+                    <span class="n">crop_box</span><span class="o">=</span><span class="n">box</span><span class="p">,</span>
+                    <span class="n">output</span><span class="o">=</span><span class="n">clip_path</span><span class="p">,</span>
+                    <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">produced</span><span class="p">[</span><span class="s2">"clip"</span><span class="p">]</span> <span class="o">=</span> <span class="n">clip_path</span>
+            <span class="k">if</span> <span class="s2">"poster"</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+                <span class="n">poster_path</span> <span class="o">=</span> <span class="n">tmp_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">.jpg"</span>
+                <span class="n">mixing</span><span class="o">.</span><span class="n">save_frame</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">produced</span><span class="p">[</span><span class="s2">"clip"</span><span class="p">]),</span>
+                    <span class="p">(</span><span class="n">end_s</span> <span class="o">-</span> <span class="n">start_s</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="n">output</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">poster_path</span><span class="p">),</span>
+                    <span class="n">image_format</span><span class="o">=</span><span class="s2">"jpg"</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">produced</span><span class="p">[</span><span class="s2">"poster"</span><span class="p">]</span> <span class="o">=</span> <span class="n">poster_path</span>
+            <span class="k">if</span> <span class="s2">"gif"</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+                <span class="n">gif_path</span> <span class="o">=</span> <span class="n">tmp_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">.gif"</span>
+                <span class="n">mixing</span><span class="o">.</span><span class="n">make_gif</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">media_path</span><span class="p">),</span> <span class="n">start_s</span><span class="p">,</span> <span class="n">end_s</span><span class="p">,</span> <span class="n">crop_box</span><span class="o">=</span><span class="n">box</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">gif_path</span>
+                <span class="p">)</span>
+                <span class="n">produced</span><span class="p">[</span><span class="s2">"gif"</span><span class="p">]</span> <span class="o">=</span> <span class="n">gif_path</span>
+            <span class="n">payloads</span> <span class="o">=</span> <span class="p">{</span><span class="n">role</span><span class="p">:</span> <span class="n">produced</span><span class="p">[</span><span class="n">role</span><span class="p">]</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">}</span>
+            <span class="n">clip_dims</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">tuple</span><span class="p">(</span><span class="n">mixing</span><span class="o">.</span><span class="n">get_video_dimensions</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">produced</span><span class="p">[</span><span class="s2">"clip"</span><span class="p">])))</span>
+                <span class="k">if</span> <span class="s2">"clip"</span> <span class="ow">in</span> <span class="n">produced</span>
+                <span class="k">else</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">dims</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">"clip"</span><span class="p">:</span> <span class="n">clip_dims</span><span class="p">,</span>
+                <span class="s2">"poster"</span><span class="p">:</span> <span class="n">clip_dims</span><span class="p">,</span>  <span class="c1"># the poster is a frame OF the clip</span>
+                <span class="s2">"gif"</span><span class="p">:</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>  <span class="c1"># scaled by make_gif; honesty over guess</span>
+            <span class="p">}</span>
+        <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">store</span><span class="p">[</span><span class="n">uris</span><span class="p">[</span><span class="n">role</span><span class="p">]]</span> <span class="o">=</span> <span class="n">payloads</span><span class="p">[</span><span class="n">role</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"could not write </span><span class="si">{</span><span class="n">uris</span><span class="p">[</span><span class="n">role</span><span class="p">]</span><span class="si">}</span><span class="s2"> to the media store "</span>
+                    <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">); make the location writable or pass "</span>
+                    <span class="s2">"media_store= pointing somewhere writable"</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+
+    <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">roles</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">payloads</span><span class="p">[</span><span class="n">role</span><span class="p">]</span>
+        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">dims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="n">refs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ArtifactRef</span><span class="p">(</span>
+                <span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span>
+                <span class="n">uri</span><span class="o">=</span><span class="n">uris</span><span class="p">[</span><span class="n">role</span><span class="p">],</span>
+                <span class="n">asset_id</span><span class="o">=</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">(),</span>
+                <span class="n">mime</span><span class="o">=</span><span class="n">_MIME</span><span class="p">[</span><span class="n">role</span><span class="p">],</span>
+                <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+                <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+                <span class="n">duration_s</span><span class="o">=</span><span class="n">duration</span> <span class="k">if</span> <span class="n">role</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"clip"</span><span class="p">,</span> <span class="s2">"gif"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">derived_from</span><span class="o">=</span><span class="n">span_role</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">refs</span><span class="p">,</span> <span class="ow">not</span> <span class="p">(</span><span class="n">all_present</span> <span class="ow">and</span> <span class="n">reuse_ok</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

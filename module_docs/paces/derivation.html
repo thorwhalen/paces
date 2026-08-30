@@ -1,0 +1,376 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.derivation &mdash; paces 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="paces.edits" href="edits.html" />
+    <link rel="prev" title="paces.__main__" href="__main__.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">paces.derivation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.Box"><code class="docutils literal notranslate"><span class="pre">Box</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.CropRecipe"><code class="docutils literal notranslate"><span class="pre">CropRecipe</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.derivation.CropRecipe.model_config"><code class="docutils literal notranslate"><span class="pre">CropRecipe.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.DFLT_ROLES"><code class="docutils literal notranslate"><span class="pre">DFLT_ROLES</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.DeriveResult"><code class="docutils literal notranslate"><span class="pre">DeriveResult</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.DirStore"><code class="docutils literal notranslate"><span class="pre">DirStore</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.ENVELOPE_LO"><code class="docutils literal notranslate"><span class="pre">ENVELOPE_LO</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.LocateQuery"><code class="docutils literal notranslate"><span class="pre">LocateQuery</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.MEDIA_PREFIX"><code class="docutils literal notranslate"><span class="pre">MEDIA_PREFIX</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.RecipesFile"><code class="docutils literal notranslate"><span class="pre">RecipesFile</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.derivation.RecipesFile.model_config"><code class="docutils literal notranslate"><span class="pre">RecipesFile.model_config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.SubjectLocator"><code class="docutils literal notranslate"><span class="pre">SubjectLocator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.SubjectObservation"><code class="docutils literal notranslate"><span class="pre">SubjectObservation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.check_media_requirements"><code class="docutils literal notranslate"><span class="pre">check_media_requirements()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.derive_document"><code class="docutils literal notranslate"><span class="pre">derive_document()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.full_frame"><code class="docutils literal notranslate"><span class="pre">full_frame()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.load_recipes"><code class="docutils literal notranslate"><span class="pre">load_recipes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.resolve_crop_box"><code class="docutils literal notranslate"><span class="pre">resolve_crop_box()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.derivation.save_recipes"><code class="docutils literal notranslate"><span class="pre">save_recipes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">paces.derivation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/module_docs/paces/derivation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-paces.derivation">
+<span id="paces-derivation"></span><h1>paces.derivation<a class="headerlink" href="#module-paces.derivation" title="Link to this heading"></a></h1>
+<p>Media derivation: fill <a href="#id1"><span class="problematic" id="id2">``</span></a>ArtifactRef``s with real clips, gifs and posters.</p>
+<p>For every excerpt-bearing <a class="reference internal" href="model.html#paces.model.SourceSpan" title="paces.model.SourceSpan"><code class="xref py py-class docutils literal notranslate"><span class="pre">SourceSpan</span></code></a>, cut a loopable
+mp4, a palette-quality gif and a poster frame from the local media, write
+them through a store keyed by document-relative uri, and upsert the
+resulting <a class="reference internal" href="model.html#paces.model.ArtifactRef" title="paces.model.ArtifactRef"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArtifactRef</span></code></a>s onto the owning step. The
+design — where media lands, why CI needs no system ffmpeg, and the
+<code class="docutils literal notranslate"><span class="pre">subject_locator=</span></code> seam — is ADR-0005 (<code class="docutils literal notranslate"><span class="pre">docs/adr/0005-media-derivation.md</span></code>);
+this docstring only summarises the contracts.</p>
+<p><strong>The locator seam (Shape B — locator observes, core decides).</strong> A
+<code class="docutils literal notranslate"><span class="pre">subject_locator</span></code> is a callable receiving a <a class="reference internal" href="#paces.derivation.LocateQuery" title="paces.derivation.LocateQuery"><code class="xref py py-class docutils literal notranslate"><span class="pre">LocateQuery</span></code></a> and
+returning a <a class="reference internal" href="#paces.derivation.SubjectObservation" title="paces.derivation.SubjectObservation"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubjectObservation</span></code></a> — timed raw region evidence — or
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, which means “no crop” and is both the default locator’s honest
+answer (<a class="reference internal" href="#paces.derivation.full_frame" title="paces.derivation.full_frame"><code class="xref py py-func docutils literal notranslate"><span class="pre">full_frame()</span></code></a>) and the zero-detections fallback. The <em>core</em>
+owns the one policy pipeline (<a class="reference internal" href="#paces.derivation.resolve_crop_box" title="paces.derivation.resolve_crop_box"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_crop_box()</span></code></a>): union regions per
+sample → robust percentile envelope → pad → force aspect → clamp → <strong>one
+static box per excerpt window</strong> (measured on 2.5–6 s loops; per-frame crops
+are unstable). A <code class="docutils literal notranslate"><span class="pre">None</span></code> observation gets no policy: no crop means
+genuinely uncropped, not letterboxed.</p>
+<p><strong>Crop recipes</strong> persist in a sidecar (<code class="docutils literal notranslate"><span class="pre">&lt;document-stem&gt;.recipes.json</span></code>,
+next to the document, committed and diffable) keyed by the span address
+<code class="docutils literal notranslate"><span class="pre">{step_id}/{source}/{role}/{start}</span></code>. A recipe whose inputs still match is
+reused (the locator is skipped); a <strong>locked</strong> recipe’s box is used verbatim
+— never re-padded, re-aspected or clamped — and survives drift with a loud
+flag. Hand-override = edit <code class="docutils literal notranslate"><span class="pre">box</span></code>, set <code class="docutils literal notranslate"><span class="pre">locked:</span> <span class="pre">true</span></code>.</p>
+<p><strong>Honesty flags over silence.</strong> Every skipped span, unverifiable identity,
+kept lock, refreshed or orphaned recipe, and stale artifact is a named flag
+in the result — never a silent drop.</p>
+<p>All media I/O goes through <code class="docutils literal notranslate"><span class="pre">mixing</span></code> (behind the <code class="docutils literal notranslate"><span class="pre">[media]</span></code> extra) — never
+moviepy/ffmpeg directly.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.derivation.Box">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">Box</span></span><a class="headerlink" href="#paces.derivation.Box" title="Link to this definition"></a></dt>
+<dd><p>(x, y, w, h) from the frame’s top-left.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A pixel box</p>
+</dd>
+</dl>
+<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.CropRecipe">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">CropRecipe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">box:</span> <span class="pre">tuple[int,</span> <span class="pre">int,</span> <span class="pre">int,</span> <span class="pre">int]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">window:</span> <span class="pre">tuple[~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])],</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]],</span> <span class="pre">frameWidth:</span> <span class="pre">int,</span> <span class="pre">frameHeight:</span> <span class="pre">int,</span> <span class="pre">sourceAssetId:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">locator:</span> <span class="pre">str,</span> <span class="pre">params:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;,</span> <span class="pre">locked:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">mediaDigest:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#CropRecipe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.CropRecipe" title="Link to this definition"></a></dt>
+<dd><p>One span’s derivation parameters: the resolved <code class="docutils literal notranslate"><span class="pre">box</span></code> (the <em>final</em>
+post-policy crop; <code class="docutils literal notranslate"><span class="pre">None</span></code> = full frame, a recorded decision) plus the
+input fingerprint that makes drift detectable. <code class="docutils literal notranslate"><span class="pre">params</span></code> and <code class="docutils literal notranslate"><span class="pre">locator</span></code>
+are read on reconcile — a locator upgrade or an aspect/pad change
+re-locates an unlocked entry; a stored box is never re-run through the
+policy. <code class="docutils literal notranslate"><span class="pre">media_digest</span></code> stamps what the stored media was actually cut
+with (box + window + source hash), so a hand-edited box or a re-timed
+window forces a re-encode instead of silently serving stale bytes —
+the POC’s crops.json failure, kept dead. <code class="docutils literal notranslate"><span class="pre">params</span></code> values are decimal
+strings (the sidecar is committed — no floats on the wire).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.derivation.CropRecipe.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.derivation.CropRecipe.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.derivation.DFLT_ROLES">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">DFLT_ROLES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('clip',</span> <span class="pre">'gif',</span> <span class="pre">'poster')</span></span><a class="headerlink" href="#paces.derivation.DFLT_ROLES" title="Link to this definition"></a></dt>
+<dd><p>The artifact roles derive produces, in production order.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.DeriveResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">DeriveResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">flags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">derived</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#DeriveResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.DeriveResult" title="Link to this definition"></a></dt>
+<dd><p>What a derive run did: the updated document, the honesty flags, and
+one row per derived (or byte-stably reused) span.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.DirStore">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">DirStore</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#DirStore"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.DirStore" title="Link to this definition"></a></dt>
+<dd><p>Minimal <code class="docutils literal notranslate"><span class="pre">MutableMapping[str,</span> <span class="pre">bytes]</span></code> over files under a root
+directory, keyed by relative POSIX paths (<code class="docutils literal notranslate"><span class="pre">media/b4.mp4</span></code>).</p>
+<p>The default backend of the ADR-0005 store seam — stdlib-only so the
+pydantic-only core stays intact (ADR-0004). Inject a <code class="docutils literal notranslate"><span class="pre">dol</span></code>/<code class="docutils literal notranslate"><span class="pre">s3dol</span></code>
+store for other backends; the key contract (document-relative POSIX uri)
+is backend-independent.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.derivation.ENVELOPE_LO">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">ENVELOPE_LO</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></span><a class="headerlink" href="#paces.derivation.ENVELOPE_LO" title="Link to this definition"></a></dt>
+<dd><p>Crop-policy defaults — the POC’s shipped production values
+(<code class="docutils literal notranslate"><span class="pre">docs/poc-reference/tools/build_media.py</span></code>): 4th/96th percentile robust
+envelope, 16% padding, 4:5 portrait-ish aspect (width/height).</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.LocateQuery">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">LocateQuery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#LocateQuery"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.LocateQuery" title="Link to this definition"></a></dt>
+<dd><p>What a <code class="docutils literal notranslate"><span class="pre">subject_locator</span></code> is asked: one excerpt window of one media
+file, with read-only hints. Times are float seconds — a computed view,
+like <a class="reference internal" href="model.html#paces.model.resolve" title="paces.model.resolve"><code class="xref py py-func docutils literal notranslate"><span class="pre">paces.model.resolve()</span></code></a>’s output, never the stored document.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.derivation.MEDIA_PREFIX">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">MEDIA_PREFIX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'media'</span></span><a class="headerlink" href="#paces.derivation.MEDIA_PREFIX" title="Link to this definition"></a></dt>
+<dd><p>Uri prefix (and store-key prefix) for derived media — POSIX ‘/’, always.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.RecipesFile">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">RecipesFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'paces.crop-recipes'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'paces.crop-recipes'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schemaVersion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'0.1.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~paces.derivation.CropRecipe]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#RecipesFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.RecipesFile" title="Link to this definition"></a></dt>
+<dd><p>The sidecar document: span address → <a class="reference internal" href="#paces.derivation.CropRecipe" title="paces.derivation.CropRecipe"><code class="xref py py-class docutils literal notranslate"><span class="pre">CropRecipe</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="paces.derivation.RecipesFile.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.derivation.RecipesFile.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.derivation.SubjectLocator">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">SubjectLocator</span></span><a class="headerlink" href="#paces.derivation.SubjectLocator" title="Link to this definition"></a></dt>
+<dd><p>returns an observation, or <code class="docutils literal notranslate"><span class="pre">None</span></code> meaning “no crop”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The seam</p>
+</dd>
+</dl>
+<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code>[[<a class="reference internal" href="#paces.derivation.LocateQuery" title="paces.derivation.LocateQuery"><code class="xref py py-class docutils literal notranslate"><span class="pre">LocateQuery</span></code></a>], <code class="xref py py-class docutils literal notranslate"><span class="pre">SubjectObservation</span> <span class="pre">|</span> <span class="pre">None</span></code>]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.derivation.SubjectObservation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">SubjectObservation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/derivation.html#SubjectObservation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.SubjectObservation" title="Link to this definition"></a></dt>
+<dd><p>Timed raw region evidence: <code class="docutils literal notranslate"><span class="pre">samples[i]</span> <span class="pre">=</span> <span class="pre">(t_s,</span> <span class="pre">(box,</span> <span class="pre">box,</span> <span class="pre">...))</span></code> —
+one region tuple per probed instant. Deliberately not person-shaped: one
+box for a dancer, two for judo, hands + workpiece for cooking. Samples
+are transient locator output; only the resolved box is ever persisted.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.check_media_requirements">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">check_media_requirements</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#check_media_requirements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.check_media_requirements" title="Link to this definition"></a></dt>
+<dd><p>Two-channel media preflight (ADR-0005 §2), reported distinctly:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bundled_ffmpeg</span></code> — the pip-bundled imageio-ffmpeg binary, which is
+all <cite>derive</cite> needs (mp4/gif via mixing; posters via cv2).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">system_ffmpeg</span></code> — a PATH ffmpeg, which <cite>derive</cite> does NOT need but
+<code class="docutils literal notranslate"><span class="pre">measure_grid</span></code> on non-wav input does (pydub knows nothing of the
+bundled binary). A bundled-only check would report healthy on a
+machine where <code class="docutils literal notranslate"><span class="pre">measure_grid(&quot;video.mp4&quot;)</span></code> fails.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.derive_document">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">derive_document</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="model.html#paces.model.StepDocument" title="paces.model.StepDocument"><span class="pre">StepDocument</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">media</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doc_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MutableMapping</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recipes_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_locator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#paces.derivation.LocateQuery" title="paces.derivation.LocateQuery"><span class="pre">LocateQuery</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#paces.derivation.SubjectObservation" title="paces.derivation.SubjectObservation"><span class="pre">SubjectObservation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aspect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('clip',</span> <span class="pre">'gif',</span> <span class="pre">'poster')</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#paces.derivation.DeriveResult" title="paces.derivation.DeriveResult"><span class="pre">DeriveResult</span></a></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#derive_document"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.derive_document" title="Link to this definition"></a></dt>
+<dd><p>Derive media for every excerpt-bearing span and return the updated
+document (the caller persists it; media and recipes are written here).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>document</strong> – the committed document (worked on a deep copy).</p></li>
+<li><p><strong>media</strong> – local media — one path when exactly one source carries
+excerpts, else <code class="docutils literal notranslate"><span class="pre">{source_id:</span> <span class="pre">path}</span></code>.</p></li>
+<li><p><strong>doc_path</strong> – the document’s file path — the anchor for the default
+media store (<code class="docutils literal notranslate"><span class="pre">&lt;dir&gt;/media/</span></code>) and recipes sidecar
+(<code class="docutils literal notranslate"><span class="pre">&lt;dir&gt;/&lt;stem&gt;.recipes.json</span></code>). Without it, <code class="docutils literal notranslate"><span class="pre">media_store</span></code>
+AND <code class="docutils literal notranslate"><span class="pre">recipes_path</span></code> must be given explicitly: a document that
+arrived as data has no directory, and deriving into cwd
+silently would make every written uri a lie (ADR-0005 §1).</p></li>
+<li><p><strong>media_store</strong> – <code class="docutils literal notranslate"><span class="pre">MutableMapping[str,</span> <span class="pre">bytes]</span></code> keyed by
+document-relative POSIX uri. Default: <a class="reference internal" href="#paces.derivation.DirStore" title="paces.derivation.DirStore"><code class="xref py py-class docutils literal notranslate"><span class="pre">DirStore</span></code></a> beside
+the document.</p></li>
+<li><p><strong>recipes_path</strong> – the crop-recipes sidecar path.</p></li>
+<li><p><strong>subject_locator</strong> – the ADR-0005 §3 seam; default <a class="reference internal" href="#paces.derivation.full_frame" title="paces.derivation.full_frame"><code class="xref py py-func docutils literal notranslate"><span class="pre">full_frame()</span></code></a>
+(no crop).</p></li>
+<li><p><strong>aspect</strong> – crop aspect (w/h) the policy forces — only when a locator
+yields regions; never applied to a locked or full-frame box.</p></li>
+<li><p><strong>pad</strong> – padding fraction around the envelope.</p></li>
+<li><p><strong>roles</strong> – which artifact roles to produce, of <code class="docutils literal notranslate"><span class="pre">(&quot;clip&quot;,</span> <span class="pre">&quot;gif&quot;,</span>
+<span class="pre">&quot;poster&quot;)</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.full_frame">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">full_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.derivation.LocateQuery" title="paces.derivation.LocateQuery"><span class="pre">LocateQuery</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#full_frame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.full_frame" title="Link to this definition"></a></dt>
+<dd><p>The default locator: no crop, ever — a real implementation of the
+contract whose honest answer is <code class="docutils literal notranslate"><span class="pre">None</span></code> (docs/09: the seam must be
+“genuinely pluggable and nullable”). Pointable replacement: rtmlib pose
+boxes (Apache-2.0; never YOLO/ultralytics — AGPL, see ADR-0005 §3).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.load_recipes">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">load_recipes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#paces.derivation.RecipesFile" title="paces.derivation.RecipesFile"><span class="pre">RecipesFile</span></a></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#load_recipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.load_recipes" title="Link to this definition"></a></dt>
+<dd><p>Read the sidecar (missing file → an empty one).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.resolve_crop_box">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">resolve_crop_box</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">observation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.derivation.SubjectObservation" title="paces.derivation.SubjectObservation"><span class="pre">SubjectObservation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aspect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">96</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#resolve_crop_box"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.resolve_crop_box" title="Link to this definition"></a></dt>
+<dd><p>The locator-agnostic crop policy: observation → ONE static box.</p>
+<p>Union regions per sample → robust percentile envelope (<code class="docutils literal notranslate"><span class="pre">lo</span></code>/<code class="docutils literal notranslate"><span class="pre">hi</span></code>) →
+pad → force <code class="docutils literal notranslate"><span class="pre">aspect</span></code> (w/h, expanding the deficient dimension) → clamp
+into the frame (shrinking aspect-true when the padded box exceeds it).
+<code class="docutils literal notranslate"><span class="pre">None</span></code> in (no observation, or no sample carried a region) → <code class="docutils literal notranslate"><span class="pre">None</span></code>
+out: full frame, no policy — no crop is genuinely uncropped.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">obs</span> <span class="o">=</span> <span class="n">SubjectObservation</span><span class="p">(</span><span class="n">samples</span><span class="o">=</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="p">((</span><span class="mi">40</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">),)),))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">resolve_crop_box</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">frame_size</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="go">(40, 40, 20, 40)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.derivation.save_recipes">
+<span class="sig-prename descclassname"><span class="pre">paces.derivation.</span></span><span class="sig-name descname"><span class="pre">save_recipes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recipes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#paces.derivation.RecipesFile" title="paces.derivation.RecipesFile"><span class="pre">RecipesFile</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/paces/derivation.html#save_recipes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.derivation.save_recipes" title="Link to this definition"></a></dt>
+<dd><p>Write the sidecar in the document’s canonical wire style.</p>
+<p>Deliberately NOT <code class="docutils literal notranslate"><span class="pre">exclude_none</span></code>: <code class="docutils literal notranslate"><span class="pre">box:</span> <span class="pre">null</span></code> (full frame) and
+<code class="docutils literal notranslate"><span class="pre">sourceAssetId:</span> <span class="pre">null</span></code> (identity unverified) are recorded decisions a
+hand-editor must be able to see and override (ADR-0005 §3).</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="__main__.html" class="btn btn-neutral float-left" title="paces.__main__" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="edits.html" class="btn btn-neutral float-right" title="paces.edits" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

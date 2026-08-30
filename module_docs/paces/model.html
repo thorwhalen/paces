@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.model &mdash; paces 0.0.3 documentation</title>
+  <title>paces.model &mdash; paces 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=47de8214"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -51,6 +51,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">paces.model</a><ul>
@@ -182,7 +183,8 @@ domain unit. NEVER an absolute time.</p>
 <dt class="sig sig-object py" id="paces.model.ArtifactRef">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.model.</span></span><span class="sig-name descname"><span class="pre">ArtifactRef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*,</span> <span class="pre">role:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')],</span> <span class="pre">uri:</span> <span class="pre">str,</span> <span class="pre">assetId:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">mime:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">width:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">height:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">durationS:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^-?\\d+(\\.\\d+)?$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">derivedFrom:</span> <span class="pre">~typing.Annotated[str,</span> <span class="pre">FieldInfo(annotation=NoneType,</span> <span class="pre">required=True,</span> <span class="pre">metadata=[_PydanticGeneralMetadata(pattern='^[a-z0-9][a-z0-9._-]*$')])]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">attrs:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/model.html#ArtifactRef"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.model.ArtifactRef" title="Link to this definition"></a></dt>
 <dd><p>WHAT a derived file is, never HOW it was made — the recipe lives in the
-evidence layer, keyed by <code class="docutils literal notranslate"><span class="pre">asset_id</span></code>.</p>
+evidence layer, keyed by <code class="docutils literal notranslate"><span class="pre">asset_id</span></code> (interim: the span-address-keyed
+<code class="docutils literal notranslate"><span class="pre">&lt;stem&gt;.recipes.json</span></code> sidecar, ADR-0005 §3, until issue #4 lands).</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="paces.model.ArtifactRef.model_config">
 <span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'alias_generator':</span> <span class="pre">&lt;function</span> <span class="pre">to_camel&gt;,</span> <span class="pre">'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'populate_by_name':</span> <span class="pre">True,</span> <span class="pre">'validate_by_alias':</span> <span class="pre">True,</span> <span class="pre">'validate_by_name':</span> <span class="pre">True}</span></span><a class="headerlink" href="#paces.model.ArtifactRef.model_config" title="Link to this definition"></a></dt>

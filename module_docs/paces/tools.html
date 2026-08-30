@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.tools &mdash; paces 0.0.3 documentation</title>
+  <title>paces.tools &mdash; paces 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=47de8214"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -50,6 +50,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
@@ -57,6 +58,7 @@
 <li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">paces.tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.tools.derive"><code class="docutils literal notranslate"><span class="pre">derive()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.edit"><code class="docutils literal notranslate"><span class="pre">edit()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.list_segmenters"><code class="docutils literal notranslate"><span class="pre">list_segmenters()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.measure_grid"><code class="docutils literal notranslate"><span class="pre">measure_grid()</span></code></a></li>
@@ -103,6 +105,23 @@ CLI in <code class="docutils literal notranslate"><span class="pre">__main__.py<
 over <code class="docutils literal notranslate"><span class="pre">_dispatch_funcs</span></code> and nothing else. Arguments that carry structure
 (steps, grids, documents) accept a Python object, a JSON string, or a path to
 a JSON file, so the same function serves the library, the shell, and an agent.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.tools.derive">
+<span class="sig-prename descclassname"><span class="pre">paces.tools.</span></span><span class="sig-name descname"><span class="pre">derive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">media</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_locator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'clip,gif,poster'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aspect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/tools.html#derive"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.tools.derive" title="Link to this definition"></a></dt>
+<dd><p>Derive real media (clip + gif + poster) for every excerpt-bearing
+span and write the refs into the document. Needs the [media] extra.</p>
+<p><code class="docutils literal notranslate"><span class="pre">document</span></code> must be a <em>path</em> here (the anchor for the <code class="docutils literal notranslate"><span class="pre">media/</span></code> dir
+and the crop-recipes sidecar — ADR-0005 §1); library callers with an
+in-memory document use <a class="reference internal" href="derivation.html#paces.derivation.derive_document" title="paces.derivation.derive_document"><code class="xref py py-func docutils literal notranslate"><span class="pre">paces.derivation.derive_document()</span></code></a> with an
+explicit store. <code class="docutils literal notranslate"><span class="pre">media</span></code> is one local file, or <code class="docutils literal notranslate"><span class="pre">{&quot;&lt;source-id&gt;&quot;:</span>
+<span class="pre">&quot;&lt;path&gt;&quot;}</span></code> when several sources carry excerpts. <code class="docutils literal notranslate"><span class="pre">subject_locator</span></code> is
+a lazy <code class="docutils literal notranslate"><span class="pre">&quot;module:attr&quot;</span></code> ref to an ADR-0005 §3 locator; the default is
+no crop. The updated document is written back to <code class="docutils literal notranslate"><span class="pre">output</span></code> (default:
+the document path itself — derive’s media side effects and the refs
+pointing at them must not go out of sync); the returned payload carries
+<code class="docutils literal notranslate"><span class="pre">flags</span></code> — read them, they are the honesty report.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="paces.tools.edit">
 <span class="sig-prename descclassname"><span class="pre">paces.tools.</span></span><span class="sig-name descname"><span class="pre">edit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edits</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/tools.html#edit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.tools.edit" title="Link to this definition"></a></dt>

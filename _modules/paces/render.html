@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.render &mdash; paces 0.0.3 documentation</title>
+  <title>paces.render &mdash; paces 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=47de8214"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -48,6 +48,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
@@ -140,6 +141,42 @@
     <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_artifact_media</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Embed derived clips: one looping ``&lt;video&gt;`` per role=clip artifact,</span>
+<span class="sd">    its poster/gif siblings paired by uri stem. ``controls`` is deliberate —</span>
+<span class="sd">    the POC's controls-less video silently swallowed clicks (docs/01 §4).</span>
+<span class="sd">    Spans' deep links stay rendered either way: the page must not get worse</span>
+<span class="sd">    when derivation has not run."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_stem</span><span class="p">(</span><span class="n">uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">uri</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">by_role</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="p">:</span>
+        <span class="n">by_role</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="p">{})[</span><span class="n">_stem</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">uri</span><span class="p">)]</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">uri</span>
+    <span class="n">posters</span> <span class="o">=</span> <span class="n">by_role</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"poster"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">gifs</span> <span class="o">=</span> <span class="n">by_role</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gif"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">artifact</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">artifacts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">artifact</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s2">"clip"</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">stem</span> <span class="o">=</span> <span class="n">_stem</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
+        <span class="n">poster</span> <span class="o">=</span> <span class="n">posters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
+        <span class="n">poster_attr</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">' poster="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">poster</span><span class="p">)</span><span class="si">}</span><span class="s1">"'</span> <span class="k">if</span> <span class="n">poster</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">mime</span> <span class="o">=</span> <span class="n">artifact</span><span class="o">.</span><span class="n">mime</span> <span class="ow">or</span> <span class="s2">"video/mp4"</span>
+        <span class="n">gif</span> <span class="o">=</span> <span class="n">gifs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
+        <span class="n">gif_link</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">'&lt;a class="gif" href="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">gif</span><span class="p">)</span><span class="si">}</span><span class="s1">" download&gt;gif&lt;/a&gt;'</span> <span class="k">if</span> <span class="n">gif</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">'&lt;div class="clip"&gt;&lt;video controls loop muted playsinline '</span>
+            <span class="sa">f</span><span class="s1">'preload="metadata"</span><span class="si">{</span><span class="n">poster_attr</span><span class="si">}</span><span class="s1">&gt;'</span>
+            <span class="sa">f</span><span class="s1">'&lt;source src="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">artifact</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span><span class="si">}</span><span class="s1">" '</span>
+            <span class="sa">f</span><span class="s1">'type="</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">mime</span><span class="p">)</span><span class="si">}</span><span class="s1">"&gt;&lt;/video&gt;</span><span class="si">{</span><span class="n">gif_link</span><span class="si">}</span><span class="s1">&lt;/div&gt;'</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_captions</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">:</span>
@@ -176,7 +213,7 @@
             <span class="p">]</span>
             <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">spans</span><span class="p">:</span>
                 <span class="n">child_bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_span_links</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">spans</span><span class="p">,</span> <span class="n">sources</span><span class="p">))</span>
-            <span class="n">extra</span> <span class="o">=</span> <span class="n">_captions</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="n">_captions</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="o">+</span> <span class="n">_artifact_media</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
             <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"&lt;li&gt;</span><span class="si">{</span><span class="s1">' — '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">child_bits</span><span class="p">)</span><span class="si">}{</span><span class="n">extra</span><span class="si">}</span><span class="s2">&lt;/li&gt;"</span><span class="p">)</span>
         <span class="n">subs</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'&lt;ol class="subs"&gt;</span><span class="si">{</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">items</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/ol&gt;'</span>
     <span class="n">cues</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
@@ -199,6 +236,7 @@
 <span class="s2">      </span><span class="si">{</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">badges</span><span class="p">)</span><span class="si">}</span>
 <span class="s2">    &lt;/header&gt;</span>
 <span class="s2">    </span><span class="si">{</span><span class="n">description</span><span class="si">}</span>
+<span class="s2">    </span><span class="si">{</span><span class="n">_artifact_media</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="si">}</span>
 <span class="s2">    </span><span class="si">{</span><span class="n">links_paragraph</span><span class="si">}</span>
 <span class="s2">    </span><span class="si">{</span><span class="n">_captions</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="si">}</span>
 <span class="s2">    </span><span class="si">{</span><span class="n">subs</span><span class="si">}</span>
@@ -303,6 +341,10 @@
 <span class="s2">  .dur { color:#666; font-size:.9rem; }</span>
 <span class="s2">  .badge { background:var(--soft); border-radius:.4rem; padding:.05rem .45rem;</span>
 <span class="s2">           font-size:.78rem; }</span>
+<span class="s2">  .clip { margin:.5rem 0; }</span>
+<span class="s2">  .clip video { width:100%; max-height:26rem; border-radius:.6rem; background:#000; }</span>
+<span class="s2">  .clip .gif { font-size:.8rem; margin-left:.4rem; }</span>
+<span class="s2">  .subs .clip video { max-height:18rem; }</span>
 <span class="s2">  .links { margin:.4rem 0 .2rem; }</span>
 <span class="s2">  .span { margin-right:.8rem; font-size:.9rem; }</span>
 <span class="s2">  .cap, .desc { margin:.3rem 0; }</span>

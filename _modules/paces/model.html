@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.model &mdash; paces 0.0.3 documentation</title>
+  <title>paces.model &mdash; paces 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=47de8214"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -48,6 +48,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
@@ -226,7 +227,8 @@
 <a class="viewcode-back" href="../../module_docs/paces/model.html#paces.ArtifactRef">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ArtifactRef</span><span class="p">(</span><span class="n">_Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""WHAT a derived file is, never HOW it was made — the recipe lives in the</span>
-<span class="sd">    evidence layer, keyed by ``asset_id``."""</span>
+<span class="sd">    evidence layer, keyed by ``asset_id`` (interim: the span-address-keyed</span>
+<span class="sd">    ``&lt;stem&gt;.recipes.json`` sidecar, ADR-0005 §3, until issue #4 lands)."""</span>
 
     <span class="n">role</span><span class="p">:</span> <span class="n">Slug</span>  <span class="c1"># clip | gif | poster | thumbnail | waveform | audio</span>
     <span class="n">uri</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># relative to the document — deploy-portable</span>
@@ -499,9 +501,19 @@
         <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">step_ids</span><span class="p">:</span>
             <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: duplicate step id </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">step_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">seen_spans</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">span</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source_ids</span><span class="p">:</span>
                 <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/spans/</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: unknown source </span><span class="si">{</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">identity</span> <span class="o">=</span> <span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="n">span</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">identity</span> <span class="ow">in</span> <span class="n">seen_spans</span><span class="p">:</span>
+                <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">/spans/</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: duplicate span identity "</span>
+                    <span class="sa">f</span><span class="s2">"(source, role, start) = </span><span class="si">{</span><span class="n">identity</span><span class="si">}</span><span class="s2"> — lock "</span>
+                    <span class="s2">"re-application and media derivation cannot tell "</span>
+                    <span class="s2">"these spans apart"</span>
+                <span class="p">)</span>
+            <span class="n">seen_spans</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">identity</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
             <span class="n">child_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
             <span class="n">expected</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
