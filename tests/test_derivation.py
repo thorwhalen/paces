@@ -848,19 +848,26 @@ def test_dirstore_rejects_backslash_keys(tmp_path):
         store["..\\..\\evil.bin"] = b"x"
 
 
-def test_unwritable_doc_dir_refuses_before_encoding(tmp_path, video):
+def test_unwritable_doc_dir_refuses_before_encoding(tmp_path, video, monkeypatch):
+    # the writability preflight is pinned via os.access, not chmod: POSIX
+    # directory mode bits are a no-op on Windows (this test's chmod-based
+    # first draft passed on Linux and failed the Windows CI leg honestly)
     import os
 
     doc_dir = tmp_path / "ro"
     doc_dir.mkdir()
     doc_path = doc_dir / "document.json"
-    doc_dir.chmod(0o555)
-    try:
-        with pytest.raises(ValueError, match="media_store"):
-            _derive(_doc([_step()]), doc_path, video)
-    finally:
-        doc_dir.chmod(0o755)
-    assert not os.path.exists(doc_dir / "media")
+    real_access = os.access
+
+    def denying_access(path, mode, **kwargs):
+        if Path(path) == doc_dir and mode & os.W_OK:
+            return False
+        return real_access(path, mode, **kwargs)
+
+    monkeypatch.setattr(os, "access", denying_access)
+    with pytest.raises(ValueError, match="media_store"):
+        _derive(_doc([_step()]), doc_path, video)
+    assert not os.path.exists(doc_dir / "media"), "refusal must precede encoding"
 
 
 def test_empty_roles_is_refused(tmp_path, video):
