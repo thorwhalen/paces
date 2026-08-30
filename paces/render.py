@@ -56,6 +56,42 @@ def _span_links(spans: list[SourceSpan], sources: dict[str, Source]) -> str:
     return " ".join(parts)
 
 
+def _artifact_media(step: Step) -> str:
+    """Embed derived clips: one looping ``<video>`` per role=clip artifact,
+    its poster/gif siblings paired by uri stem. ``controls`` is deliberate —
+    the POC's controls-less video silently swallowed clicks (docs/01 §4).
+    Spans' deep links stay rendered either way: the page must not get worse
+    when derivation has not run."""
+
+    def _stem(uri: str) -> str:
+        return uri.rsplit(".", 1)[0]
+
+    by_role: dict[str, dict[str, str]] = {}
+    for artifact in step.artifacts:
+        by_role.setdefault(artifact.role, {})[_stem(artifact.uri)] = artifact.uri
+    posters = by_role.get("poster", {})
+    gifs = by_role.get("gif", {})
+    parts = []
+    for artifact in step.artifacts:
+        if artifact.role != "clip":
+            continue
+        stem = _stem(artifact.uri)
+        poster = posters.get(stem)
+        poster_attr = f' poster="{html.escape(poster)}"' if poster else ""
+        mime = artifact.mime or "video/mp4"
+        gif = gifs.get(stem)
+        gif_link = (
+            f'<a class="gif" href="{html.escape(gif)}" download>gif</a>' if gif else ""
+        )
+        parts.append(
+            f'<div class="clip"><video controls loop muted playsinline '
+            f'preload="metadata"{poster_attr}>'
+            f'<source src="{html.escape(artifact.uri)}" '
+            f'type="{html.escape(mime)}"></video>{gif_link}</div>'
+        )
+    return "".join(parts)
+
+
 def _captions(step: Step) -> str:
     rows = []
     for span in step.spans:
@@ -92,7 +128,7 @@ def _step_card(
             ]
             if child.spans:
                 child_bits.append(_span_links(child.spans, sources))
-            extra = _captions(child)
+            extra = _captions(child) + _artifact_media(child)
             items.append(f"<li>{' — '.join(child_bits)}{extra}</li>")
         subs = f'<ol class="subs">{"".join(items)}</ol>'
     cues = "".join(
@@ -115,6 +151,7 @@ def _step_card(
       {" ".join(badges)}
     </header>
     {description}
+    {_artifact_media(step)}
     {links_paragraph}
     {_captions(step)}
     {subs}
@@ -219,6 +256,10 @@ _CSS = """
   .dur { color:#666; font-size:.9rem; }
   .badge { background:var(--soft); border-radius:.4rem; padding:.05rem .45rem;
            font-size:.78rem; }
+  .clip { margin:.5rem 0; }
+  .clip video { width:100%; max-height:26rem; border-radius:.6rem; background:#000; }
+  .clip .gif { font-size:.8rem; margin-left:.4rem; }
+  .subs .clip video { max-height:18rem; }
   .links { margin:.4rem 0 .2rem; }
   .span { margin-right:.8rem; font-size:.9rem; }
   .cap, .desc { margin:.3rem 0; }

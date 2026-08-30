@@ -128,7 +128,8 @@ class SourceSpan(_Base):
 
 class ArtifactRef(_Base):
     """WHAT a derived file is, never HOW it was made — the recipe lives in the
-    evidence layer, keyed by ``asset_id``."""
+    evidence layer, keyed by ``asset_id`` (interim: the span-address-keyed
+    ``<stem>.recipes.json`` sidecar, ADR-0005 §3, until issue #4 lands)."""
 
     role: Slug  # clip | gif | poster | thumbnail | waveform | audio
     uri: str  # relative to the document — deploy-portable

@@ -47,8 +47,16 @@ Same thing from the shell:
 ```bash
 paces segment VIDEO_URL --steps steps.json --grid grid.json --output seg.json
 paces to-document seg.json --source VIDEO_URL --title "My routine" --output document.json
+paces derive document.json --media routine.mp4   # real loop clips + gifs + posters
 paces render document.json --output page.html
 ```
+
+`derive` (`pip install paces[media]`) cuts a loopable mp4, a palette-quality
+gif and a poster for every excerpt-bearing span, writes them to `media/` next
+to the document, and the practice page embeds them as looping clips. Crop
+recipes persist in a hand-overridable `document.recipes.json` sidecar; the
+`subject_locator=` seam (default: no crop) is where pose-based auto-crop
+plugs in. Design record: `docs/adr/0005-media-derivation.md`.
 
 ## How it thinks
 
@@ -79,6 +87,7 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 | measure the grid from the media | `segment(local_media, steps=[(name, counts), ...])` — no grid needed; tempo + structure measured, origin estimated and flagged (`pip install paces[audio]`) |
 | protect edits from regeneration | `apply_edits(doc, patches, by="user:you")` + `merge_regenerated(committed, fresh)` |
 | the committed artifact | `to_document(seg, ...)` → `StepDocument` |
+| real clips/gifs/posters for the page | `derive_document(doc, media=..., doc_path=...)` / `paces derive` (`pip install paces[media]`) |
 | a practice page | `render_html(doc)` |
 | wall-clock times from counts | `resolve(doc)` |
 | sanity checks | `validate_document(doc)` |
