@@ -84,6 +84,34 @@ class GridMeasurement:
     evidence: Mapping[str, Any] = field(default_factory=dict)
 
 
+def _load_audio(path, *, sample_rate):
+    """Decode *path* to ``(samples, rate)`` — wav-family natively, anything
+    else through pydub's ffmpeg decode to a temp wav.
+
+    librosa reads only what soundfile can open (wav/flac/ogg); for an .mp4
+    or .mp3 it silently falls back to its DEPRECATED audioread path when
+    that package happens to be installed, and raises when it is not — which
+    is exactly how this worked on a dev machine and failed on CI. Routing
+    non-wav through pydub gives one decode path (the same ffmpeg pydub
+    already uses for ``find_segments`` on the same file) that survives
+    librosa 1.0.
+    """
+    import librosa
+
+    try:
+        return librosa.load(str(path), sr=sample_rate)
+    except Exception:
+        import tempfile
+
+        from pydub import AudioSegment
+
+        audio = AudioSegment.from_file(str(path))
+        with tempfile.TemporaryDirectory() as tmp:
+            wav_path = Path(tmp) / "decoded.wav"
+            audio.export(str(wav_path), format="wav")
+            return librosa.load(str(wav_path), sr=sample_rate)
+
+
 def _measured_tempo(beat_grid_result) -> tuple[str | None, float | None]:
     """The tempo as a wire decimal, or None when there is no beat structure.
 
@@ -168,7 +196,7 @@ def measure_grid(
     if music:
         region = max(music, key=lambda s: s.end - s.start)
         try:
-            samples, rate = librosa.load(str(path), sr=sample_rate)
+            samples, rate = _load_audio(path, sample_rate=sample_rate)
         except Exception as error:
             raise MediaDecodeError(
                 f"could not decode {media!r} as audio ({type(error).__name__})"

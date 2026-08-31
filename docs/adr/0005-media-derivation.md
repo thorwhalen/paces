@@ -97,6 +97,9 @@ system-ffmpeg subprocess path; a test that feeds pydub a non-wav file (the
 `measure_grid`-on-mp4 production path already needs system ffmpeg — pydub
 knows nothing of the bundled binary — which is why the preflight below
 reports two channels); or a Windows-leg failure of the bundled path.
+*Trigger fired 2026-08-31*: the vertical-slice test (issue #3) runs
+`measure_grid` on an audio-bearing mp4, so the ops block is now declared —
+`derive` itself still needs no system ffmpeg, and everything above stands.
 
 `paces.derivation.check_media_requirements()` is that preflight: channel 1 =
 the bundled binary resolves (the derive paths), channel 2 = `which ffmpeg`

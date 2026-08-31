@@ -47,6 +47,7 @@ Same thing from the shell:
 ```bash
 paces segment VIDEO_URL --steps steps.json --grid grid.json --output seg.json
 paces to-document seg.json --source VIDEO_URL --title "My routine" --output document.json
+paces suggest-excerpts document.json --output document.json   # mark each block's loop window
 paces derive document.json --media routine.mp4   # real loop clips + gifs + posters
 paces render document.json --output page.html
 ```

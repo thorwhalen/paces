@@ -15,6 +15,7 @@ from pathlib import Path
 
 from paces import (
     edits as edits_module,
+    excerpts as excerpts_module,
     model,
     projection,
     render as render_module,
@@ -402,6 +403,38 @@ def derive(
     }
 
 
+def suggest_excerpts(
+    document,
+    *,
+    units: float | None = None,
+    role: str = excerpts_module.DFLT_EXCERPT_ROLE,
+    overwrite: bool = False,
+    output: str | None = None,
+) -> dict:
+    """Mark each step's loopable sub-window (the ``excerpt`` derive cuts).
+
+    v1 heuristic (issue #3): the excerpt is the span's whole grid window;
+    ``units=N`` takes the first N metric units instead. Never overwrites an
+    existing excerpt unless ``overwrite`` (and never a locked one). Returns
+    ``{"document", "flags", "suggested"}``; writes to ``output=`` when given.
+    """
+    result = excerpts_module.suggest_excerpts(
+        _as_document(document),
+        # the CLI hands numbers over as strings
+        units=None if units is None else float(units),
+        role=role,
+        overwrite=overwrite,
+    )
+    text = model.dumps_document(result.document)
+    if output:
+        Path(output).write_text(text, encoding="utf-8")
+    return {
+        "document": json.loads(text),
+        "flags": result.flags,
+        "suggested": result.suggested,
+    }
+
+
 def list_segmenters() -> dict:
     """The registered segmentation capabilities: name → what it needs/gives."""
     return {
@@ -420,6 +453,7 @@ _dispatch_funcs = [
     segment,
     to_document,
     render,
+    suggest_excerpts,
     derive,
     edit,
     merge,
