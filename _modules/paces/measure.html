@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.measure &mdash; paces 0.0.4 documentation</title>
+  <title>paces.measure &mdash; paces 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
@@ -175,6 +176,34 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_audio</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Decode *path* to ``(samples, rate)`` — wav-family natively, anything</span>
+<span class="sd">    else through pydub's ffmpeg decode to a temp wav.</span>
+
+<span class="sd">    librosa reads only what soundfile can open (wav/flac/ogg); for an .mp4</span>
+<span class="sd">    or .mp3 it silently falls back to its DEPRECATED audioread path when</span>
+<span class="sd">    that package happens to be installed, and raises when it is not — which</span>
+<span class="sd">    is exactly how this worked on a dev machine and failed on CI. Routing</span>
+<span class="sd">    non-wav through pydub gives one decode path (the same ffmpeg pydub</span>
+<span class="sd">    already uses for ``find_segments`` on the same file) that survives</span>
+<span class="sd">    librosa 1.0.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">librosa</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">sr</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pydub</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioSegment</span>
+
+        <span class="n">audio</span> <span class="o">=</span> <span class="n">AudioSegment</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+            <span class="n">wav_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"decoded.wav"</span>
+            <span class="n">audio</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">wav_path</span><span class="p">),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">wav_path</span><span class="p">),</span> <span class="n">sr</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_measured_tempo</span><span class="p">(</span><span class="n">beat_grid_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""The tempo as a wire decimal, or None when there is no beat structure.</span>
 
@@ -261,7 +290,7 @@
     <span class="k">if</span> <span class="n">music</span><span class="p">:</span>
         <span class="n">region</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">music</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">sr</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_load_audio</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MediaDecodeError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"could not decode </span><span class="si">{</span><span class="n">media</span><span class="si">!r}</span><span class="s2"> as audio (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">)"</span>

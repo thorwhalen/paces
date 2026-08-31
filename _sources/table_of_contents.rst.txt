@@ -6,6 +6,7 @@
    module_docs/paces/__main__
    module_docs/paces/derivation
    module_docs/paces/edits
+   module_docs/paces/excerpts
    module_docs/paces/measure
    module_docs/paces/model
    module_docs/paces/projection

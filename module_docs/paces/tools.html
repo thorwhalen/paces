@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.tools &mdash; paces 0.0.4 documentation</title>
+  <title>paces.tools &mdash; paces 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -52,6 +52,7 @@
 <li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
 <li class="toctree-l1"><a class="reference internal" href="derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
@@ -66,6 +67,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.segment"><code class="docutils literal notranslate"><span class="pre">segment()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.tools.suggest_excerpts"><code class="docutils literal notranslate"><span class="pre">suggest_excerpts()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.to_document"><code class="docutils literal notranslate"><span class="pre">to_document()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.tools.validate"><code class="docutils literal notranslate"><span class="pre">validate()</span></code></a></li>
 </ul>
@@ -183,6 +185,16 @@ Returns the segmentation as a JSON-ready dict (also written to
 <code class="docutils literal notranslate"><span class="pre">output=</span></code> when given) — honest about naming
 (<code class="docutils literal notranslate"><span class="pre">flags:</span> <span class="pre">['naming-abstained']</span></code>) and about refusal
 (<code class="docutils literal notranslate"><span class="pre">flags:</span> <span class="pre">['no-signal',</span> <span class="pre">'try:</span> <span class="pre">...']</span></code>); never a fabricated step list.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.tools.suggest_excerpts">
+<span class="sig-prename descclassname"><span class="pre">paces.tools.</span></span><span class="sig-name descname"><span class="pre">suggest_excerpts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'performance'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/tools.html#suggest_excerpts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.tools.suggest_excerpts" title="Link to this definition"></a></dt>
+<dd><p>Mark each step’s loopable sub-window (the <code class="docutils literal notranslate"><span class="pre">excerpt</span></code> derive cuts).</p>
+<p>v1 heuristic (issue #3): the excerpt is the span’s whole grid window;
+<code class="docutils literal notranslate"><span class="pre">units=N</span></code> takes the first N metric units instead. Never overwrites an
+existing excerpt unless <code class="docutils literal notranslate"><span class="pre">overwrite</span></code> (and never a locked one). Returns
+<code class="docutils literal notranslate"><span class="pre">{&quot;document&quot;,</span> <span class="pre">&quot;flags&quot;,</span> <span class="pre">&quot;suggested&quot;}</span></code>; writes to <code class="docutils literal notranslate"><span class="pre">output=</span></code> when given.</p>
 </dd></dl>
 
 <dl class="py function">

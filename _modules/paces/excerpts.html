@@ -1,0 +1,276 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.excerpts &mdash; paces 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/excerpts.html">paces.excerpts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.excerpts</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.excerpts</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Excerpt suggestion: mark the loopable sub-window each step's clip is cut</span>
+<span class="sd">from.</span>
+
+<span class="sd">A :class:`~paces.model.SourceSpan` with an ``excerpt`` is what media</span>
+<span class="sd">derivation (ADR-0005) cuts; nothing upstream sets one. This module holds the</span>
+<span class="sd">v1 heuristic (issue #3's cost note): **a step's excerpt is its own grid</span>
+<span class="sd">window** — the span itself — or, with ``units=``, its first N metric units.</span>
+<span class="sd">Editorial window-picking (the POC spent ~11 min of LLM agents over contact</span>
+<span class="sd">sheets choosing windows by eye) is a later capability that replaces this</span>
+<span class="sd">default behind the same seam; corrections meanwhile are ordinary document</span>
+<span class="sd">edits, which a suggestion must never eat:</span>
+
+<span class="sd">- an existing excerpt is only replaced under ``overwrite=True``, and even</span>
+<span class="sd">  then only by a real new suggestion — **never by nothing** (a heuristic</span>
+<span class="sd">  that cannot compute a window keeps what the human picked, with a flag);</span>
+<span class="sd">- a step carrying any span-level lock that could denote an excerpt gets</span>
+<span class="sd">  **no suggestions at all**: lock paths are recorded in index form and a</span>
+<span class="sd">  regeneration merge reorders spans (``edits.py``'s own premise), so "which</span>
+<span class="sd">  span does ``/spans/0/excerpt`` mean now?" cannot be answered here —</span>
+<span class="sd">  abstaining loses a default; guessing can silently undo a locked edit.</span>
+
+<span class="sd">Honesty flags over silence: every span this module skips or cannot fill is</span>
+<span class="sd">flagged by name.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fractions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fraction</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.model</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SourceSpan</span><span class="p">,</span>
+    <span class="n">Step</span><span class="p">,</span>
+    <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="n">decimal_str</span><span class="p">,</span>
+    <span class="n">seconds_per_unit</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1">#: The span role a clip is cut from by default — the at-tempo run-through.</span>
+<span class="n">DFLT_EXCERPT_ROLE</span> <span class="o">=</span> <span class="s2">"performance"</span>
+
+<span class="c1">#: A lock path that could denote a span's excerpt: the whole spans list, a</span>
+<span class="c1">#: whole span, or anything mentioning an excerpt. A narrower span field</span>
+<span class="c1">#: (caption, label) denotes that field under any reordering and never blocks.</span>
+<span class="n">_SPAN_LOCK</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^/spans(/\d+)?$|^/spans/.*excerpt"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ExcerptResult">
+<a class="viewcode-back" href="../../module_docs/paces/excerpts.html#paces.ExcerptResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExcerptResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The updated document plus the honesty flags."""</span>
+
+    <span class="n">document</span><span class="p">:</span> <span class="n">StepDocument</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">suggested</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># step ids touched</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_walk_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">step</span>
+        <span class="k">yield from</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_excerpts_locked</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">_SPAN_LOCK</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">locks</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="suggest_excerpts">
+<a class="viewcode-back" href="../../module_docs/paces/excerpts.html#paces.suggest_excerpts">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">suggest_excerpts</span><span class="p">(</span>
+    <span class="n">document</span><span class="p">:</span> <span class="n">StepDocument</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">units</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">role</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_EXCERPT_ROLE</span><span class="p">,</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExcerptResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Fill each step's first *role* span with a suggested ``excerpt``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        document: the committed document (worked on a deep copy).</span>
+<span class="sd">        units: ``None`` (default) → the excerpt is the span's whole window</span>
+<span class="sd">            (``start``..``end`` — for grid-placed segmentation that IS the</span>
+<span class="sd">            block's grid window, which is issue #3's acceptance). A number →</span>
+<span class="sd">            the first that-many metric units from the span's start, computed</span>
+<span class="sd">            through the document's grid and clipped to the span's end.</span>
+<span class="sd">        role: which span carries the clip (default ``"performance"`` — the</span>
+<span class="sd">            run-through). A step whose spans lack the role is flagged; a</span>
+<span class="sd">            step with SEVERAL role spans gets a suggestion on the first and</span>
+<span class="sd">            a ``multiple-&lt;role&gt;-spans:`` flag for the rest (the POC's b8</span>
+<span class="sd">            shape — the other moments still derive once excerpts are set by</span>
+<span class="sd">            hand or a future picker).</span>
+<span class="sd">        overwrite: replace existing excerpts with new suggestions. Off by</span>
+<span class="sd">            default; replacement never degrades to deletion, and a span-</span>
+<span class="sd">            locked step abstains entirely (see the module docstring).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">units</span><span class="p">)</span> <span class="ow">or</span> <span class="n">units</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"units must be a positive number, got </span><span class="si">{</span><span class="n">units</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">ExcerptResult</span><span class="p">(</span><span class="n">document</span><span class="o">=</span><span class="n">doc</span><span class="p">)</span>
+    <span class="n">flags</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">flags</span>
+
+    <span class="n">spu</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metric</span>
+        <span class="n">spu</span> <span class="o">=</span> <span class="n">seconds_per_unit</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">spu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">"no-grid: units= needs a metric grid with a tempo; "</span>
+                <span class="s2">"use units=None (the span's whole window) instead"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">_walk_steps</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">steps</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">role_spans</span> <span class="o">=</span> <span class="p">[</span><span class="n">span</span> <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">spans</span> <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="n">role</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">role_spans</span><span class="p">:</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no-</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">-span:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">role_spans</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"multiple-</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">-spans:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_excerpts_locked</span><span class="p">(</span><span class="n">step</span><span class="p">):</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"locked-excerpt-kept:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">role_spans</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">excerpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">suggestion</span> <span class="o">=</span> <span class="n">_suggest_for_span</span><span class="p">(</span><span class="n">span</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">,</span> <span class="n">spu</span><span class="o">=</span><span class="n">spu</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">suggestion</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># nothing computable: keep whatever is there — replacement must</span>
+            <span class="c1"># never degrade to deletion — and say so</span>
+            <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no-extent:</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">span</span><span class="o">.</span><span class="n">excerpt</span> <span class="o">=</span> <span class="n">suggestion</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">suggested</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_suggest_for_span</span><span class="p">(</span>
+    <span class="n">span</span><span class="p">:</span> <span class="n">SourceSpan</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">spu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One span's suggested window, as exact wire decimals — or ``None``</span>
+<span class="sd">    when the span records no extent to cut (inventing one would be data)."""</span>
+    <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">end</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">span</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+    <span class="n">end_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">))</span> <span class="o">+</span> <span class="n">units</span> <span class="o">*</span> <span class="n">spu</span>
+    <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">end_s</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end_s</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">Fraction</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">end</span><span class="p">)))</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">decimal_str</span><span class="p">(</span><span class="n">end_s</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

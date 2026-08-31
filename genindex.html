@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; paces 0.0.4 documentation</title>
+  <title>Index &mdash; paces 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="_static/documentation_options.js?v=282f96c0"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/__main__.html">paces.__main__</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_docs/paces/excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/model.html">paces.model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/projection.html">paces.projection</a></li>
@@ -196,6 +197,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces/excerpts.html#paces.excerpts.DFLT_EXCERPT_ROLE">DFLT_EXCERPT_ROLE (in module paces.excerpts)</a>
+</li>
       <li><a href="module_docs/paces/measure.html#paces.measure.DFLT_MEASURED_CONFIDENCE">DFLT_MEASURED_CONFIDENCE (in module paces.measure)</a>
 </li>
       <li><a href="module_docs/paces/derivation.html#paces.derivation.DFLT_ROLES">DFLT_ROLES (in module paces.derivation)</a>
@@ -220,10 +223,16 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces/tools.html#paces.tools.edit">edit() (in module paces.tools)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces/derivation.html#paces.derivation.ENVELOPE_LO">ENVELOPE_LO (in module paces.derivation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces.html#paces.ExcerptResult">ExcerptResult (class in paces)</a>
+
+      <ul>
+        <li><a href="module_docs/paces/excerpts.html#paces.excerpts.ExcerptResult">(class in paces.excerpts)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -398,6 +407,8 @@
 </li>
         <li><a href="module_docs/paces/edits.html#module-paces.edits">paces.edits</a>
 </li>
+        <li><a href="module_docs/paces/excerpts.html#module-paces.excerpts">paces.excerpts</a>
+</li>
         <li><a href="module_docs/paces/measure.html#module-paces.measure">paces.measure</a>
 </li>
         <li><a href="module_docs/paces/model.html#module-paces.model">paces.model</a>
@@ -463,6 +474,13 @@
 
       <ul>
         <li><a href="module_docs/paces/edits.html#module-paces.edits">module</a>
+</li>
+      </ul></li>
+      <li>
+    paces.excerpts
+
+      <ul>
+        <li><a href="module_docs/paces/excerpts.html#module-paces.excerpts">module</a>
 </li>
       </ul></li>
       <li>
@@ -585,14 +603,14 @@
       </ul></li>
       <li><a href="module_docs/paces/model.html#paces.model.Slug">Slug (in module paces.model)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces.html#paces.Source">Source (class in paces)</a>
 
       <ul>
         <li><a href="module_docs/paces/model.html#paces.model.Source">(class in paces.model)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces.html#paces.SourceSpan">SourceSpan (class in paces)</a>
 
       <ul>
@@ -617,6 +635,14 @@
 
       <ul>
         <li><a href="module_docs/paces/derivation.html#paces.derivation.SubjectObservation">(class in paces.derivation)</a>
+</li>
+      </ul></li>
+      <li><a href="module_docs/paces.html#paces.suggest_excerpts">suggest_excerpts() (in module paces)</a>
+
+      <ul>
+        <li><a href="module_docs/paces/excerpts.html#paces.excerpts.suggest_excerpts">(in module paces.excerpts)</a>
+</li>
+        <li><a href="module_docs/paces/tools.html#paces.tools.suggest_excerpts">(in module paces.tools)</a>
 </li>
       </ul></li>
       <li><a href="module_docs/paces/edits.html#paces.edits.SUPPORTED_OPS">SUPPORTED_OPS (in module paces.edits)</a>
