@@ -75,9 +75,10 @@ def test_the_slice_end_to_end(tmp_path, av):
         seg, doc_id="routine", title="Routine", source=SOURCE, output=str(doc_path)
     )
 
-    # 3. suggest excerpts: each block's clip window IS its grid window
+    # 3. suggest excerpts: each block's clip window IS its grid window —
+    # EVERY block, not just the asserted one
     payload = tools.suggest_excerpts(str(doc_path), output=str(doc_path))
-    assert "dehanches" in payload["suggested"]
+    assert payload["suggested"] == ["intro", "bras", "dehanches"]
     doc = json.loads(doc_path.read_text())
     block = next(s for s in doc["steps"] if s["id"] == "dehanches")
     excerpt = block["spans"][0]["excerpt"]
@@ -117,6 +118,43 @@ def test_the_slice_end_to_end(tmp_path, av):
     assert "<video controls loop muted playsinline" in page
     assert 'poster="media/dehanches.jpg"' in page
     assert "Déhanchés" in page
+
+    # 6. the caption is editorial content and arrives as a hand EDIT (which
+    # writes a Lock) — the POC card's caption path, exercised the house way
+    caption = "Jambes tendues, le bassin pulse"
+    tools.edit(
+        str(doc_path),
+        [
+            {
+                "op": "set",
+                "path": "/steps/dehanches/spans/0/caption",
+                "value": caption,
+            }
+        ],
+        by="user:test",
+        output=str(doc_path),
+    )
+
+    # 7. the crop is hand-tuned via the recipes sidecar (ADR-0005 §3's
+    # documented flow: edit box, set locked) — and the digest gate re-cuts
+    from paces.derivation import load_recipes, save_recipes
+
+    sidecar = tmp_path / "document.recipes.json"
+    recipes = load_recipes(sidecar)
+    span_start = block["spans"][0]["start"]
+    key = f"dehanches/rt/performance/{span_start}"
+    recipes.entries[key].box = (60, 40, 100, 80)
+    recipes.entries[key].locked = True
+    save_recipes(recipes, sidecar)
+    tools.derive(str(doc_path), media=str(video))
+    assert tuple(mixing.get_video_dimensions(str(clip_path))) == (100, 80), (
+        "the locked hand box must re-cut the existing clip"
+    )
+
+    tools.render(str(doc_path), output=str(page_path))
+    page = page_path.read_text()
+    assert caption in page  # the card carries the caption
+    assert '<source src="media/dehanches.mp4"' in page  # and still the clip
 
 
 def test_the_slice_via_the_cli(tmp_path, av):

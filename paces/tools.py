@@ -15,6 +15,7 @@ from pathlib import Path
 
 from paces import (
     edits as edits_module,
+    excerpts as excerpts_module,
     model,
     projection,
     render as render_module,
@@ -406,7 +407,7 @@ def suggest_excerpts(
     document,
     *,
     units: float | None = None,
-    role: str = "performance",
+    role: str = excerpts_module.DFLT_EXCERPT_ROLE,
     overwrite: bool = False,
     output: str | None = None,
 ) -> dict:
@@ -417,8 +418,6 @@ def suggest_excerpts(
     existing excerpt unless ``overwrite`` (and never a locked one). Returns
     ``{"document", "flags", "suggested"}``; writes to ``output=`` when given.
     """
-    from paces import excerpts as excerpts_module
-
     result = excerpts_module.suggest_excerpts(
         _as_document(document),
         # the CLI hands numbers over as strings
