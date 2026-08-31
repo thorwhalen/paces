@@ -196,3 +196,29 @@ def test_the_slice_via_the_cli(tmp_path, av):
     assert (tmp_path / "document.recipes.json").is_file()
     page = (tmp_path / "page.html").read_text()
     assert '<source src="media/dehanches.mp4"' in page
+
+
+def test_measure_decodes_mp4_without_librosas_deprecated_fallback(av, monkeypatch):
+    """CI regression: librosa reads only soundfile formats and silently leans
+    on its deprecated audioread fallback when that package happens to be
+    installed (dev machines) — and raises where it is not (CI). Simulate the
+    CI condition and prove the pydub decode path carries the mp4."""
+    import librosa
+
+    from paces import measure
+
+    video, truth = av
+    real_load = librosa.load
+
+    def no_fallback_load(path, **kwargs):
+        if str(path).endswith(".mp4"):
+            raise RuntimeError("simulated: soundfile cannot open mp4")
+        return real_load(path, **kwargs)
+
+    monkeypatch.setattr(librosa, "load", no_fallback_load)
+    samples, rate = measure._load_audio(video, sample_rate=22050)
+    assert rate == 22050 and samples.size > 20 * 22050  # ~41 s of audio
+    # and the full measurement still lands on the truth through this path
+    measurement = measure.measure_grid(str(video))
+    assert measurement.grid.tempo_bpm is not None
+    assert float(measurement.grid.tempo_bpm) == pytest.approx(truth["bpm"], abs=0.5)
