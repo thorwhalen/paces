@@ -59,6 +59,7 @@ from paces.derivation import (
     resolve_crop_box,
 )
 from paces.edits import apply_edits, merge_regenerated
+from paces.excerpts import ExcerptResult, suggest_excerpts
 from paces.measure import GridMeasurement, measure_grid
 from paces.projection import to_document
 from paces.render import render_html
@@ -102,6 +103,8 @@ __all__ = [
     "GridMeasurement",
     "to_document",
     # media derivation (issue #1, ADR-0005)
+    "suggest_excerpts",
+    "ExcerptResult",
     "derive_document",
     "DeriveResult",
     "DirStore",
