@@ -36,7 +36,7 @@ Documentation = "https://thorwhalen.github.io/paces"
 paces = "paces.__main__:main"
 
 [project.optional-dependencies]
-cli = ["argh>=0.30", "argcomplete>=3"]
+cli = ["cw>=0.1.1,<0.2", "argcomplete>=3"]
 audio = [
     # Grid measurement (issue #2): the fleet's `mixing` owns speech/music
     # segmentation and beat tracking; [beats] pulls librosa, [audio] pulls
@@ -63,9 +63,9 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
-    # The CLI smoke test runs `python -m paces ...`; without argh in dev it
+    # The CLI smoke test runs `python -m paces ...`; without cw in dev it
     # would fail rather than silently skip — keep it mirrored with [cli].
-    "argh>=0.30",
+    "cw>=0.1.1,<0.2",
     # The grid-measurement tests exercise the real mixing/librosa path on
     # synthesized audio; mirrored with [audio] so they run rather than skip.
     # The derivation tests do the same on synthetic video — mirrored with
