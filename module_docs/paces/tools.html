@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.tools &mdash; paces 0.0.5 documentation</title>
+  <title>paces.tools &mdash; paces 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/documentation_options.js?v=1fd71caa"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -102,7 +102,7 @@
 <span id="paces-tools"></span><h1>paces.tools<a class="headerlink" href="#module-paces.tools" title="Link to this heading"></a></h1>
 <p>Agent-callable tool surface over <code class="docutils literal notranslate"><span class="pre">paces</span></code> — plain functions with JSON-able
 arguments returning JSON-ready values, deliberately CLI/MCP/HTTP-agnostic.</p>
-<p>This module is the SSOT for “what paces can do”: every surface (the <code class="docutils literal notranslate"><span class="pre">argh</span></code>
+<p>This module is the SSOT for “what paces can do”: every surface (the <code class="docutils literal notranslate"><span class="pre">cw</span></code>
 CLI in <code class="docutils literal notranslate"><span class="pre">__main__.py</span></code> today; <code class="docutils literal notranslate"><span class="pre">py2mcp</span></code>/<code class="docutils literal notranslate"><span class="pre">qh</span></code> wrappers tomorrow) dispatches
 over <code class="docutils literal notranslate"><span class="pre">_dispatch_funcs</span></code> and nothing else. Arguments that carry structure
 (steps, grids, documents) accept a Python object, a JSON string, or a path to

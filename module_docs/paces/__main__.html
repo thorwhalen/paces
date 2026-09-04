@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.__main__ &mdash; paces 0.0.5 documentation</title>
+  <title>paces.__main__ &mdash; paces 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/documentation_options.js?v=1fd71caa"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -51,6 +51,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">paces.__main__</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.__main__.CONVENTION"><code class="docutils literal notranslate"><span class="pre">CONVENTION</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#paces.__main__.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 </ul>
 </li>
@@ -92,10 +93,29 @@
   <section id="module-paces.__main__">
 <span id="paces-main"></span><h1>paces.__main__<a class="headerlink" href="#module-paces.__main__" title="Link to this heading"></a></h1>
 <p>paces CLI entry point — <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">paces</span></code> / <code class="docutils literal notranslate"><span class="pre">paces</span></code> (after install).</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.__main__.CONVENTION">
+<span class="sig-prename descclassname"><span class="pre">paces.__main__.</span></span><span class="sig-name descname"><span class="pre">CONVENTION</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Convention(naming='by_name_if_kwonly',</span> <span class="pre">short_flags=True,</span> <span class="pre">hyphenate_commands=True,</span> <span class="pre">hyphenate_groups=False,</span> <span class="pre">default_in_help=True,</span> <span class="pre">hints_when_declared=False,</span> <span class="pre">resolve_hints=False,</span> <span class="pre">decode=&lt;function</span> <span class="pre">argh_decode&gt;,</span> <span class="pre">egress=&lt;function</span> <span class="pre">argh_egress&gt;)</span></span><a class="headerlink" href="#paces.__main__.CONVENTION" title="Link to this definition"></a></dt>
+<dd><p>Positional args (with or without defaults) stay positional; the keyword-only args
+every tool uses become <code class="docutils literal notranslate"><span class="pre">--flags</span></code>.</p>
+<p>This is <code class="docutils literal notranslate"><span class="pre">argh</span></code>’s post-0.30 <code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_KWONLY</span></code> policy, which this CLI has always
+run on and which cw spells the same way. It is <strong>not</strong> cw’s default: <code class="docutils literal notranslate"><span class="pre">cw.ARGH</span></code>
+reproduces <code class="docutils literal notranslate"><span class="pre">argh.dispatch_commands</span></code> instead, under which a defaulted positional
+becomes an option. <code class="docutils literal notranslate"><span class="pre">segment(media=None,</span> <span class="pre">*,</span> <span class="pre">...)</span></code> is exactly that shape, so the
+difference is the difference between <code class="docutils literal notranslate"><span class="pre">paces</span> <span class="pre">segment</span> <span class="pre">video.mp4</span></code> and
+<code class="docutils literal notranslate"><span class="pre">paces</span> <span class="pre">segment</span> <span class="pre">--media</span> <span class="pre">video.mp4</span></code>. The former is what the docs, the smoke test and
+the vertical-slice test all type.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="paces.__main__.main">
 <span class="sig-prename descclassname"><span class="pre">paces.__main__.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/paces/__main__.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.__main__.main" title="Link to this definition"></a></dt>
-<dd><p>Build the argh parser over the paces tools and dispatch.</p>
+<dd><p>Build the parser over the paces tools and dispatch.</p>
+<p><code class="docutils literal notranslate"><span class="pre">cw.run</span></code> offers the parser to <code class="docutils literal notranslate"><span class="pre">argcomplete</span></code> before parsing, exactly where
+<code class="docutils literal notranslate"><span class="pre">argh</span></code>’s dispatch did, so <code class="docutils literal notranslate"><span class="pre">PYTHON_ARGCOMPLETE_OK</span></code> above still applies with no
+hand-written completion block here. It <em>returns</em> the exit code rather than raising
+it, which is why the <code class="docutils literal notranslate"><span class="pre">SystemExit</span></code> is written out: without it every usage error
+would exit 0, and the end-to-end tests all assert <code class="docutils literal notranslate"><span class="pre">returncode</span> <span class="pre">==</span> <span class="pre">0</span></code>.</p>
 </dd></dl>
 
 </section>

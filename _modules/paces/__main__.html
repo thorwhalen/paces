@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.__main__ &mdash; paces 0.0.5 documentation</title>
+  <title>paces.__main__ &mdash; paces 0.0.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/documentation_options.js?v=1fd71caa"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -89,30 +89,38 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">argh</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cw</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">paces.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">_dispatch_funcs</span>
+
+<span class="c1">#: Positional args (with or without defaults) stay positional; the keyword-only args</span>
+<span class="c1">#: every tool uses become ``--flags``.</span>
+<span class="c1">#:</span>
+<span class="c1">#: This is ``argh``'s post-0.30 ``BY_NAME_IF_KWONLY`` policy, which this CLI has always</span>
+<span class="c1">#: run on and which cw spells the same way. It is **not** cw's default: ``cw.ARGH``</span>
+<span class="c1">#: reproduces ``argh.dispatch_commands`` instead, under which a defaulted positional</span>
+<span class="c1">#: becomes an option. ``segment(media=None, *, ...)`` is exactly that shape, so the</span>
+<span class="c1">#: difference is the difference between ``paces segment video.mp4`` and</span>
+<span class="c1">#: ``paces segment --media video.mp4``. The former is what the docs, the smoke test and</span>
+<span class="c1">#: the vertical-slice test all type.</span>
+<span class="n">CONVENTION</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">cw</span><span class="o">.</span><span class="n">ARGH</span><span class="p">,</span> <span class="n">naming</span><span class="o">=</span><span class="n">cw</span><span class="o">.</span><span class="n">BY_NAME_IF_KWONLY</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="main">
 <a class="viewcode-back" href="../../module_docs/paces/__main__.html#paces.__main__.main">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Build the argh parser over the paces tools and dispatch."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">argh.assembling</span><span class="w"> </span><span class="kn">import</span> <span class="n">NameMappingPolicy</span>
+<span class="w">    </span><span class="sd">"""Build the parser over the paces tools and dispatch.</span>
 
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">argh</span><span class="o">.</span><span class="n">ArghParser</span><span class="p">()</span>
-    <span class="c1"># Positional args (with or without defaults) stay positional; the</span>
-    <span class="c1"># keyword-only args every tool uses become --flags.</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_commands</span><span class="p">(</span>
-        <span class="n">_dispatch_funcs</span><span class="p">,</span> <span class="n">name_mapping_policy</span><span class="o">=</span><span class="n">NameMappingPolicy</span><span class="o">.</span><span class="n">BY_NAME_IF_KWONLY</span>
-    <span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">argcomplete</span>
-
-        <span class="n">argcomplete</span><span class="o">.</span><span class="n">autocomplete</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">pass</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">dispatch</span><span class="p">()</span></div>
+<span class="sd">    ``cw.run`` offers the parser to ``argcomplete`` before parsing, exactly where</span>
+<span class="sd">    ``argh``'s dispatch did, so ``PYTHON_ARGCOMPLETE_OK`` above still applies with no</span>
+<span class="sd">    hand-written completion block here. It *returns* the exit code rather than raising</span>
+<span class="sd">    it, which is why the ``SystemExit`` is written out: without it every usage error</span>
+<span class="sd">    would exit 0, and the end-to-end tests all assert ``returncode == 0``.</span>
+<span class="sd">    """</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">cw</span><span class="o">.</span><span class="n">mk_parser</span><span class="p">(</span><span class="n">_dispatch_funcs</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="n">CONVENTION</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">cw</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">parser</span><span class="p">))</span></div>
 
 
 
