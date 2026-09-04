@@ -1,7 +1,7 @@
 """Agent-callable tool surface over ``paces`` — plain functions with JSON-able
 arguments returning JSON-ready values, deliberately CLI/MCP/HTTP-agnostic.
 
-This module is the SSOT for "what paces can do": every surface (the ``argh``
+This module is the SSOT for "what paces can do": every surface (the ``cw``
 CLI in ``__main__.py`` today; ``py2mcp``/``qh`` wrappers tomorrow) dispatches
 over ``_dispatch_funcs`` and nothing else. Arguments that carry structure
 (steps, grids, documents) accept a Python object, a JSON string, or a path to

@@ -174,7 +174,33 @@ imports neither.
 
 ---
 
-## 3. Surface 1 — CLI (`argh`)
+## 3. Surface 1 — CLI (`argh` — see the note)
+
+> **`paces` no longer uses `argh`.** It dispatches through
+> [`cw`](https://pypi.org/project/cw/) (MIT, zero runtime dependencies) instead —
+> `argh` is LGPL-3.0-or-later, which is a licence every install inherits for the sake
+> of one dispatch call. `cw` builds a plain `argparse.ArgumentParser` and reproduces
+> `argh`'s grammar; `paces/__main__.py` is now four lines of body:
+>
+> ```python
+> CONVENTION = dataclasses.replace(cw.ARGH, naming=cw.BY_NAME_IF_KWONLY)
+> parser = cw.mk_parser(_dispatch_funcs, convention=CONVENTION)
+> raise SystemExit(cw.run(parser))
+> ```
+>
+> Three things that swap does not let you skip. **(1)** The naming policy is explicit
+> because it has to be: cw's default (`cw.ARGH`) reproduces `argh.dispatch_commands`,
+> under which a parameter with a default becomes an *option* — so `segment(media=None,
+> *, ...)` would turn `paces segment video.mp4` into `paces segment --media video.mp4`.
+> `BY_NAME_IF_KWONLY` is what `argh.add_commands` applies, and it is what this CLI has
+> always run on. **(2)** `cw.run` *returns* the exit code where `argh` raised it, so the
+> `SystemExit` is written out; without it every usage error exits 0. **(3)** `cw.run`
+> offers the parser to `argcomplete` exactly where `argh`'s dispatch did, so the
+> hand-written `try: import argcomplete` block below is not needed — but the
+> `# PYTHON_ARGCOMPLETE_OK` marker and its first-1024-bytes rule still are.
+>
+> The `argh` example below is kept as the historical exemplar the other fleet packages
+> still match. When one of them moves, it moves to the shape above.
 
 **What it is.** ~20 lines, no deployment, no auth, no client. Written *even for a library
 nobody will call from a shell*, because it is the audit of the core and the way you run the
