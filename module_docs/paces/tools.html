@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.tools &mdash; paces 0.0.6 documentation</title>
+  <title>paces.tools &mdash; paces 0.0.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=1fd71caa"></script>
+      <script src="../../_static/documentation_options.js?v=bbaf98b3"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -55,6 +55,7 @@
 <li class="toctree-l1"><a class="reference internal" href="excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pose.html">paces.pose</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
@@ -118,7 +119,8 @@ in-memory document use <a class="reference internal" href="derivation.html#paces
 explicit store. <code class="docutils literal notranslate"><span class="pre">media</span></code> is one local file, or <code class="docutils literal notranslate"><span class="pre">{&quot;&lt;source-id&gt;&quot;:</span>
 <span class="pre">&quot;&lt;path&gt;&quot;}</span></code> when several sources carry excerpts. <code class="docutils literal notranslate"><span class="pre">subject_locator</span></code> is
 a lazy <code class="docutils literal notranslate"><span class="pre">&quot;module:attr&quot;</span></code> ref to an ADR-0005 §3 locator; the default is
-no crop. The updated document is written back to <code class="docutils literal notranslate"><span class="pre">output</span></code> (default:
+no crop, and <code class="docutils literal notranslate"><span class="pre">paces.pose:rtmlib_pose</span></code> is the shipped pointable one
+(rtmlib pose boxes, <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">paces[pose]</span></code>). The updated document is written back to <code class="docutils literal notranslate"><span class="pre">output</span></code> (default:
 the document path itself — derive’s media side effects and the refs
 pointing at them must not go out of sync); the returned payload carries
 <code class="docutils literal notranslate"><span class="pre">flags</span></code> — read them, they are the honesty report.</p>

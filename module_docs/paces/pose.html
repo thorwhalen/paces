@@ -1,0 +1,360 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.pose &mdash; paces 0.0.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=bbaf98b3"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="paces.projection" href="projection.html" />
+    <link rel="prev" title="paces.model" href="model.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="derivation.html">paces.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="excerpts.html">paces.excerpts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">paces.pose</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.DFLT_DEVICE"><code class="docutils literal notranslate"><span class="pre">DFLT_DEVICE</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.DFLT_KEYPOINT_CONFIDENCE"><code class="docutils literal notranslate"><span class="pre">DFLT_KEYPOINT_CONFIDENCE</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.DFLT_MIN_KEYPOINTS"><code class="docutils literal notranslate"><span class="pre">DFLT_MIN_KEYPOINTS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.DFLT_MODE"><code class="docutils literal notranslate"><span class="pre">DFLT_MODE</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.DFLT_PROBE_FPS"><code class="docutils literal notranslate"><span class="pre">DFLT_PROBE_FPS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.POSE_EXTRA"><code class="docutils literal notranslate"><span class="pre">POSE_EXTRA</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.RtmlibPoseLocator"><code class="docutils literal notranslate"><span class="pre">RtmlibPoseLocator</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#paces.pose.RtmlibPoseLocator.locator_name"><code class="docutils literal notranslate"><span class="pre">RtmlibPoseLocator.locator_name</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.TEST_MODELS_ENVVAR"><code class="docutils literal notranslate"><span class="pre">TEST_MODELS_ENVVAR</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.check_pose_requirements"><code class="docutils literal notranslate"><span class="pre">check_pose_requirements()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.person_boxes"><code class="docutils literal notranslate"><span class="pre">person_boxes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.probe_times"><code class="docutils literal notranslate"><span class="pre">probe_times()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#paces.pose.rtmlib_pose"><code class="docutils literal notranslate"><span class="pre">rtmlib_pose</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">paces.pose</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/module_docs/paces/pose.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-paces.pose">
+<span id="paces-pose"></span><h1>paces.pose<a class="headerlink" href="#module-paces.pose" title="Link to this heading"></a></h1>
+<p>The pointable <code class="docutils literal notranslate"><span class="pre">subject_locator</span></code>: person boxes from rtmlib pose keypoints.</p>
+<p>ADR-0005 §3 shipped the <code class="docutils literal notranslate"><span class="pre">subject_locator=</span></code> seam with <a class="reference internal" href="derivation.html#paces.derivation.full_frame" title="paces.derivation.full_frame"><code class="xref py py-func docutils literal notranslate"><span class="pre">paces.derivation.full_frame()</span></code></a>
+as its default — a real implementation whose honest answer is “no crop” — and pinned
+the contract with fake locators. This module is the pointable replacement: probe the
+excerpt window at ~5 fps, run RTMPose over each probed frame, and hand the core one
+region list per instant, every person seen. It <strong>observes only</strong>; the core still owns
+the one policy pipeline (union → percentile envelope → pad → aspect → clamp → one
+static box per window), which is exactly where the POC measured that crops go wrong.</p>
+<p><strong>Licence perimeter.</strong> What this extra itself adds is permissive: rtmlib is
+Apache-2.0 (a pure-Python wheel, no bundled binaries or weights) and onnxruntime is
+MIT. Its detector is <strong>YOLOX</strong> (Megvii, Apache-2.0) — measured, not assumed: every
+<code class="docutils literal notranslate"><span class="pre">Body</span></code> mode downloads a <code class="docutils literal notranslate"><span class="pre">yolox_*</span></code> checkpoint from download.openmmlab.com, and the
+RTMDet code in rtmlib is not what <code class="docutils literal notranslate"><span class="pre">Body</span></code> uses. So the accurate claim is <em>not</em> “no
+YOLO” (the issue and ADR-0005 §3 say RTMDet; that is wrong) but the one that actually
+carries the licence: no <strong>ultralytics</strong>, whose YOLOv5/v8/v11 are AGPL-3.0 and whose §13
+network clause reaches users you serve rather than only people you hand a copy to. What
+is barred is that distribution, not the word YOLO.
+<code class="docutils literal notranslate"><span class="pre">tests/test_pose.py</span></code> guards that perimeter as the packaging fact it is. kodokan’s
+<code class="docutils literal notranslate"><span class="pre">pose</span></code>/<code class="docutils literal notranslate"><span class="pre">track</span></code> split is the fleet’s worked example of the same quarantine.</p>
+<p><strong>The closure is NOT uniformly permissive, and the wheel’s own notice file will not
+tell you so.</strong> opencv — which rtmlib pulls, and which <code class="docutils literal notranslate"><span class="pre">[media]</span></code>’s mixing already
+declares — bundles FFmpeg whose licence tier is <strong>platform-dependent</strong> and must be
+read off the binary, because <code class="docutils literal notranslate"><span class="pre">LICENSE-3RD-PARTY.txt</span></code> never mentions x264 on any
+platform. Measured per wheel (see the PR for #15 for the commands):</p>
+<ul class="simple">
+<li><p>manylinux (what CI installs) and Windows: no x264/x265, no <code class="docutils literal notranslate"><span class="pre">--enable-gpl</span></code>;
+<code class="docutils literal notranslate"><span class="pre">libavutil</span> <span class="pre">license:</span> <span class="pre">LGPL</span> <span class="pre">version</span> <span class="pre">2.1</span> <span class="pre">or</span> <span class="pre">later</span></code>.</p></li>
+<li><p>macOS, <strong>both</strong> arm64 and x86_64: <code class="docutils literal notranslate"><span class="pre">--enable-gpl</span> <span class="pre">--enable-version3</span>
+<span class="pre">--enable-libx264</span> <span class="pre">--enable-libx265</span></code>, libx264/libx265 shipped;
+<code class="docutils literal notranslate"><span class="pre">libavutil</span> <span class="pre">license:</span> <span class="pre">GPL</span> <span class="pre">version</span> <span class="pre">3</span> <span class="pre">or</span> <span class="pre">later</span></code>.</p></li>
+</ul>
+<p>That tier already arrives with <code class="docutils literal notranslate"><span class="pre">[media]</span></code>. <code class="docutils literal notranslate"><span class="pre">[pose]</span></code> does not raise it — but it is
+not free of it either: rtmlib requires opencv-python <em>and</em> opencv-contrib-python,
+both unpinned, so installing it adds a second wheel carrying its own copy of those
+same binaries (issue #20).</p>
+<p><strong>Nothing here is imported until it is used.</strong> <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">paces</span></code> never touches this
+module, and importing <em>this</em> module never touches rtmlib: every rtmlib access goes
+through <code class="xref py py-func docutils literal notranslate"><span class="pre">_import_body()</span></code> or <code class="xref py py-func docutils literal notranslate"><span class="pre">_rtmlib_version()</span></code>, both of which raise an
+<code class="docutils literal notranslate"><span class="pre">ImportError</span></code> naming the extra. Model weights download on first inference, so CI
+covers the seam’s contract through fake locators and never runs a model.</p>
+<p>Usage — the shell, then the library:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">paces</span> <span class="n">derive</span> <span class="n">doc</span><span class="o">.</span><span class="n">json</span> <span class="o">--</span><span class="n">media</span> <span class="n">routine</span><span class="o">.</span><span class="n">mp4</span> <span class="o">--</span><span class="n">subject</span><span class="o">-</span><span class="n">locator</span> <span class="n">paces</span><span class="o">.</span><span class="n">pose</span><span class="p">:</span><span class="n">rtmlib_pose</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.derivation</span><span class="w"> </span><span class="kn">import</span> <span class="n">derive_document</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.pose</span><span class="w"> </span><span class="kn">import</span> <span class="n">RtmlibPoseLocator</span><span class="p">,</span> <span class="n">rtmlib_pose</span>
+
+<span class="n">derive_document</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">media</span><span class="o">=...</span><span class="p">,</span> <span class="n">doc_path</span><span class="o">=...</span><span class="p">,</span> <span class="n">subject_locator</span><span class="o">=</span><span class="n">rtmlib_pose</span><span class="p">)</span>
+<span class="n">derive_document</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">subject_locator</span><span class="o">=</span><span class="n">RtmlibPoseLocator</span><span class="p">(</span><span class="n">probe_fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">))</span>
+</pre></div>
+</div>
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.DFLT_DEVICE">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">DFLT_DEVICE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cpu'</span></span><a class="headerlink" href="#paces.pose.DFLT_DEVICE" title="Link to this definition"></a></dt>
+<dd><p>onnxruntime execution device. “cpu” is the portable answer and the only one
+CI would ever have; “cuda”/”mps” are a caller’s choice, not a default.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.DFLT_KEYPOINT_CONFIDENCE">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">DFLT_KEYPOINT_CONFIDENCE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.3</span></span><a class="headerlink" href="#paces.pose.DFLT_KEYPOINT_CONFIDENCE" title="Link to this definition"></a></dt>
+<dd><p>A keypoint below this score is noise, not evidence, and never widens a box.
+This threshold is load-bearing, not decorative: rtmlib’s <code class="docutils literal notranslate"><span class="pre">Body</span></code> is a
+top-down pipeline, so it returns a full 17-keypoint person for a frame with
+nobody in it at all. Measured on a blank frame (rtmlib 0.0.15, balanced):
+one “person”, every score ~0.11-0.13. Without this filter the locator would
+hand the core a confident box around nothing, every time.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.DFLT_MIN_KEYPOINTS">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">DFLT_MIN_KEYPOINTS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></span><a class="headerlink" href="#paces.pose.DFLT_MIN_KEYPOINTS" title="Link to this definition"></a></dt>
+<dd><p>Fewer confident keypoints than this is not a person — it is a hallucinated
+limb or two, and boxing it would hand the core a region with no subject in
+it. The second half of the same defence: a real detection clears 0.3 on far
+more than four joints, while the blank-frame phantom above clears it on none.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.DFLT_MODE">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">DFLT_MODE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'balanced'</span></span><a class="headerlink" href="#paces.pose.DFLT_MODE" title="Link to this definition"></a></dt>
+<dd><p>“lightweight” | “balanced” | “performance”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>rtmlib <code class="docutils literal notranslate"><span class="pre">Body</span></code> accuracy/latency trade-off</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.DFLT_PROBE_FPS">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">DFLT_PROBE_FPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5.0</span></span><a class="headerlink" href="#paces.pose.DFLT_PROBE_FPS" title="Link to this definition"></a></dt>
+<dd><p>Probe rate across an excerpt window, in samples per second — the POC’s rate.
+Excerpts are 2.5–6 s loops, so ~5 fps is 13–30 looks: enough for the 4/96
+envelope to shrug off a stray frame, cheap enough to run on CPU.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.POSE_EXTRA">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">POSE_EXTRA</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pose'</span></span><a class="headerlink" href="#paces.pose.POSE_EXTRA" title="Link to this definition"></a></dt>
+<dd><p>The extra that carries this locator, and the stem of its recorded identity.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="paces.pose.RtmlibPoseLocator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">RtmlibPoseLocator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'balanced'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keypoint_confidence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_keypoints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose_estimator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/paces/pose.html#RtmlibPoseLocator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.pose.RtmlibPoseLocator" title="Link to this definition"></a></dt>
+<dd><p>The pointable <code class="docutils literal notranslate"><span class="pre">subject_locator</span></code>: rtmlib pose boxes over a probed window.</p>
+<p>Callable per the ADR-0005 §3 contract — a <a class="reference internal" href="derivation.html#paces.derivation.LocateQuery" title="paces.derivation.LocateQuery"><code class="xref py py-class docutils literal notranslate"><span class="pre">LocateQuery</span></code></a>
+in, a <a class="reference internal" href="derivation.html#paces.derivation.SubjectObservation" title="paces.derivation.SubjectObservation"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubjectObservation</span></code></a> out, or <code class="docutils literal notranslate"><span class="pre">None</span></code>, the
+honest “no crop”, when the window showed nobody. It never resolves a box:
+that is the core’s <a class="reference internal" href="derivation.html#paces.derivation.resolve_crop_box" title="paces.derivation.resolve_crop_box"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_crop_box()</span></code></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">pose_estimator</span></code> is the seam inside the seam: any
+<code class="docutils literal notranslate"><span class="pre">callable(frame)</span> <span class="pre">-&gt;</span> <span class="pre">(keypoints,</span> <span class="pre">scores)</span></code>. The default is rtmlib’s <code class="docutils literal notranslate"><span class="pre">Body</span></code>
+(YOLOX + RTMPose, COCO-17); the replacements are already pointable —
+rtmlib’s <code class="docutils literal notranslate"><span class="pre">Wholebody</span></code>, <code class="docutils literal notranslate"><span class="pre">Hand</span></code> and <code class="docutils literal notranslate"><span class="pre">Animal</span></code> solutions have exactly this
+shape, and the ADR’s “hands + workpiece for cooking” case is one of them.
+Tests inject a fake through it, which is how the contract is exercised with
+no weights downloaded and no network reached.</p>
+<p>All fields are keyword-only, and the defaults are the shipped policy.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="paces.pose.RtmlibPoseLocator.locator_name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">locator_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#paces.pose.RtmlibPoseLocator.locator_name" title="Link to this definition"></a></dt>
+<dd><p>The policy identity the crop recipe records — <strong>every</strong> input that
+can move a box, not just the model version.</p>
+<p><code class="docutils literal notranslate"><span class="pre">derive</span></code> reuses a stored box when this name and the core’s params
+still match (ADR-0005 §3), so anything left out of it silently reuses a
+box that something else measured. That is the whole point of the
+fingerprint, so the probe rate and both keypoint thresholds are in it
+alongside the model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rtmlib</span><span class="o">-</span><span class="n">pose</span><span class="o">@</span><span class="mf">0.0.16</span><span class="p">;</span><span class="n">mode</span><span class="o">=</span><span class="n">balanced</span><span class="p">;</span><span class="n">fps</span><span class="o">=</span><span class="mi">5</span><span class="p">;</span><span class="n">conf</span><span class="o">=</span><span class="mf">0.3</span><span class="p">;</span><span class="n">minkp</span><span class="o">=</span><span class="mi">4</span>
+</pre></div>
+</div>
+<p>An injected <code class="docutils literal notranslate"><span class="pre">pose_estimator</span></code> names <em>itself</em> — claiming rtmlib’s
+version for a box rtmlib did not measure would be exactly the false
+identity this exists to prevent — and drops <code class="docutils literal notranslate"><span class="pre">mode</span></code>, which is a
+<code class="docutils literal notranslate"><span class="pre">Body</span></code> argument and means nothing to another estimator:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rtmlib</span><span class="o">-</span><span class="n">pose</span><span class="nd">@custom</span><span class="p">:</span><span class="n">mypkg</span><span class="o">.</span><span class="n">my_estimator</span><span class="p">;</span><span class="n">fps</span><span class="o">=</span><span class="mi">5</span><span class="p">;</span><span class="n">conf</span><span class="o">=</span><span class="mf">0.3</span><span class="p">;</span><span class="n">minkp</span><span class="o">=</span><span class="mi">4</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">device</span></code> is deliberately absent: it selects an execution provider,
+not a policy, and putting it in would re-locate every box on a machine
+change — a false honesty flag, which this codebase treats as the
+failure mode it is.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.TEST_MODELS_ENVVAR">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">TEST_MODELS_ENVVAR</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'PACES_TEST_MODELS'</span></span><a class="headerlink" href="#paces.pose.TEST_MODELS_ENVVAR" title="Link to this definition"></a></dt>
+<dd><p>Opt-in for the real-model smoke test. Unset (CI, always) = no weights, no
+inference — the contract is covered by fake locators instead.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.pose.check_pose_requirements">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">check_pose_requirements</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../../_modules/paces/pose.html#check_pose_requirements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.pose.check_pose_requirements" title="Link to this definition"></a></dt>
+<dd><p>Preflight for the <code class="docutils literal notranslate"><span class="pre">[pose]</span></code> extra, per channel and never silently.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rtmlib</span></code> / <code class="docutils literal notranslate"><span class="pre">onnxruntime</span></code> — the locator and its inference backend.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cv2_providers</span></code> — rtmlib declares BOTH <code class="docutils literal notranslate"><span class="pre">opencv-python</span></code> and
+<code class="docutils literal notranslate"><span class="pre">opencv-contrib-python</span></code>, while the fleet standardises on the contrib
+superset (mixing’s single cv2 provider). An install can therefore end up
+with two distributions owning one <code class="docutils literal notranslate"><span class="pre">cv2</span></code> package. Reported, not fatal:
+it works until one of them is uninstalled, and a reader deserves to know.</p></li>
+</ul>
+<p>Downloads nothing: weights arrive on first inference, not on this check.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.pose.person_boxes">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">person_boxes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keypoints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keypoint_confidence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_keypoints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/paces/pose.html#person_boxes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.pose.person_boxes" title="Link to this definition"></a></dt>
+<dd><p>One box per person, spanning that person’s <em>confident</em> keypoints.</p>
+<p><code class="docutils literal notranslate"><span class="pre">keypoints</span></code> is <code class="docutils literal notranslate"><span class="pre">(n_persons,</span> <span class="pre">n_keypoints,</span> <span class="pre">2)</span></code> and <code class="docutils literal notranslate"><span class="pre">scores</span></code> is
+<code class="docutils literal notranslate"><span class="pre">(n_persons,</span> <span class="pre">n_keypoints)</span></code> — rtmlib’s output shape, read here as plain
+nested sequences, so this stays a pure function and numpy remains the
+extra’s business rather than this module’s. A person carrying fewer than
+<code class="docutils literal notranslate"><span class="pre">min_keypoints</span></code> confident points is dropped rather than boxed from noise;
+boxes are clamped into the frame, and a degenerate one is dropped too.
+Zero detections is <code class="docutils literal notranslate"><span class="pre">()</span></code> — evidence that nobody was there, not an error.</p>
+<p>Order is rtmlib’s and means nothing: the seam is a <em>set</em> of regions per
+instant (the core unions them), so no person-identity claim is made here.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">person_boxes</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">[[(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">60</span><span class="p">)]],</span> <span class="p">[(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="n">frame_size</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="n">min_keypoints</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">((10, 20, 20, 40),)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="paces.pose.probe_times">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">probe_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/paces/pose.html#probe_times"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#paces.pose.probe_times" title="Link to this definition"></a></dt>
+<dd><p>The instants to look at: ~``probe_fps`` samples spread inside the window.</p>
+<p>Samples sit at the midpoints of <code class="docutils literal notranslate"><span class="pre">n</span></code> equal slices, so each one is strictly
+inside <code class="docutils literal notranslate"><span class="pre">[start_s,</span> <span class="pre">end_s)</span></code> — a probe on the closing edge would read the
+next shot — and a window shorter than one probe interval still gets exactly
+one look, at its middle.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">probe_times</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">probe_fps</span><span class="o">=</span><span class="mf">5.0</span><span class="p">))</span>
+<span class="go">(0.1, 0.3, 0.5, 0.7, 0.9)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">probe_times</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">10.05</span><span class="p">))</span>
+<span class="go">(10.025,)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="paces.pose.rtmlib_pose">
+<span class="sig-prename descclassname"><span class="pre">paces.pose.</span></span><span class="sig-name descname"><span class="pre">rtmlib_pose</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">RtmlibPoseLocator(probe_fps=5.0,</span> <span class="pre">mode='balanced',</span> <span class="pre">device='cpu',</span> <span class="pre">keypoint_confidence=0.3,</span> <span class="pre">min_keypoints=4,</span> <span class="pre">pose_estimator=None)</span></span><a class="headerlink" href="#paces.pose.rtmlib_pose" title="Link to this definition"></a></dt>
+<dd><p>no configuration, and the target a CLI
+<code class="docutils literal notranslate"><span class="pre">--subject-locator</span> <span class="pre">paces.pose:rtmlib_pose</span></code> reference resolves to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The ready-made locator</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="model.html" class="btn btn-neutral float-left" title="paces.model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="projection.html" class="btn btn-neutral float-right" title="paces.projection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,589 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>paces.pose &mdash; paces 0.0.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=bbaf98b3"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            paces
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/excerpts.html">paces.excerpts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/pose.html">paces.pose</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/projection.html">paces.projection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/render.html">paces.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/segmenters.html">paces.segmenters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/tools.html">paces.tools</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">paces</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">paces.pose</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for paces.pose</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The pointable ``subject_locator``: person boxes from rtmlib pose keypoints.</span>
+
+<span class="sd">ADR-0005 §3 shipped the ``subject_locator=`` seam with :func:`paces.derivation.full_frame`</span>
+<span class="sd">as its default — a real implementation whose honest answer is "no crop" — and pinned</span>
+<span class="sd">the contract with fake locators. This module is the pointable replacement: probe the</span>
+<span class="sd">excerpt window at ~5 fps, run RTMPose over each probed frame, and hand the core one</span>
+<span class="sd">region list per instant, every person seen. It **observes only**; the core still owns</span>
+<span class="sd">the one policy pipeline (union → percentile envelope → pad → aspect → clamp → one</span>
+<span class="sd">static box per window), which is exactly where the POC measured that crops go wrong.</span>
+
+<span class="sd">**Licence perimeter.** What this extra itself adds is permissive: rtmlib is</span>
+<span class="sd">Apache-2.0 (a pure-Python wheel, no bundled binaries or weights) and onnxruntime is</span>
+<span class="sd">MIT. Its detector is **YOLOX** (Megvii, Apache-2.0) — measured, not assumed: every</span>
+<span class="sd">``Body`` mode downloads a ``yolox_*`` checkpoint from download.openmmlab.com, and the</span>
+<span class="sd">RTMDet code in rtmlib is not what ``Body`` uses. So the accurate claim is *not* "no</span>
+<span class="sd">YOLO" (the issue and ADR-0005 §3 say RTMDet; that is wrong) but the one that actually</span>
+<span class="sd">carries the licence: no **ultralytics**, whose YOLOv5/v8/v11 are AGPL-3.0 and whose §13</span>
+<span class="sd">network clause reaches users you serve rather than only people you hand a copy to. What</span>
+<span class="sd">is barred is that distribution, not the word YOLO.</span>
+<span class="sd">``tests/test_pose.py`` guards that perimeter as the packaging fact it is. kodokan's</span>
+<span class="sd">``pose``/``track`` split is the fleet's worked example of the same quarantine.</span>
+
+<span class="sd">**The closure is NOT uniformly permissive, and the wheel's own notice file will not</span>
+<span class="sd">tell you so.** opencv — which rtmlib pulls, and which ``[media]``'s mixing already</span>
+<span class="sd">declares — bundles FFmpeg whose licence tier is **platform-dependent** and must be</span>
+<span class="sd">read off the binary, because ``LICENSE-3RD-PARTY.txt`` never mentions x264 on any</span>
+<span class="sd">platform. Measured per wheel (see the PR for #15 for the commands):</span>
+
+<span class="sd">- manylinux (what CI installs) and Windows: no x264/x265, no ``--enable-gpl``;</span>
+<span class="sd">  ``libavutil license: LGPL version 2.1 or later``.</span>
+<span class="sd">- macOS, **both** arm64 and x86_64: ``--enable-gpl --enable-version3</span>
+<span class="sd">  --enable-libx264 --enable-libx265``, libx264/libx265 shipped;</span>
+<span class="sd">  ``libavutil license: GPL version 3 or later``.</span>
+
+<span class="sd">That tier already arrives with ``[media]``. ``[pose]`` does not raise it — but it is</span>
+<span class="sd">not free of it either: rtmlib requires opencv-python *and* opencv-contrib-python,</span>
+<span class="sd">both unpinned, so installing it adds a second wheel carrying its own copy of those</span>
+<span class="sd">same binaries (issue #20).</span>
+
+<span class="sd">**Nothing here is imported until it is used.** ``import paces`` never touches this</span>
+<span class="sd">module, and importing *this* module never touches rtmlib: every rtmlib access goes</span>
+<span class="sd">through :func:`_import_body` or :func:`_rtmlib_version`, both of which raise an</span>
+<span class="sd">``ImportError`` naming the extra. Model weights download on first inference, so CI</span>
+<span class="sd">covers the seam's contract through fake locators and never runs a model.</span>
+
+<span class="sd">Usage — the shell, then the library::</span>
+
+<span class="sd">    paces derive doc.json --media routine.mp4 --subject-locator paces.pose:rtmlib_pose</span>
+
+<span class="sd">    from paces.derivation import derive_document</span>
+<span class="sd">    from paces.pose import RtmlibPoseLocator, rtmlib_pose</span>
+
+<span class="sd">    derive_document(doc, media=..., doc_path=..., subject_locator=rtmlib_pose)</span>
+<span class="sd">    derive_document(..., subject_locator=RtmlibPoseLocator(probe_fps=10.0))</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">paces.derivation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Box</span><span class="p">,</span> <span class="n">LocateQuery</span><span class="p">,</span> <span class="n">SubjectObservation</span>
+
+<span class="c1">#: Probe rate across an excerpt window, in samples per second — the POC's rate.</span>
+<span class="c1">#: Excerpts are 2.5–6 s loops, so ~5 fps is 13–30 looks: enough for the 4/96</span>
+<span class="c1">#: envelope to shrug off a stray frame, cheap enough to run on CPU.</span>
+<span class="n">DFLT_PROBE_FPS</span> <span class="o">=</span> <span class="mf">5.0</span>
+
+<span class="c1">#: rtmlib ``Body`` accuracy/latency trade-off: "lightweight" | "balanced" | "performance".</span>
+<span class="n">DFLT_MODE</span> <span class="o">=</span> <span class="s2">"balanced"</span>
+
+<span class="c1">#: onnxruntime execution device. "cpu" is the portable answer and the only one</span>
+<span class="c1">#: CI would ever have; "cuda"/"mps" are a caller's choice, not a default.</span>
+<span class="n">DFLT_DEVICE</span> <span class="o">=</span> <span class="s2">"cpu"</span>
+
+<span class="c1">#: A keypoint below this score is noise, not evidence, and never widens a box.</span>
+<span class="c1">#: This threshold is load-bearing, not decorative: rtmlib's ``Body`` is a</span>
+<span class="c1">#: top-down pipeline, so it returns a full 17-keypoint person for a frame with</span>
+<span class="c1">#: nobody in it at all. Measured on a blank frame (rtmlib 0.0.15, balanced):</span>
+<span class="c1">#: one "person", every score ~0.11-0.13. Without this filter the locator would</span>
+<span class="c1">#: hand the core a confident box around nothing, every time.</span>
+<span class="n">DFLT_KEYPOINT_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.3</span>
+
+<span class="c1">#: Fewer confident keypoints than this is not a person — it is a hallucinated</span>
+<span class="c1">#: limb or two, and boxing it would hand the core a region with no subject in</span>
+<span class="c1">#: it. The second half of the same defence: a real detection clears 0.3 on far</span>
+<span class="c1">#: more than four joints, while the blank-frame phantom above clears it on none.</span>
+<span class="n">DFLT_MIN_KEYPOINTS</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="c1">#: The extra that carries this locator, and the stem of its recorded identity.</span>
+<span class="n">POSE_EXTRA</span> <span class="o">=</span> <span class="s2">"pose"</span>
+<span class="n">LOCATOR_STEM</span> <span class="o">=</span> <span class="s2">"rtmlib-pose"</span>
+
+<span class="c1">#: Opt-in for the real-model smoke test. Unset (CI, always) = no weights, no</span>
+<span class="c1">#: inference — the contract is covered by fake locators instead.</span>
+<span class="n">TEST_MODELS_ENVVAR</span> <span class="o">=</span> <span class="s2">"PACES_TEST_MODELS"</span>
+
+<span class="n">POSE_EXTRA_MISSING</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"rtmlib is required for the pose subject_locator. Install it with:</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="sa">f</span><span class="s2">"    pip install 'paces[</span><span class="si">{</span><span class="n">POSE_EXTRA</span><span class="si">}</span><span class="s2">]'</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"That extra is rtmlib (Apache-2.0, pure Python) + onnxruntime (MIT). Its</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"detector is YOLOX (Megvii, Apache-2.0); what is barred here is the</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"ultralytics distribution — AGPL-3.0 — not the YOLO family (ADR-0005 §3).</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"Model weights download on first inference, not on install.</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"Note what it pulls in: rtmlib requires BOTH opencv-python and</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"opencv-contrib-python, and opencv's bundled FFmpeg is GPL-3.0-or-later on</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"macOS (built --enable-gpl with libx264/libx265) though LGPL-2.1-or-later</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"on manylinux and Windows. paces[media] already brings one such wheel; this</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"adds a second copy, not a higher tier (issue #20).</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"The default locator (paces.derivation.full_frame) needs none of this: it</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"answers 'no crop', which is a real answer rather than a failure."</span>
+<span class="p">)</span>
+
+<span class="n">POSE_METADATA_MISSING</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"rtmlib is importable but has no distribution metadata, so its version</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"cannot be read — which is what a vendored copy or a source tree on</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"PYTHONPATH looks like. The version is not cosmetic: the crop recipe</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"records it, so that a model upgrade re-locates instead of reusing a box a</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"different model measured (ADR-0005 §3).</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="sa">f</span><span class="s2">"Install rtmlib as a distribution (pip install 'paces[</span><span class="si">{</span><span class="n">POSE_EXTRA</span><span class="si">}</span><span class="s2">]'), or</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"pass your own estimator — RtmlibPoseLocator(pose_estimator=...) names</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"itself after that estimator and never reads rtmlib's version."</span>
+<span class="p">)</span>
+
+<span class="n">MEDIA_EXTRA_MISSING</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"the pose locator reads frames through mixing, the same media path derive</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"itself runs on. Install it with:</span><span class="se">\n</span><span class="s2">"</span>
+    <span class="s2">"    pip install 'paces[media]'"</span>
+<span class="p">)</span>
+
+
+<span class="c1"># ── rtmlib, reached from exactly two places ─────────────────────────────────</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_import_body</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""rtmlib's ``Body`` solution (YOLOX detector + RTMPose, COCO-17).</span>
+
+<span class="sd">    Every rtmlib *import* goes through here so the missing-extra message is</span>
+<span class="sd">    written once, the way kodokan routes ultralytics through one importer.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">rtmlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Body</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="n">POSE_EXTRA_MISSING</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="k">return</span> <span class="n">Body</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rtmlib_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""rtmlib's version, from distribution metadata — no import, no model load.</span>
+
+<span class="sd">    ``derive`` reads ``locator_name`` *before* it decides whether a recipe may</span>
+<span class="sd">    be reused (ADR-0005 §3's re-run semantics), so naming the locator must stay</span>
+<span class="sd">    this cheap — and it is reported before any encode work is spent.</span>
+
+<span class="sd">    Two different absences, told apart because the fixes differ: no rtmlib at</span>
+<span class="sd">    all (install the extra) versus an importable rtmlib carrying no metadata,</span>
+<span class="sd">    which is a vendored copy or a source tree on ``PYTHONPATH``.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="s2">"rtmlib"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">PackageNotFoundError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">importable</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"rtmlib"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="n">POSE_METADATA_MISSING</span> <span class="k">if</span> <span class="n">importable</span> <span class="k">else</span> <span class="n">POSE_EXTRA_MISSING</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_estimator_identity</span><span class="p">(</span><span class="n">estimator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A stable-enough name for an injected estimator, for the recipe identity.</span>
+
+<span class="sd">    Its own ``locator_name`` if it declares one (the way to make an estimator</span>
+<span class="sd">    version itself properly), else its qualified name, else its type's.</span>
+<span class="sd">    """</span>
+    <span class="n">declared</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="s2">"locator_name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">declared</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">declared</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="s2">"__module__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="s2">"__qualname__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">estimator</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">module</span> <span class="k">else</span> <span class="n">name</span>
+
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_body_estimator</span><span class="p">(</span><span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One loaded ``Body`` per (mode, device), for the life of the process.</span>
+
+<span class="sd">    The first call downloads the ONNX weights; every excerpt window after it</span>
+<span class="sd">    reuses the loaded session rather than paying that again.</span>
+<span class="sd">    """</span>
+    <span class="n">Body</span> <span class="o">=</span> <span class="n">_import_body</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Body</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"onnxruntime"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_frame_reader</span><span class="p">(</span><span class="n">media_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A ``t_seconds -&gt; frame`` reader over one media file, through ``mixing``.</span>
+
+<span class="sd">    All media I/O goes through mixing, never moviepy/cv2 directly (ADR-0005).</span>
+<span class="sd">    ``mixing.Video`` indexes by time and hands back cv2's native BGR, which is</span>
+<span class="sd">    the layout rtmlib expects.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Video</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># pragma: no cover - needs [media] absent</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="n">MEDIA_EXTRA_MISSING</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="n">video</span> <span class="o">=</span> <span class="n">Video</span><span class="p">(</span><span class="n">media_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">t_s</span><span class="p">:</span> <span class="n">video</span><span class="p">[</span><span class="n">t_s</span><span class="p">]</span>
+
+
+<span class="c1"># ── the two pure pieces (no media, no model, no numpy) ──────────────────────</span>
+
+
+<div class="viewcode-block" id="probe_times">
+<a class="viewcode-back" href="../../module_docs/paces/pose.html#paces.pose.probe_times">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">probe_times</span><span class="p">(</span>
+    <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">probe_fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PROBE_FPS</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The instants to look at: ~``probe_fps`` samples spread inside the window.</span>
+
+<span class="sd">    Samples sit at the midpoints of ``n`` equal slices, so each one is strictly</span>
+<span class="sd">    inside ``[start_s, end_s)`` — a probe on the closing edge would read the</span>
+<span class="sd">    next shot — and a window shorter than one probe interval still gets exactly</span>
+<span class="sd">    one look, at its middle.</span>
+
+<span class="sd">    &gt;&gt;&gt; tuple(round(t, 3) for t in probe_times(0.0, 1.0, probe_fps=5.0))</span>
+<span class="sd">    (0.1, 0.3, 0.5, 0.7, 0.9)</span>
+<span class="sd">    &gt;&gt;&gt; tuple(round(t, 3) for t in probe_times(10.0, 10.05))</span>
+<span class="sd">    (10.025,)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">end_s</span> <span class="o">&gt;</span> <span class="n">start_s</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"an excerpt window must be non-empty; got [</span><span class="si">{</span><span class="n">start_s</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">end_s</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">probe_fps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"probe_fps must be positive; got </span><span class="si">{</span><span class="n">probe_fps</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">round</span><span class="p">((</span><span class="n">end_s</span> <span class="o">-</span> <span class="n">start_s</span><span class="p">)</span> <span class="o">*</span> <span class="n">probe_fps</span><span class="p">))</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_s</span> <span class="o">-</span> <span class="n">start_s</span><span class="p">)</span> <span class="o">/</span> <span class="n">count</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">start_s</span> <span class="o">+</span> <span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="person_boxes">
+<a class="viewcode-back" href="../../module_docs/paces/pose.html#paces.pose.person_boxes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">person_boxes</span><span class="p">(</span>
+    <span class="n">keypoints</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">scores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">frame_size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">keypoint_confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_KEYPOINT_CONFIDENCE</span><span class="p">,</span>
+    <span class="n">min_keypoints</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_MIN_KEYPOINTS</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Box</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""One box per person, spanning that person's *confident* keypoints.</span>
+
+<span class="sd">    ``keypoints`` is ``(n_persons, n_keypoints, 2)`` and ``scores`` is</span>
+<span class="sd">    ``(n_persons, n_keypoints)`` — rtmlib's output shape, read here as plain</span>
+<span class="sd">    nested sequences, so this stays a pure function and numpy remains the</span>
+<span class="sd">    extra's business rather than this module's. A person carrying fewer than</span>
+<span class="sd">    ``min_keypoints`` confident points is dropped rather than boxed from noise;</span>
+<span class="sd">    boxes are clamped into the frame, and a degenerate one is dropped too.</span>
+<span class="sd">    Zero detections is ``()`` — evidence that nobody was there, not an error.</span>
+
+<span class="sd">    Order is rtmlib's and means nothing: the seam is a *set* of regions per</span>
+<span class="sd">    instant (the core unions them), so no person-identity claim is made here.</span>
+
+<span class="sd">    &gt;&gt;&gt; person_boxes(</span>
+<span class="sd">    ...     [[(10, 20), (30, 60)]], [(0.9, 0.9)],</span>
+<span class="sd">    ...     frame_size=(100, 100), min_keypoints=2,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    ((10, 20, 20, 40),)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">keypoints</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">scores</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">()</span>
+    <span class="n">frame_width</span><span class="p">,</span> <span class="n">frame_height</span> <span class="o">=</span> <span class="n">frame_size</span>
+    <span class="n">boxes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Box</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">person</span><span class="p">,</span> <span class="n">person_scores</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">keypoints</span><span class="p">,</span> <span class="n">scores</span><span class="p">):</span>
+        <span class="n">confident</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">for</span> <span class="n">point</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">person</span><span class="p">,</span> <span class="n">person_scores</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">score</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">keypoint_confidence</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">confident</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_keypoints</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">_y</span> <span class="ow">in</span> <span class="n">confident</span><span class="p">]</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span> <span class="k">for</span> <span class="n">_x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">confident</span><span class="p">]</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">xs</span><span class="p">))))</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">ys</span><span class="p">))))</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">frame_width</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">xs</span><span class="p">))))</span>
+        <span class="n">bottom</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">frame_height</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">ys</span><span class="p">))))</span>
+        <span class="k">if</span> <span class="n">right</span> <span class="o">-</span> <span class="n">left</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">bottom</span> <span class="o">-</span> <span class="n">top</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">boxes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">left</span><span class="p">,</span> <span class="n">top</span><span class="p">,</span> <span class="n">right</span> <span class="o">-</span> <span class="n">left</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">-</span> <span class="n">top</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ── the locator ─────────────────────────────────────────────────────────────</span>
+
+
+<div class="viewcode-block" id="RtmlibPoseLocator">
+<a class="viewcode-back" href="../../module_docs/paces/pose.html#paces.pose.RtmlibPoseLocator">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RtmlibPoseLocator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The pointable ``subject_locator``: rtmlib pose boxes over a probed window.</span>
+
+<span class="sd">    Callable per the ADR-0005 §3 contract — a :class:`~paces.derivation.LocateQuery`</span>
+<span class="sd">    in, a :class:`~paces.derivation.SubjectObservation` out, or ``None``, the</span>
+<span class="sd">    honest "no crop", when the window showed nobody. It never resolves a box:</span>
+<span class="sd">    that is the core's :func:`~paces.derivation.resolve_crop_box`.</span>
+
+<span class="sd">    ``pose_estimator`` is the seam inside the seam: any</span>
+<span class="sd">    ``callable(frame) -&gt; (keypoints, scores)``. The default is rtmlib's ``Body``</span>
+<span class="sd">    (YOLOX + RTMPose, COCO-17); the replacements are already pointable —</span>
+<span class="sd">    rtmlib's ``Wholebody``, ``Hand`` and ``Animal`` solutions have exactly this</span>
+<span class="sd">    shape, and the ADR's "hands + workpiece for cooking" case is one of them.</span>
+<span class="sd">    Tests inject a fake through it, which is how the contract is exercised with</span>
+<span class="sd">    no weights downloaded and no network reached.</span>
+
+<span class="sd">    All fields are keyword-only, and the defaults are the shipped policy.</span>
+<span class="sd">    """</span>
+
+    <span class="n">probe_fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PROBE_FPS</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_MODE</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_DEVICE</span>
+    <span class="n">keypoint_confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_KEYPOINT_CONFIDENCE</span>
+    <span class="n">min_keypoints</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_MIN_KEYPOINTS</span>
+    <span class="n">pose_estimator</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">locator_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The policy identity the crop recipe records — **every** input that</span>
+<span class="sd">        can move a box, not just the model version.</span>
+
+<span class="sd">        ``derive`` reuses a stored box when this name and the core's params</span>
+<span class="sd">        still match (ADR-0005 §3), so anything left out of it silently reuses a</span>
+<span class="sd">        box that something else measured. That is the whole point of the</span>
+<span class="sd">        fingerprint, so the probe rate and both keypoint thresholds are in it</span>
+<span class="sd">        alongside the model::</span>
+
+<span class="sd">            rtmlib-pose@0.0.16;mode=balanced;fps=5;conf=0.3;minkp=4</span>
+
+<span class="sd">        An injected ``pose_estimator`` names *itself* — claiming rtmlib's</span>
+<span class="sd">        version for a box rtmlib did not measure would be exactly the false</span>
+<span class="sd">        identity this exists to prevent — and drops ``mode``, which is a</span>
+<span class="sd">        ``Body`` argument and means nothing to another estimator::</span>
+
+<span class="sd">            rtmlib-pose@custom:mypkg.my_estimator;fps=5;conf=0.3;minkp=4</span>
+
+<span class="sd">        ``device`` is deliberately absent: it selects an execution provider,</span>
+<span class="sd">        not a policy, and putting it in would re-locate every box on a machine</span>
+<span class="sd">        change — a false honesty flag, which this codebase treats as the</span>
+<span class="sd">        failure mode it is.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pose_estimator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">engine</span> <span class="o">=</span> <span class="n">_rtmlib_version</span><span class="p">()</span>
+            <span class="n">terms</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"mode=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">engine</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"custom:</span><span class="si">{</span><span class="n">_estimator_identity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pose_estimator</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">terms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">terms</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">"fps=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">probe_fps</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"conf=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">keypoint_confidence</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"minkp=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_keypoints</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">LOCATOR_STEM</span><span class="si">}</span><span class="s2">@</span><span class="si">{</span><span class="n">engine</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="o">*</span><span class="n">terms</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">LocateQuery</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SubjectObservation</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">estimate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pose_estimator</span> <span class="ow">or</span> <span class="n">_body_estimator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">read_frame</span> <span class="o">=</span> <span class="n">_frame_reader</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">media_path</span><span class="p">)</span>
+        <span class="n">frame_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">frame_width</span><span class="p">,</span> <span class="n">query</span><span class="o">.</span><span class="n">frame_height</span><span class="p">)</span>
+        <span class="n">samples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Box</span><span class="p">,</span> <span class="o">...</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">unreadable</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">t_s</span> <span class="ow">in</span> <span class="n">probe_times</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="n">query</span><span class="o">.</span><span class="n">end_s</span><span class="p">,</span> <span class="n">probe_fps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">probe_fps</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">frame</span> <span class="o">=</span> <span class="n">read_frame</span><span class="p">(</span><span class="n">t_s</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+                <span class="c1"># one unreadable probe is a damaged frame, not a verdict on the</span>
+                <span class="c1"># window; only losing every probe is a fault worth raising</span>
+                <span class="n">unreadable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t_s</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">keypoints</span><span class="p">,</span> <span class="n">scores</span> <span class="o">=</span> <span class="n">estimate</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+            <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="n">t_s</span><span class="p">,</span>
+                    <span class="n">person_boxes</span><span class="p">(</span>
+                        <span class="n">keypoints</span><span class="p">,</span>
+                        <span class="n">scores</span><span class="p">,</span>
+                        <span class="n">frame_size</span><span class="o">=</span><span class="n">frame_size</span><span class="p">,</span>
+                        <span class="n">keypoint_confidence</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">keypoint_confidence</span><span class="p">,</span>
+                        <span class="n">min_keypoints</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_keypoints</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">samples</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"read no frame of </span><span class="si">{</span><span class="n">query</span><span class="o">.</span><span class="n">media_path</span><span class="si">}</span><span class="s2"> in "</span>
+                <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">query</span><span class="o">.</span><span class="n">start_s</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">query</span><span class="o">.</span><span class="n">end_s</span><span class="si">}</span><span class="s2">) — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unreadable</span><span class="p">)</span><span class="si">}</span><span class="s2"> probes "</span>
+                <span class="s2">"all failed; the media is unreadable there, which is a fault, "</span>
+                <span class="s2">"not a 'no crop' answer"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">boxes</span> <span class="k">for</span> <span class="n">_t</span><span class="p">,</span> <span class="n">boxes</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">):</span>
+            <span class="c1"># ADR-0005 §3: None is the zero-detections fallback, and no crop</span>
+            <span class="c1"># means genuinely uncropped — never letterboxed</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">SubjectObservation</span><span class="p">(</span><span class="n">samples</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">samples</span><span class="p">))</span></div>
+
+
+
+<span class="c1">#: The ready-made locator: no configuration, and the target a CLI</span>
+<span class="c1">#: ``--subject-locator paces.pose:rtmlib_pose`` reference resolves to.</span>
+<span class="n">rtmlib_pose</span> <span class="o">=</span> <span class="n">RtmlibPoseLocator</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="check_pose_requirements">
+<a class="viewcode-back" href="../../module_docs/paces/pose.html#paces.pose.check_pose_requirements">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_pose_requirements</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Preflight for the ``[pose]`` extra, per channel and never silently.</span>
+
+<span class="sd">    - ``rtmlib`` / ``onnxruntime`` — the locator and its inference backend.</span>
+<span class="sd">    - ``cv2_providers`` — rtmlib declares BOTH ``opencv-python`` and</span>
+<span class="sd">      ``opencv-contrib-python``, while the fleet standardises on the contrib</span>
+<span class="sd">      superset (mixing's single cv2 provider). An install can therefore end up</span>
+<span class="sd">      with two distributions owning one ``cv2`` package. Reported, not fatal:</span>
+<span class="sd">      it works until one of them is uninstalled, and a reader deserves to know.</span>
+
+<span class="sd">    Downloads nothing: weights arrive on first inference, not on this check.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_version</span><span class="p">(</span><span class="n">distribution</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="n">distribution</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">rtmlib_version</span> <span class="o">=</span> <span class="n">_version</span><span class="p">(</span><span class="s2">"rtmlib"</span><span class="p">)</span>
+    <span class="n">onnxruntime_version</span> <span class="o">=</span> <span class="n">_version</span><span class="p">(</span><span class="s2">"onnxruntime"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rtmlib_version</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">onnxruntime_version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">name</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="p">(</span><span class="s2">"rtmlib"</span><span class="p">,</span> <span class="n">rtmlib_version</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">"onnxruntime"</span><span class="p">,</span> <span class="n">onnxruntime_version</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="p">]</span>
+        <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> not installed — install the pose extra: "</span>
+            <span class="sa">f</span><span class="s2">"pip install 'paces[</span><span class="si">{</span><span class="n">POSE_EXTRA</span><span class="si">}</span><span class="s2">]'"</span>
+        <span class="p">)</span>
+    <span class="n">cv2_providers</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">name</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"opencv-python"</span><span class="p">,</span> <span class="s2">"opencv-contrib-python"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_version</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cv2_providers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"two distributions provide cv2 "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cv2_providers</span><span class="p">)</span><span class="si">}</span><span class="s2">) — rtmlib declares both; uninstalling "</span>
+            <span class="s2">"either can leave the other's cv2 broken"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"ok"</span><span class="p">:</span> <span class="n">rtmlib_version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">onnxruntime_version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"rtmlib"</span><span class="p">:</span> <span class="n">rtmlib_version</span><span class="p">,</span>
+        <span class="s2">"onnxruntime"</span><span class="p">:</span> <span class="n">onnxruntime_version</span><span class="p">,</span>
+        <span class="s2">"cv2_providers"</span><span class="p">:</span> <span class="n">cv2_providers</span><span class="p">,</span>
+        <span class="s2">"notes"</span><span class="p">:</span> <span class="n">notes</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

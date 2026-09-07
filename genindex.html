@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; paces 0.0.6 documentation</title>
+  <title>Index &mdash; paces 0.0.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=1fd71caa"></script>
+      <script src="_static/documentation_options.js?v=bbaf98b3"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -53,6 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/model.html">paces.model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_docs/paces/pose.html">paces.pose</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/projection.html">paces.projection</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/render.html">paces.render</a></li>
 <li class="toctree-l1"><a class="reference internal" href="module_docs/paces/segmenters.html">paces.segmenters</a></li>
@@ -161,6 +162,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces/pose.html#paces.pose.check_pose_requirements">check_pose_requirements() (in module paces.pose)</a>
+</li>
       <li><a href="module_docs/paces/__main__.html#paces.__main__.CONVENTION">CONVENTION (in module paces.__main__)</a>
 </li>
       <li><a href="module_docs/paces/derivation.html#paces.derivation.CropRecipe">CropRecipe (class in paces.derivation)</a>
@@ -197,11 +200,21 @@
         <li><a href="module_docs/paces/derivation.html#paces.derivation.DeriveResult">(class in paces.derivation)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces/pose.html#paces.pose.DFLT_DEVICE">DFLT_DEVICE (in module paces.pose)</a>
+</li>
       <li><a href="module_docs/paces/excerpts.html#paces.excerpts.DFLT_EXCERPT_ROLE">DFLT_EXCERPT_ROLE (in module paces.excerpts)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="module_docs/paces/pose.html#paces.pose.DFLT_KEYPOINT_CONFIDENCE">DFLT_KEYPOINT_CONFIDENCE (in module paces.pose)</a>
+</li>
       <li><a href="module_docs/paces/measure.html#paces.measure.DFLT_MEASURED_CONFIDENCE">DFLT_MEASURED_CONFIDENCE (in module paces.measure)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.DFLT_MIN_KEYPOINTS">DFLT_MIN_KEYPOINTS (in module paces.pose)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.DFLT_MODE">DFLT_MODE (in module paces.pose)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.DFLT_PROBE_FPS">DFLT_PROBE_FPS (in module paces.pose)</a>
 </li>
       <li><a href="module_docs/paces/derivation.html#paces.derivation.DFLT_ROLES">DFLT_ROLES (in module paces.derivation)</a>
 </li>
@@ -295,6 +308,8 @@
         <li><a href="module_docs/paces/derivation.html#paces.derivation.LocateQuery">(class in paces.derivation)</a>
 </li>
       </ul></li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.RtmlibPoseLocator.locator_name">locator_name (paces.pose.RtmlibPoseLocator property)</a>
+</li>
       <li><a href="module_docs/paces.html#paces.Lock">Lock (class in paces)</a>
 
       <ul>
@@ -415,6 +430,8 @@
 </li>
         <li><a href="module_docs/paces/model.html#module-paces.model">paces.model</a>
 </li>
+        <li><a href="module_docs/paces/pose.html#module-paces.pose">paces.pose</a>
+</li>
         <li><a href="module_docs/paces/projection.html#module-paces.projection">paces.projection</a>
 </li>
         <li><a href="module_docs/paces/render.html#module-paces.render">paces.render</a>
@@ -492,13 +509,20 @@
         <li><a href="module_docs/paces/measure.html#module-paces.measure">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     paces.model
 
       <ul>
         <li><a href="module_docs/paces/model.html#module-paces.model">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    paces.pose
+
+      <ul>
+        <li><a href="module_docs/paces/pose.html#module-paces.pose">module</a>
 </li>
       </ul></li>
       <li>
@@ -529,6 +553,12 @@
         <li><a href="module_docs/paces/tools.html#module-paces.tools">module</a>
 </li>
       </ul></li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.person_boxes">person_boxes() (in module paces.pose)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.POSE_EXTRA">POSE_EXTRA (in module paces.pose)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.probe_times">probe_times() (in module paces.pose)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -551,8 +581,6 @@
         <li><a href="module_docs/paces/render.html#paces.render.render_html">(in module paces.render)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces.html#paces.resolve">resolve() (in module paces)</a>
 
       <ul>
@@ -561,6 +589,8 @@
         <li><a href="module_docs/paces/tools.html#paces.tools.resolve">(in module paces.tools)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces.html#paces.resolve_crop_box">resolve_crop_box() (in module paces)</a>
 
       <ul>
@@ -568,6 +598,10 @@
 </li>
       </ul></li>
       <li><a href="module_docs/paces/render.html#paces.render.ROLE_LABELS">ROLE_LABELS (in module paces.render)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.rtmlib_pose">rtmlib_pose (in module paces.pose)</a>
+</li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.RtmlibPoseLocator">RtmlibPoseLocator (class in paces.pose)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -657,6 +691,10 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces/measure.html#paces.measure.TEMPO_DISAGREEMENT_RTOL">TEMPO_DISAGREEMENT_RTOL (in module paces.measure)</a>
 </li>
+      <li><a href="module_docs/paces/pose.html#paces.pose.TEST_MODELS_ENVVAR">TEST_MODELS_ENVVAR (in module paces.pose)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="module_docs/paces.html#paces.to_document">to_document() (in module paces)</a>
 
       <ul>

@@ -9,6 +9,7 @@
    module_docs/paces/excerpts
    module_docs/paces/measure
    module_docs/paces/model
+   module_docs/paces/pose
    module_docs/paces/projection
    module_docs/paces/render
    module_docs/paces/segmenters
