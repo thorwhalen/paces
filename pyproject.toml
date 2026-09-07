@@ -60,21 +60,38 @@ media = [
     "mixing>=0.0.39",
 ]
 # The pointable subject_locator (issue #15, ADR-0005 §3): rtmlib pose boxes,
-# reached through `paces.pose:rtmlib_pose`. rtmlib is Apache-2.0 and its whole
-# runtime closure (numpy, opencv, onnxruntime, tqdm) is permissive; its bundled
-# RTMDet detector means person boxes need no YOLO even for detection. A
-# YOLO/ultralytics dependency is barred from EVERY extra here — AGPL-3.0, whose
-# §13 network clause reaches served users, not only people handed a copy — and
-# tests/test_pose.py is what notices if that ever stops being true.
+# reached through `paces.pose:rtmlib_pose`. rtmlib is Apache-2.0 (a pure-Python
+# wheel: no bundled binaries, no vendored weights) and onnxruntime is MIT.
+# Its detector is YOLOX (Megvii, Apache-2.0) — checked by running it, not taken
+# from the issue, which says RTMDet: every `Body` mode fetches a `yolox_*`
+# checkpoint. So the barred thing is the `ultralytics` DISTRIBUTION (AGPL-3.0,
+# §13's network clause reaching served users, not only people handed a copy),
+# not the YOLO family. That bar covers EVERY extra here, and
+# tests/test_pose.py is what notices if it ever stops being true.
+#
+# What this extra pulls in is NOT uniformly permissive, and opencv's own
+# LICENSE-3RD-PARTY.txt does not say so (it never mentions x264, on any
+# platform) — so it was measured off the shipped binaries instead:
+#   manylinux (CI) and Windows: no x264/x265, no --enable-gpl;
+#                               "libavutil license: LGPL version 2.1 or later"
+#   macOS arm64 AND x86_64:     --enable-gpl --enable-version3 with
+#                               libx264/libx265 shipped;
+#                               "libavutil license: GPL version 3 or later"
+# That tier already arrives with [media] (mixing declares opencv-contrib-
+# python). [pose] does not raise it, but it does add a SECOND wheel with its
+# own copy of those binaries, because rtmlib requires opencv-python and
+# opencv-contrib-python both, unpinned — see issue #20.
+#
 # onnxruntime is named rather than left to rtmlib's transitive closure: it is
 # the backend= this locator asks for by name, not an incidental fact.
+# rtmlib is bounded: the licence audit above was done against 0.0.16, and a
+# 0.0.x line promises no stability — a floor without a ceiling would let an
+# unaudited wheel in silently.
 # Not mirrored into [dev] on purpose: the tests are offline and stay on fake
-# locators (no weights, no network), and rtmlib declares opencv-python next to
-# the opencv-contrib-python that mixing already brings — two distributions for
-# one cv2, which CI has no reason to take on. `check_pose_requirements()`
-# reports that pair when it happens.
+# locators (no weights, no network), and CI has no reason to take on the second
+# cv2 provider. `check_pose_requirements()` reports that pair when it happens.
 pose = [
-    "rtmlib",
+    "rtmlib>=0.0.16,<0.1",
     "onnxruntime",
 ]
 dev = [
@@ -118,13 +135,19 @@ install.windows = "choco install ffmpeg -y --no-progress"
 # Licence adjudication
 #
 # paces is MIT and its core dependency is pydantic alone, so `pip install
-# paces` pulls nothing copyleft. Neither does any extra: `pose` is rtmlib
+# paces` pulls nothing copyleft. No extra reaches AGPL either: `pose` is rtmlib
 # (Apache-2.0) + onnxruntime (MIT), and the AGPL alternative for that job
 # (ultralytics) is barred outright rather than quarantined — kodokan needs a
 # `track` extra because Ultralytics' tracker is genuinely load-bearing there;
-# paces needs boxes, and rtmlib's bundled RTMDet gives them. There is
-# therefore nothing to adjudicate, and no [tool.wads.licence.exceptions]
+# paces needs boxes, and rtmlib's Apache-2.0 YOLOX gives them. There is nothing
+# to adjudicate at the AGPL tier, hence no [tool.wads.licence.exceptions]
 # table: an entry appearing here later would mean the perimeter moved.
+#
+# What IS copyleft, and stated because a checker reading declared metadata will
+# not find it: opencv's bundled FFmpeg binaries, pulled by both [media] and
+# [pose], are GPL-3.0-or-later on macOS wheels and LGPL-2.1-or-later on
+# manylinux/Windows — measured off the shipped libraries, since the wheels'
+# LICENSE-3RD-PARTY.txt never mentions x264. See the [pose] block above.
 #
 # `include-extras` makes the check look where the exposure is — a check that
 # reads only hard dependencies would report paces clean, which is correct and

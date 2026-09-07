@@ -64,10 +64,18 @@ Auto-crop to the people in frame with `pip install paces[pose]`, then
 (or `subject_locator=paces.pose.rtmlib_pose` from Python). It probes each
 excerpt window at ~5 fps and reports every person it sees; the crop policy
 stays in the core, so two people in frame get one box around both. The extra
-is [rtmlib](https://github.com/Tau-J/rtmlib) (Apache-2.0) and onnxruntime —
-permissive throughout, with model weights downloaded on first use. **No
-YOLO/ultralytics**: that is AGPL-3.0, and it is barred from every extra here
-rather than quarantined into one.
+itself is [rtmlib](https://github.com/Tau-J/rtmlib) (Apache-2.0, pure Python)
+and onnxruntime (MIT), with model weights downloaded on first use. Detection is
+YOLOX (Apache-2.0); what is barred from every extra here — rather than
+quarantined into one — is the **ultralytics** distribution, which is AGPL-3.0.
+
+What it pulls in is a different question, and worth stating plainly: rtmlib
+requires opencv, and opencv's *bundled FFmpeg* is **GPL-3.0-or-later on macOS
+wheels** (built `--enable-gpl` with libx264/libx265) though LGPL-2.1-or-later
+on manylinux and Windows. This is measured from the shipped binaries — the
+wheels' own `LICENSE-3RD-PARTY.txt` never mentions x264. `paces[media]`
+already brings such a wheel, so `[pose]` adds a second copy rather than a
+higher tier. `paces.pose.check_pose_requirements()` reports what you have.
 
 ## How it thinks
 

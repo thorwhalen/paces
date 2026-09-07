@@ -201,8 +201,28 @@ estimator through its `pose_estimator=` seam, so CI downloads no weights and
 runs no model (a real pass is opt-in behind `PACES_TEST_MODELS`). ultralytics
 is barred from **every** extra rather than quarantined into one — kodokan
 needs a `track` extra because its tracker is genuinely load-bearing there;
-paces needs boxes, and rtmlib's bundled RTMDet gives them. `[tool.wads.licence]`
-in `pyproject.toml` and `tests/test_pose.py` are where that is enforced.
+paces needs boxes, and rtmlib gives them. `[tool.wads.licence]` in
+`pyproject.toml` and `tests/test_pose.py` are where that is enforced.
+
+*Two corrections this section's own text needs, both found by measuring rather
+than by reading upstream claims — the same discipline §3 already demands of the
+locator:*
+
+1. **The detector is YOLOX, not RTMDet, and "needs no YOLO" was never right.**
+   Every `rtmlib.Body` mode fetches a `yolox_*` checkpoint (`yolox_x` /
+   `yolox_m` / `yolox_tiny`); rtmlib ships RTMDet code that `Body` does not
+   use. YOLOX is Megvii's and **Apache-2.0**, so the conclusion holds intact —
+   but the reason is not "no YOLO", it is *not `ultralytics`*. The bar is on
+   that distribution and its AGPL, not on the YOLO family.
+2. **The permissive closure claim was false on macOS.** opencv — pulled by
+   `[media]`'s mixing already, and again by rtmlib — bundles FFmpeg built
+   `--enable-gpl --enable-version3` with libx264/libx265 on **both** macOS
+   wheels (`libavutil license: GPL version 3 or later`), while manylinux and
+   Windows carry no x264/x265 and self-report LGPL-2.1-or-later. The wheels'
+   own `LICENSE-3RD-PARTY.txt` never mentions x264 on any platform, which is
+   why reading it — as the first draft of this work did — gets the wrong
+   answer. Licence tier for the media stack is therefore **platform-dependent**
+   and must be read off the shipped binary.
 
 ## 4. What mixing grew for this (its first customer is #1)
 

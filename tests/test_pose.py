@@ -232,11 +232,60 @@ def test_locator_name_carries_the_rtmlib_version(monkeypatch):
     # the recipe fingerprint reads this: an rtmlib upgrade must re-locate rather
     # than reuse a box a different model measured (ADR-0005 §3)
     monkeypatch.setattr(pose, "_rtmlib_version", lambda: FAKE_RTMLIB_VERSION)
-    assert rtmlib_pose.locator_name == f"rtmlib-pose@{FAKE_RTMLIB_VERSION}"
+    assert rtmlib_pose.locator_name == (
+        f"rtmlib-pose@{FAKE_RTMLIB_VERSION};mode=balanced;fps=5;conf=0.3;minkp=4"
+    )
+
+
+@pytest.mark.parametrize(
+    "changed",
+    [
+        {"mode": "performance"},
+        {"probe_fps": 10.0},
+        {"keypoint_confidence": 0.5},
+        {"min_keypoints": 6},
+    ],
+)
+def test_every_input_that_moves_a_box_moves_the_locator_name(monkeypatch, changed):
+    # derive gates recipe reuse on this name (derivation.py's _reconcile_recipe),
+    # so anything left out of it silently reuses a box measured under different
+    # settings — precisely what ADR-0005 §3's fingerprint exists to prevent
+    monkeypatch.setattr(pose, "_rtmlib_version", lambda: FAKE_RTMLIB_VERSION)
+    assert RtmlibPoseLocator(**changed).locator_name != rtmlib_pose.locator_name
+
+
+def test_an_injected_estimator_names_itself_instead_of_claiming_rtmlib(monkeypatch):
+    # claiming rtmlib's version for a box rtmlib did not measure would be the
+    # same false identity in the other direction
+    def boom():
+        raise AssertionError("an injected estimator must not read rtmlib's version")
+
+    monkeypatch.setattr(pose, "_rtmlib_version", boom)
+
+    def my_estimator(frame):
+        return _people()
+
+    name = RtmlibPoseLocator(pose_estimator=my_estimator).locator_name
+    assert name.startswith("rtmlib-pose@custom:")
+    assert "my_estimator" in name
+    assert "mode=" not in name  # a Body argument; meaningless to another estimator
+    assert ";fps=5;conf=0.3;minkp=4" in name
+
+
+def test_an_estimator_may_version_itself(monkeypatch):
+    monkeypatch.setattr(pose, "_rtmlib_version", lambda: FAKE_RTMLIB_VERSION)
+
+    def versioned(frame):
+        return _people()
+
+    versioned.locator_name = "my-model@2.1"
+    name = RtmlibPoseLocator(pose_estimator=versioned).locator_name
+    assert name.startswith("rtmlib-pose@custom:my-model@2.1;")
 
 
 def test_naming_the_locator_without_the_extra_names_the_extra(monkeypatch):
     import importlib.metadata
+    import importlib.util
 
     def not_installed(distribution, *args, **kwargs):
         if distribution == "rtmlib":
@@ -244,6 +293,9 @@ def test_naming_the_locator_without_the_extra_names_the_extra(monkeypatch):
         return FAKE_RTMLIB_VERSION
 
     monkeypatch.setattr(importlib.metadata, "version", not_installed)
+    # patched too, so this describes an absent rtmlib rather than whatever the
+    # developer's machine happens to have installed
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
     with pytest.raises(ImportError) as excinfo:
         rtmlib_pose.locator_name
     message = str(excinfo.value)
@@ -271,6 +323,24 @@ def test_running_the_locator_without_the_extra_names_the_extra(monkeypatch):
     with pytest.raises(ImportError) as excinfo:
         pose._import_body()
     assert "paces[pose]" in str(excinfo.value)
+
+
+def test_a_vendored_rtmlib_is_told_apart_from_a_missing_one(monkeypatch):
+    # importable but no dist-info (a vendored copy, or a source tree on
+    # PYTHONPATH): "pip install paces[pose]" is the wrong advice there
+    import importlib.metadata
+    import importlib.util
+
+    def no_metadata(distribution, *args, **kwargs):
+        raise importlib.metadata.PackageNotFoundError(distribution)
+
+    monkeypatch.setattr(importlib.metadata, "version", no_metadata)
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
+    with pytest.raises(ImportError) as excinfo:
+        rtmlib_pose.locator_name
+    message = str(excinfo.value)
+    assert "no distribution metadata" in message
+    assert "pose_estimator" in message, "the message must name the way out"
 
 
 def test_the_missing_extra_message_states_the_licence_boundary():
@@ -305,10 +375,11 @@ def test_derive_records_the_pose_locator_in_the_recipe(tmp_path, video, monkeypa
     )
     doc_path = tmp_path / "routine.json"
     doc_path.write_text("{}", encoding="utf-8")
-    locator = RtmlibPoseLocator(
-        probe_fps=5.0,
-        pose_estimator=lambda frame: _people((60, 40, 100, 80)),
-    )
+
+    def one_dancer(frame):
+        return _people((60, 40, 100, 80))
+
+    locator = RtmlibPoseLocator(probe_fps=5.0, pose_estimator=one_dancer)
     result = derive_document(
         document,
         media={"perf": str(video)},
@@ -320,7 +391,10 @@ def test_derive_records_the_pose_locator_in_the_recipe(tmp_path, video, monkeypa
     )
     recipes = load_recipes(tmp_path / "routine.recipes.json")
     entry = recipes.entries["b4/perf/performance/0.4"]
-    assert entry.locator == f"rtmlib-pose@{FAKE_RTMLIB_VERSION}"
+    # the whole policy identity lands in the sidecar, not just a model version
+    assert entry.locator.startswith("rtmlib-pose@custom:")
+    assert "one_dancer" in entry.locator
+    assert entry.locator.endswith(";fps=5;conf=0.3;minkp=4")
     assert entry.box is not None
     x, y, w, h = entry.box
     # the rect (60, 40, 100, 80) squared to aspect 1.0 about its own centre
@@ -384,17 +458,26 @@ def test_core_dependencies_stay_copyleft_free(pyproject):
 
 def test_no_extra_reaches_agpl(pyproject):
     # putting ultralytics into `pose` is the regression this exists to catch:
-    # it is how a user who asked for pose boxes would silently inherit the AGPL
+    # it is how a user who asked for pose boxes would silently inherit the AGPL.
+    # Scope, stated so nobody reads more into a green run than is there: this
+    # reads paces' OWN pyproject, i.e. what paces declares. It says nothing
+    # about transitive closures, and nothing about what a dependency's wheels
+    # actually ship — opencv's GPL-on-macOS FFmpeg is exactly that gap, which
+    # is why it was measured off the binaries and written down instead.
     for extra, requirements in pyproject["project"]["optional-dependencies"].items():
         found = set(_distribution_names(requirements)) & FORBIDDEN_DISTRIBUTIONS
         assert not found, f"AGPL {sorted(found)} reached the `{extra}` extra"
 
 
 def test_pose_is_the_extra_that_declares_rtmlib(pyproject):
-    pose_extra = set(
-        _distribution_names(pyproject["project"]["optional-dependencies"]["pose"])
+    requirements = pyproject["project"]["optional-dependencies"]["pose"]
+    assert set(_distribution_names(requirements)) == {"rtmlib", "onnxruntime"}
+    # the licence audit was done against one rtmlib version, and 0.0.x promises
+    # no stability: a floor with no ceiling would let an unaudited wheel in
+    (rtmlib_requirement,) = [r for r in requirements if r.startswith("rtmlib")]
+    assert "<" in rtmlib_requirement, (
+        f"rtmlib must carry an upper bound, got {rtmlib_requirement!r}"
     )
-    assert pose_extra == {"rtmlib", "onnxruntime"}
 
 
 def test_the_licence_table_looks_where_the_exposure_is(pyproject):

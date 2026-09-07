@@ -8,13 +8,34 @@ region list per instant, every person seen. It **observes only**; the core still
 the one policy pipeline (union → percentile envelope → pad → aspect → clamp → one
 static box per window), which is exactly where the POC measured that crops go wrong.
 
-**Licence perimeter.** rtmlib is Apache-2.0 and its runtime closure
-(numpy / opencv / onnxruntime / tqdm) is permissive throughout; its bundled RTMDet
-detector means person boxes need no YOLO even for detection. A YOLO/ultralytics
-dependency is barred here — AGPL-3.0, whose §13 network clause reaches users you
-serve rather than only people you hand a copy to (ADR-0005 §3).
+**Licence perimeter.** What this extra itself adds is permissive: rtmlib is
+Apache-2.0 (a pure-Python wheel, no bundled binaries or weights) and onnxruntime is
+MIT. Its detector is **YOLOX** (Megvii, Apache-2.0) — measured, not assumed: every
+``Body`` mode downloads a ``yolox_*`` checkpoint from download.openmmlab.com, and the
+RTMDet code in rtmlib is not what ``Body`` uses. So the accurate claim is *not* "no
+YOLO" (the issue and ADR-0005 §3 say RTMDet; that is wrong) but the one that actually
+carries the licence: no **ultralytics**, whose YOLOv5/v8/v11 are AGPL-3.0 and whose §13
+network clause reaches users you serve rather than only people you hand a copy to. What
+is barred is that distribution, not the word YOLO.
 ``tests/test_pose.py`` guards that perimeter as the packaging fact it is. kodokan's
 ``pose``/``track`` split is the fleet's worked example of the same quarantine.
+
+**The closure is NOT uniformly permissive, and the wheel's own notice file will not
+tell you so.** opencv — which rtmlib pulls, and which ``[media]``'s mixing already
+declares — bundles FFmpeg whose licence tier is **platform-dependent** and must be
+read off the binary, because ``LICENSE-3RD-PARTY.txt`` never mentions x264 on any
+platform. Measured per wheel (see the PR for #15 for the commands):
+
+- manylinux (what CI installs) and Windows: no x264/x265, no ``--enable-gpl``;
+  ``libavutil license: LGPL version 2.1 or later``.
+- macOS, **both** arm64 and x86_64: ``--enable-gpl --enable-version3
+  --enable-libx264 --enable-libx265``, libx264/libx265 shipped;
+  ``libavutil license: GPL version 3 or later``.
+
+That tier already arrives with ``[media]``. ``[pose]`` does not raise it — but it is
+not free of it either: rtmlib requires opencv-python *and* opencv-contrib-python,
+both unpinned, so installing it adds a second wheel carrying its own copy of those
+same binaries (issue #20).
 
 **Nothing here is imported until it is used.** ``import paces`` never touches this
 module, and importing *this* module never touches rtmlib: every rtmlib access goes
@@ -55,10 +76,17 @@ DFLT_MODE = "balanced"
 DFLT_DEVICE = "cpu"
 
 #: A keypoint below this score is noise, not evidence, and never widens a box.
+#: This threshold is load-bearing, not decorative: rtmlib's ``Body`` is a
+#: top-down pipeline, so it returns a full 17-keypoint person for a frame with
+#: nobody in it at all. Measured on a blank frame (rtmlib 0.0.15, balanced):
+#: one "person", every score ~0.11-0.13. Without this filter the locator would
+#: hand the core a confident box around nothing, every time.
 DFLT_KEYPOINT_CONFIDENCE = 0.3
 
 #: Fewer confident keypoints than this is not a person — it is a hallucinated
-#: limb or two, and boxing it would hand the core a region with no subject in it.
+#: limb or two, and boxing it would hand the core a region with no subject in
+#: it. The second half of the same defence: a real detection clears 0.3 on far
+#: more than four joints, while the blank-frame phantom above clears it on none.
 DFLT_MIN_KEYPOINTS = 4
 
 #: The extra that carries this locator, and the stem of its recorded identity.
@@ -72,13 +100,28 @@ TEST_MODELS_ENVVAR = "PACES_TEST_MODELS"
 POSE_EXTRA_MISSING = (
     "rtmlib is required for the pose subject_locator. Install it with:\n"
     f"    pip install 'paces[{POSE_EXTRA}]'\n"
-    "That extra is rtmlib (Apache-2.0) + onnxruntime (MIT); its runtime closure\n"
-    "(numpy, opencv, onnxruntime, tqdm) is permissive throughout. rtmlib's\n"
-    "bundled RTMDet detector means person boxes need no YOLO, and a\n"
-    "YOLO/ultralytics dependency is barred here — AGPL-3.0 (ADR-0005 §3).\n"
+    "That extra is rtmlib (Apache-2.0, pure Python) + onnxruntime (MIT). Its\n"
+    "detector is YOLOX (Megvii, Apache-2.0); what is barred here is the\n"
+    "ultralytics distribution — AGPL-3.0 — not the YOLO family (ADR-0005 §3).\n"
     "Model weights download on first inference, not on install.\n"
+    "Note what it pulls in: rtmlib requires BOTH opencv-python and\n"
+    "opencv-contrib-python, and opencv's bundled FFmpeg is GPL-3.0-or-later on\n"
+    "macOS (built --enable-gpl with libx264/libx265) though LGPL-2.1-or-later\n"
+    "on manylinux and Windows. paces[media] already brings one such wheel; this\n"
+    "adds a second copy, not a higher tier (issue #20).\n"
     "The default locator (paces.derivation.full_frame) needs none of this: it\n"
     "answers 'no crop', which is a real answer rather than a failure."
+)
+
+POSE_METADATA_MISSING = (
+    "rtmlib is importable but has no distribution metadata, so its version\n"
+    "cannot be read — which is what a vendored copy or a source tree on\n"
+    "PYTHONPATH looks like. The version is not cosmetic: the crop recipe\n"
+    "records it, so that a model upgrade re-locates instead of reusing a box a\n"
+    "different model measured (ADR-0005 §3).\n"
+    f"Install rtmlib as a distribution (pip install 'paces[{POSE_EXTRA}]'), or\n"
+    "pass your own estimator — RtmlibPoseLocator(pose_estimator=...) names\n"
+    "itself after that estimator and never reads rtmlib's version."
 )
 
 MEDIA_EXTRA_MISSING = (
@@ -92,7 +135,7 @@ MEDIA_EXTRA_MISSING = (
 
 
 def _import_body():
-    """rtmlib's ``Body`` solution (RTMDet detector + RTMPose, COCO-17).
+    """rtmlib's ``Body`` solution (YOLOX detector + RTMPose, COCO-17).
 
     Every rtmlib *import* goes through here so the missing-extra message is
     written once, the way kodokan routes ultralytics through one importer.
@@ -109,15 +152,36 @@ def _rtmlib_version() -> str:
 
     ``derive`` reads ``locator_name`` *before* it decides whether a recipe may
     be reused (ADR-0005 §3's re-run semantics), so naming the locator must stay
-    this cheap. An absent distribution is the same failure as an absent import,
-    reported the same way — and reported before any encode work is spent.
+    this cheap — and it is reported before any encode work is spent.
+
+    Two different absences, told apart because the fixes differ: no rtmlib at
+    all (install the extra) versus an importable rtmlib carrying no metadata,
+    which is a vendored copy or a source tree on ``PYTHONPATH``.
     """
+    import importlib.util
     from importlib.metadata import PackageNotFoundError, version
 
     try:
         return version("rtmlib")
     except PackageNotFoundError as error:
-        raise ImportError(POSE_EXTRA_MISSING) from error
+        importable = importlib.util.find_spec("rtmlib") is not None
+        raise ImportError(
+            POSE_METADATA_MISSING if importable else POSE_EXTRA_MISSING
+        ) from error
+
+
+def _estimator_identity(estimator) -> str:
+    """A stable-enough name for an injected estimator, for the recipe identity.
+
+    Its own ``locator_name`` if it declares one (the way to make an estimator
+    version itself properly), else its qualified name, else its type's.
+    """
+    declared = getattr(estimator, "locator_name", None)
+    if isinstance(declared, str):
+        return declared
+    module = getattr(estimator, "__module__", None)
+    name = getattr(estimator, "__qualname__", None) or type(estimator).__qualname__
+    return f"{module}.{name}" if module else name
 
 
 @lru_cache(maxsize=None)
@@ -240,7 +304,7 @@ class RtmlibPoseLocator:
 
     ``pose_estimator`` is the seam inside the seam: any
     ``callable(frame) -> (keypoints, scores)``. The default is rtmlib's ``Body``
-    (RTMDet + RTMPose, COCO-17); the replacements are already pointable —
+    (YOLOX + RTMPose, COCO-17); the replacements are already pointable —
     rtmlib's ``Wholebody``, ``Hand`` and ``Animal`` solutions have exactly this
     shape, and the ADR's "hands + workpiece for cooking" case is one of them.
     Tests inject a fake through it, which is how the contract is exercised with
@@ -258,10 +322,41 @@ class RtmlibPoseLocator:
 
     @property
     def locator_name(self) -> str:
-        """``rtmlib-pose@<version>`` — the policy identity the crop recipe
-        records, so that an rtmlib upgrade re-locates rather than reusing a box
-        that a different model measured (ADR-0005 §3)."""
-        return f"{LOCATOR_STEM}@{_rtmlib_version()}"
+        """The policy identity the crop recipe records — **every** input that
+        can move a box, not just the model version.
+
+        ``derive`` reuses a stored box when this name and the core's params
+        still match (ADR-0005 §3), so anything left out of it silently reuses a
+        box that something else measured. That is the whole point of the
+        fingerprint, so the probe rate and both keypoint thresholds are in it
+        alongside the model::
+
+            rtmlib-pose@0.0.16;mode=balanced;fps=5;conf=0.3;minkp=4
+
+        An injected ``pose_estimator`` names *itself* — claiming rtmlib's
+        version for a box rtmlib did not measure would be exactly the false
+        identity this exists to prevent — and drops ``mode``, which is a
+        ``Body`` argument and means nothing to another estimator::
+
+            rtmlib-pose@custom:mypkg.my_estimator;fps=5;conf=0.3;minkp=4
+
+        ``device`` is deliberately absent: it selects an execution provider,
+        not a policy, and putting it in would re-locate every box on a machine
+        change — a false honesty flag, which this codebase treats as the
+        failure mode it is.
+        """
+        if self.pose_estimator is None:
+            engine = _rtmlib_version()
+            terms = [f"mode={self.mode}"]
+        else:
+            engine = f"custom:{_estimator_identity(self.pose_estimator)}"
+            terms = []
+        terms += [
+            f"fps={self.probe_fps:g}",
+            f"conf={self.keypoint_confidence:g}",
+            f"minkp={self.min_keypoints:g}",
+        ]
+        return ";".join([f"{LOCATOR_STEM}@{engine}", *terms])
 
     def __call__(self, query: LocateQuery) -> SubjectObservation | None:
         estimate = self.pose_estimator or _body_estimator(self.mode, self.device)
