@@ -59,6 +59,24 @@ recipes persist in a hand-overridable `document.recipes.json` sidecar; the
 `subject_locator=` seam (default: no crop) is where pose-based auto-crop
 plugs in. Design record: `docs/adr/0005-media-derivation.md`.
 
+Auto-crop to the people in frame with `pip install paces[pose]`, then
+`paces derive doc.json --media routine.mp4 --subject-locator paces.pose:rtmlib_pose`
+(or `subject_locator=paces.pose.rtmlib_pose` from Python). It probes each
+excerpt window at ~5 fps and reports every person it sees; the crop policy
+stays in the core, so two people in frame get one box around both. The extra
+itself is [rtmlib](https://github.com/Tau-J/rtmlib) (Apache-2.0, pure Python)
+and onnxruntime (MIT), with model weights downloaded on first use. Detection is
+YOLOX (Apache-2.0); what is barred from every extra here — rather than
+quarantined into one — is the **ultralytics** distribution, which is AGPL-3.0.
+
+What it pulls in is a different question, and worth stating plainly: rtmlib
+requires opencv, and opencv's *bundled FFmpeg* is **GPL-3.0-or-later on macOS
+wheels** (built `--enable-gpl` with libx264/libx265) though LGPL-2.1-or-later
+on manylinux and Windows. This is measured from the shipped binaries — the
+wheels' own `LICENSE-3RD-PARTY.txt` never mentions x264. `paces[media]`
+already brings such a wheel, so `[pose]` adds a second copy rather than a
+higher tier. `paces.pose.check_pose_requirements()` reports what you have.
+
 ## How it thinks
 
 **Analysis and rendering are separate phases** with a serialisable document
@@ -89,6 +107,7 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 | protect edits from regeneration | `apply_edits(doc, patches, by="user:you")` + `merge_regenerated(committed, fresh)` |
 | the committed artifact | `to_document(seg, ...)` → `StepDocument` |
 | real clips/gifs/posters for the page | `derive_document(doc, media=..., doc_path=...)` / `paces derive` (`pip install paces[media]`) |
+| auto-crop those clips to the people in frame | `derive(..., subject_locator=paces.pose.rtmlib_pose)` / `--subject-locator paces.pose:rtmlib_pose` (`pip install paces[pose]`) |
 | a practice page | `render_html(doc)` |
 | wall-clock times from counts | `resolve(doc)` |
 | sanity checks | `validate_document(doc)` |
