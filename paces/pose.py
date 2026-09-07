@@ -412,7 +412,12 @@ def check_pose_requirements() -> dict:
       ``opencv-contrib-python``, while the fleet standardises on the contrib
       superset (mixing's single cv2 provider). An install can therefore end up
       with two distributions owning one ``cv2`` package. Reported, not fatal:
-      it works until one of them is uninstalled, and a reader deserves to know.
+      it works until one of them is uninstalled, and a reader deserves to know
+      — and, since neither package's uninstall is safe once both are present
+      (each claims files the other also claims), the note names the repair
+      command rather than only the collision. See README's "Auto-crop" section
+      for the install recipe that avoids the pair in the first place
+      (issue #20).
 
     Downloads nothing: weights arrive on first inference, not on this check.
     """
@@ -449,7 +454,11 @@ def check_pose_requirements() -> dict:
         notes.append(
             "two distributions provide cv2 "
             f"({', '.join(cv2_providers)}) — rtmlib declares both; uninstalling "
-            "either can leave the other's cv2 broken"
+            "either can leave the other's cv2 broken. Repair: "
+            "pip uninstall -y opencv-python opencv-contrib-python && "
+            "pip install --force-reinstall opencv-contrib-python — not sticky: "
+            "the next plain `pip install paces[pose]` re-adds opencv-python, "
+            "so use README's Auto-crop install recipe to avoid it recurring"
         )
     return {
         "ok": rtmlib_version is not None and onnxruntime_version is not None,
