@@ -456,7 +456,9 @@ def check_pose_requirements() -> dict:
             f"({', '.join(cv2_providers)}) — rtmlib declares both; uninstalling "
             "either can leave the other's cv2 broken. Repair: "
             "pip uninstall -y opencv-python opencv-contrib-python && "
-            "pip install --force-reinstall opencv-contrib-python"
+            "pip install --force-reinstall opencv-contrib-python — not sticky: "
+            "the next plain `pip install paces[pose]` re-adds opencv-python, "
+            "so use README's Auto-crop install recipe to avoid it recurring"
         )
     return {
         "ok": rtmlib_version is not None and onnxruntime_version is not None,
