@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.pose &mdash; paces 0.0.7 documentation</title>
+  <title>paces.pose &mdash; paces 0.0.8 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=bbaf98b3"></script>
+      <script src="../../_static/documentation_options.js?v=53b53b71"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -510,7 +510,12 @@
 <span class="sd">      ``opencv-contrib-python``, while the fleet standardises on the contrib</span>
 <span class="sd">      superset (mixing's single cv2 provider). An install can therefore end up</span>
 <span class="sd">      with two distributions owning one ``cv2`` package. Reported, not fatal:</span>
-<span class="sd">      it works until one of them is uninstalled, and a reader deserves to know.</span>
+<span class="sd">      it works until one of them is uninstalled, and a reader deserves to know</span>
+<span class="sd">      — and, since neither package's uninstall is safe once both are present</span>
+<span class="sd">      (each claims files the other also claims), the note names the repair</span>
+<span class="sd">      command rather than only the collision. See README's "Auto-crop" section</span>
+<span class="sd">      for the install recipe that avoids the pair in the first place</span>
+<span class="sd">      (issue #20).</span>
 
 <span class="sd">    Downloads nothing: weights arrive on first inference, not on this check.</span>
 <span class="sd">    """</span>
@@ -547,7 +552,11 @@
         <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="s2">"two distributions provide cv2 "</span>
             <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cv2_providers</span><span class="p">)</span><span class="si">}</span><span class="s2">) — rtmlib declares both; uninstalling "</span>
-            <span class="s2">"either can leave the other's cv2 broken"</span>
+            <span class="s2">"either can leave the other's cv2 broken. Repair: "</span>
+            <span class="s2">"pip uninstall -y opencv-python opencv-contrib-python &amp;&amp; "</span>
+            <span class="s2">"pip install --force-reinstall opencv-contrib-python — not sticky: "</span>
+            <span class="s2">"the next plain `pip install paces[pose]` re-adds opencv-python, "</span>
+            <span class="s2">"so use README's Auto-crop install recipe to avoid it recurring"</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"ok"</span><span class="p">:</span> <span class="n">rtmlib_version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">onnxruntime_version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>

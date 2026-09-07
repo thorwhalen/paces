@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.pose &mdash; paces 0.0.7 documentation</title>
+  <title>paces.pose &mdash; paces 0.0.8 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=bbaf98b3"></script>
+      <script src="../../_static/documentation_options.js?v=53b53b71"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -269,7 +269,12 @@ inference — the contract is covered by fake locators instead.</p>
 <code class="docutils literal notranslate"><span class="pre">opencv-contrib-python</span></code>, while the fleet standardises on the contrib
 superset (mixing’s single cv2 provider). An install can therefore end up
 with two distributions owning one <code class="docutils literal notranslate"><span class="pre">cv2</span></code> package. Reported, not fatal:
-it works until one of them is uninstalled, and a reader deserves to know.</p></li>
+it works until one of them is uninstalled, and a reader deserves to know
+— and, since neither package’s uninstall is safe once both are present
+(each claims files the other also claims), the note names the repair
+command rather than only the collision. See README’s “Auto-crop” section
+for the install recipe that avoids the pair in the first place
+(issue #20).</p></li>
 </ul>
 <p>Downloads nothing: weights arrive on first inference, not on this check.</p>
 </dd></dl>
