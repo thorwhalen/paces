@@ -439,6 +439,36 @@ def test_check_pose_requirements_reports_channels_without_downloading():
         assert any("paces[pose]" in note for note in report["notes"])
 
 
+def test_check_pose_requirements_names_the_repair_when_both_cv2_providers_present(
+    monkeypatch,
+):
+    # issue #20: rtmlib declares both opencv-python and opencv-contrib-python.
+    # Naming the collision isn't enough — a reader who hits it needs the
+    # repair command, not just the two package names, since neither package's
+    # uninstall is safe once both are present (each claims the other's files).
+    import importlib.metadata
+
+    installed = {
+        "rtmlib": "0.0.16",
+        "onnxruntime": "1.2.3",
+        "opencv-python": "4.12.0.88",
+        "opencv-contrib-python": "4.13.0.92",
+    }
+
+    def fake_version(distribution, *args, **kwargs):
+        try:
+            return installed[distribution]
+        except KeyError:
+            raise importlib.metadata.PackageNotFoundError(distribution)
+
+    monkeypatch.setattr(importlib.metadata, "version", fake_version)
+    report = check_pose_requirements()
+    assert report["cv2_providers"] == ["opencv-python", "opencv-contrib-python"]
+    assert any(
+        "pip install --force-reinstall" in note for note in report["notes"]
+    )
+
+
 # ── the licence perimeter (packaging facts, guarded because nothing else is) ─
 
 

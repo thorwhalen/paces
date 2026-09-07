@@ -89,7 +89,12 @@ media = [
 # unaudited wheel in silently.
 # Not mirrored into [dev] on purpose: the tests are offline and stay on fake
 # locators (no weights, no network), and CI has no reason to take on the second
-# cv2 provider. `check_pose_requirements()` reports that pair when it happens.
+# cv2 provider. `check_pose_requirements()` reports that pair when it happens
+# and names the repair command; README's "Auto-crop" section has the two-step
+# install recipe that avoids the pair in the first place (issue #20). Not
+# fixable from here: rtmlib declares both wheels unconditionally, with no
+# marker paces can override, so a single-provider closure needs either that
+# recipe or an upstream rtmlib change — not a pin in this file.
 pose = [
     "rtmlib>=0.0.16,<0.1",
     "onnxruntime",

@@ -75,7 +75,23 @@ wheels** (built `--enable-gpl` with libx264/libx265) though LGPL-2.1-or-later
 on manylinux and Windows. This is measured from the shipped binaries — the
 wheels' own `LICENSE-3RD-PARTY.txt` never mentions x264. `paces[media]`
 already brings such a wheel, so `[pose]` adds a second copy rather than a
-higher tier. `paces.pose.check_pose_requirements()` reports what you have.
+higher tier. Worse: rtmlib's own metadata requires *both* `opencv-python`
+*and* `opencv-contrib-python`, unpinned, so a plain
+`pip install paces[media,pose]` ends up with two distributions owning one
+`cv2` — harmless until either is uninstalled, at which point the survivor's
+`cv2` can be left with files missing (issue #20). rtmlib only calls plain
+`cv2` APIs (`VideoCapture`, `dnn.readNetFromONNX`, drawing helpers — nothing
+contrib-only), so `[media]`'s `opencv-contrib-python` already covers it; to
+keep the closure single-provider, install in two steps instead of one:
+
+```bash
+pip install "paces[media]"           # opencv-contrib-python, the fleet's one cv2
+pip install --no-deps rtmlib         # skip rtmlib's own opencv-* re-declaration
+pip install onnxruntime tqdm         # rtmlib's other real, non-cv2 deps
+```
+
+`paces.pose.check_pose_requirements()` reports what you have, and names the
+repair command if both providers are already present.
 
 ## How it thinks
 
