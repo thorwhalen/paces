@@ -191,6 +191,19 @@ ultralytics, ultralytics-thop, ultralytics-platform); the POC used it as
 throwaway session tooling only, which a library cannot. The rtmlib locator is
 a follow-up issue; the seam's contract is pinned now by fake-locator tests.
 
+*Shipped 2026-09-07 (issue #15).* `paces/pose.py` is that locator —
+`RtmlibPoseLocator` / `paces.pose:rtmlib_pose`, behind a `[pose]` extra
+(rtmlib + onnxruntime), lazily imported so `import paces` pulls neither, and
+naming itself `rtmlib-pose@<version>` so an rtmlib upgrade re-locates rather
+than reusing a box a different model measured. The seam's contract stays
+pinned by fake-locator tests; the pose locator's own tests inject a fake
+estimator through its `pose_estimator=` seam, so CI downloads no weights and
+runs no model (a real pass is opt-in behind `PACES_TEST_MODELS`). ultralytics
+is barred from **every** extra rather than quarantined into one — kodokan
+needs a `track` extra because its tracker is genuinely load-bearing there;
+paces needs boxes, and rtmlib's bundled RTMDet gives them. `[tool.wads.licence]`
+in `pyproject.toml` and `tests/test_pose.py` are where that is enforced.
+
 ## 4. What mixing grew for this (its first customer is #1)
 
 `make_gif` (two-pass palette, bundled-binary subprocess) and

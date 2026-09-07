@@ -59,6 +59,24 @@ media = [
     # get_video_dimensions ship there.
     "mixing>=0.0.39",
 ]
+# The pointable subject_locator (issue #15, ADR-0005 §3): rtmlib pose boxes,
+# reached through `paces.pose:rtmlib_pose`. rtmlib is Apache-2.0 and its whole
+# runtime closure (numpy, opencv, onnxruntime, tqdm) is permissive; its bundled
+# RTMDet detector means person boxes need no YOLO even for detection. A
+# YOLO/ultralytics dependency is barred from EVERY extra here — AGPL-3.0, whose
+# §13 network clause reaches served users, not only people handed a copy — and
+# tests/test_pose.py is what notices if that ever stops being true.
+# onnxruntime is named rather than left to rtmlib's transitive closure: it is
+# the backend= this locator asks for by name, not an incidental fact.
+# Not mirrored into [dev] on purpose: the tests are offline and stay on fake
+# locators (no weights, no network), and rtmlib declares opencv-python next to
+# the opencv-contrib-python that mixing already brings — two distributions for
+# one cv2, which CI has no reason to take on. `check_pose_requirements()`
+# reports that pair when it happens.
+pose = [
+    "rtmlib",
+    "onnxruntime",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -72,6 +90,9 @@ dev = [
     # [media] (the >=0.0.39 floor wins over [audio]'s >=0.0.36).
     "mixing[beats,audio]>=0.0.39",
     "numba>=0.59",
+    # tests/test_pose.py reads pyproject.toml to guard the licence perimeter;
+    # stdlib tomllib is 3.11+, and a skipped guard guards nothing.
+    "tomli>=2.0; python_version < '3.11'",
 ]
 docs = [
     "sphinx>=6.0",
@@ -92,6 +113,32 @@ check.windows = "which ffmpeg"
 install.linux = ["sudo apt-get update", "sudo apt-get install -y ffmpeg"]
 install.macos = "brew install ffmpeg"
 install.windows = "choco install ffmpeg -y --no-progress"
+
+# --------------------------------------------------------------------------
+# Licence adjudication
+#
+# paces is MIT and its core dependency is pydantic alone, so `pip install
+# paces` pulls nothing copyleft. Neither does any extra: `pose` is rtmlib
+# (Apache-2.0) + onnxruntime (MIT), and the AGPL alternative for that job
+# (ultralytics) is barred outright rather than quarantined — kodokan needs a
+# `track` extra because Ultralytics' tracker is genuinely load-bearing there;
+# paces needs boxes, and rtmlib's bundled RTMDet gives them. There is
+# therefore nothing to adjudicate, and no [tool.wads.licence.exceptions]
+# table: an entry appearing here later would mean the perimeter moved.
+#
+# `include-extras` makes the check look where the exposure is — a check that
+# reads only hard dependencies would report paces clean, which is correct and
+# incomplete. `allowed`/`forbidden` are deliberately unset: they REPLACE wads'
+# defaults rather than extend them, so re-stating the permissive families here
+# would silently narrow the policy every time wads widens it.
+#
+# `enabled` stays false until the gate ships in a released wads and the extras'
+# closures have been walked with it once; flipping it is a one-line change.
+# Until then the perimeter is enforced by tests/test_pose.py, which runs in CI.
+# --------------------------------------------------------------------------
+[tool.wads.licence]
+enabled = false
+include-extras = ["cli", "audio", "media", "pose"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["paces"]

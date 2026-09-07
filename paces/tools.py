@@ -338,7 +338,8 @@ def derive(
     explicit store. ``media`` is one local file, or ``{"<source-id>":
     "<path>"}`` when several sources carry excerpts. ``subject_locator`` is
     a lazy ``"module:attr"`` ref to an ADR-0005 §3 locator; the default is
-    no crop. The updated document is written back to ``output`` (default:
+    no crop, and ``paces.pose:rtmlib_pose`` is the shipped pointable one
+    (rtmlib pose boxes, ``pip install paces[pose]``). The updated document is written back to ``output`` (default:
     the document path itself — derive's media side effects and the refs
     pointing at them must not go out of sync); the returned payload carries
     ``flags`` — read them, they are the honesty report.

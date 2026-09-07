@@ -59,6 +59,16 @@ recipes persist in a hand-overridable `document.recipes.json` sidecar; the
 `subject_locator=` seam (default: no crop) is where pose-based auto-crop
 plugs in. Design record: `docs/adr/0005-media-derivation.md`.
 
+Auto-crop to the people in frame with `pip install paces[pose]`, then
+`paces derive doc.json --media routine.mp4 --subject-locator paces.pose:rtmlib_pose`
+(or `subject_locator=paces.pose.rtmlib_pose` from Python). It probes each
+excerpt window at ~5 fps and reports every person it sees; the crop policy
+stays in the core, so two people in frame get one box around both. The extra
+is [rtmlib](https://github.com/Tau-J/rtmlib) (Apache-2.0) and onnxruntime —
+permissive throughout, with model weights downloaded on first use. **No
+YOLO/ultralytics**: that is AGPL-3.0, and it is barred from every extra here
+rather than quarantined into one.
+
 ## How it thinks
 
 **Analysis and rendering are separate phases** with a serialisable document
@@ -89,6 +99,7 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 | protect edits from regeneration | `apply_edits(doc, patches, by="user:you")` + `merge_regenerated(committed, fresh)` |
 | the committed artifact | `to_document(seg, ...)` → `StepDocument` |
 | real clips/gifs/posters for the page | `derive_document(doc, media=..., doc_path=...)` / `paces derive` (`pip install paces[media]`) |
+| auto-crop those clips to the people in frame | `derive(..., subject_locator=paces.pose.rtmlib_pose)` / `--subject-locator paces.pose:rtmlib_pose` (`pip install paces[pose]`) |
 | a practice page | `render_html(doc)` |
 | wall-clock times from counts | `resolve(doc)` |
 | sanity checks | `validate_document(doc)` |
