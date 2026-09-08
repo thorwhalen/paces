@@ -10,7 +10,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from paces.model import Lock, Measure, SourceSpan, Step, StepDocument, validate_document
+from paces.edits import apply_edits
+from paces.model import (
+    Lock,
+    Measure,
+    Source,
+    SourceSpan,
+    Step,
+    StepDocument,
+    validate_document,
+)
 
 
 def _doc(**overrides) -> StepDocument:
@@ -104,3 +113,57 @@ def test_validate_document_does_not_flag_the_typed_confidence_float():
 
 def test_validate_document_clean_document_has_no_float_issues():
     assert validate_document(_doc()) == []
+
+
+# ── rename onto an existing id is refused at edit time ───────────────────────
+
+
+def _two_step_doc(**overrides) -> StepDocument:
+    fields = dict(
+        id="guide",
+        title="A guide",
+        sources=[Source(id="vid", kind="video", uri="https://example.com/v")],
+        steps=[
+            Step(
+                id="a",
+                name="Step A",
+                duration=Measure(value="2", unit="eight"),
+                spans=[SourceSpan(source="vid", start="10")],
+            ),
+            Step(
+                id="b",
+                name="Step B",
+                duration=Measure(value="2", unit="eight"),
+                spans=[SourceSpan(source="vid", start="20")],
+            ),
+        ],
+    )
+    fields.update(overrides)
+    return StepDocument(**fields)
+
+
+def test_apply_edits_refuses_rename_onto_an_existing_id():
+    with pytest.raises(ValueError, match="already used"):
+        apply_edits(
+            _two_step_doc(),
+            [{"op": "set", "path": "/steps/a/id", "value": "b"}],
+            by="user:thor",
+        )
+
+
+def test_apply_edits_allows_rename_onto_a_free_id():
+    doc = apply_edits(
+        _two_step_doc(),
+        [{"op": "set", "path": "/steps/a/id", "value": "a2"}],
+        by="user:thor",
+    )
+    assert [s.id for s in doc.steps] == ["a2", "b"]
+
+
+def test_apply_edits_allows_renaming_id_to_itself():
+    doc = apply_edits(
+        _two_step_doc(),
+        [{"op": "set", "path": "/steps/a/id", "value": "a"}],
+        by="user:thor",
+    )
+    assert [s.id for s in doc.steps] == ["a", "b"]

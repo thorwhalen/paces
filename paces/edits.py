@@ -34,6 +34,9 @@ Path rules (each earned by an adversarial review, PR #11):
   edit does not survive; only its lock record does.
 - ``attrs`` bags merge committed-over-fresh per key: they are user/renderer
   data that analysis does not produce, so regeneration never wins there.
+- Renaming a list item's ``id`` onto an id already used by another item in
+  the same list is refused at edit time (previously accepted, and only
+  flagged later by :func:`~paces.model.validate_document`) — issue #12.
 
 Not yet recorded anywhere: the fresh values a merge *rejects*
 (``Origin.value_digest`` and the op-log arrive with the evidence layer,
@@ -129,6 +132,24 @@ def _resolve_parent(root: Any, segments: list[str], *, path: str):
     raise ValueError(f"{path}: cannot set into {type(node).__name__}")
 
 
+def _containing_list(dump: dict, segments: list[str]) -> list | None:
+    """The list holding the item whose own field the leaf segment addresses
+    (e.g. for ``/steps/a/id``, the ``steps`` list a and its siblings live in),
+    or ``None`` when the leaf isn't a field on a list item."""
+    if len(segments) < 2:
+        return None
+    node: Any = dump
+    for i, segment in enumerate(segments[:-2]):
+        at = "/" + "/".join(segments[: i + 1])
+        if isinstance(node, list):
+            node = node[_index_of(node, segment, at=at)]
+        elif isinstance(node, Mapping):
+            node = node[_key_of(node, segment, at=at)]
+        else:
+            return None
+    return node if isinstance(node, list) else None
+
+
 def _canonical_segments(root: Any, segments: list[str], *, path: str) -> list[str]:
     """The stablest spelling of a path: snake_case fields; list items by id
     when one exists unambiguously in that list, by index otherwise."""
@@ -214,6 +235,24 @@ def apply_edits(
         raw_path = edit.get("path", "")
         segments = _canonical_segments(dump, _split_path(raw_path), path=raw_path)
         container, key = _resolve_parent(dump, segments, path=raw_path)
+        if key == "id" and isinstance(container, Mapping):
+            new_id = edit["value"]
+            siblings = _containing_list(dump, segments) or []
+            collision = next(
+                (
+                    sibling
+                    for sibling in siblings
+                    if isinstance(sibling, Mapping)
+                    and sibling is not container
+                    and sibling.get("id") == new_id
+                ),
+                None,
+            )
+            if collision is not None:
+                raise ValueError(
+                    f"edits[{i}]: cannot rename id to {new_id!r} — already used "
+                    "by another item in the same list"
+                )
         # The lock site must resolve BEFORE the mutation: an edit may change
         # the very value a segment addresses (renaming a step's id).
         site, relative = _lock_site(dump, segments)
