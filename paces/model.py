@@ -24,6 +24,7 @@ Design decisions, each argued in ``docs/07-annotation-model.md``:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from fractions import Fraction
 from typing import Annotated, Any, Literal
@@ -372,6 +373,36 @@ def resolve(doc: StepDocument) -> dict:
     }
 
 
+#: Field names whose schema type is deliberately ``float`` (``docs/07 §6.5``
+#: accepts this as a pre-existing hole in the no-floats-on-the-wire rule) —
+#: everywhere else, a Python ``float`` reaching the wire (typically through an
+#: ``attrs`` bag or a ``Lock.was``, both typed ``Any``) is a leak.
+_FLOAT_TYPED_KEYS = frozenset({"confidence"})
+
+
+def _scan_floats(node: Any, path: str, *, key: str | None = None) -> list[str]:
+    """Paths where a raw ``float`` reaches the wire outside a typed field."""
+    if isinstance(node, float):
+        if key in _FLOAT_TYPED_KEYS:
+            return []
+        return [
+            f"{path}: float value {node!r} on the no-floats wire (use a decimal string)"
+        ]
+    if isinstance(node, Mapping):
+        return [
+            issue
+            for k, v in node.items()
+            for issue in _scan_floats(v, f"{path}/{k}", key=k)
+        ]
+    if isinstance(node, (list, tuple)):
+        return [
+            issue
+            for i, v in enumerate(node)
+            for issue in _scan_floats(v, f"{path}/{i}", key=key)
+        ]
+    return []
+
+
 def validate_document(doc: StepDocument) -> list[str]:
     """Semantic checks beyond the schema. Returns human-readable issues
     (empty list = clean); never raises.
@@ -379,9 +410,11 @@ def validate_document(doc: StepDocument) -> list[str]:
     Checks: children durations account for the parent's (``repeat`` included),
     span sources exist, cue anchors point at real steps, step ids are unique
     (id-addressed edits and the regeneration merge both key on them — a
-    duplicate makes those silently ambiguous).
+    duplicate makes those silently ambiguous), and no raw ``float`` has
+    leaked onto the no-floats wire through an ``attrs`` bag or a ``Lock.was``
+    (both typed ``Any``, so the schema alone cannot catch this).
     """
-    issues: list[str] = []
+    issues: list[str] = _scan_floats(doc.model_dump(mode="python", by_alias=False), "")
     source_ids = {s.id for s in doc.sources}
     step_ids: set[str] = set()
 
