@@ -34,6 +34,16 @@ Path rules (each earned by an adversarial review, PR #11):
   edit does not survive; only its lock record does.
 - ``attrs`` bags merge committed-over-fresh per key: they are user/renderer
   data that analysis does not produce, so regeneration never wins there.
+- Renaming a list item's ``id`` onto an id already used by another item in
+  the same list is refused at edit time (previously accepted, and only
+  flagged later by :func:`~paces.model.validate_document`) — issue #12.
+- A step rename (its own ``/id`` lock) is remembered by :func:`merge_regenerated`:
+  a fresh projection that still emits the pre-rename id (because analysis
+  does not know about the rename) is matched to the renamed committed step
+  instead of being treated as a new, unrelated step — otherwise the old id
+  resurfaces alongside the renamed one. This does not follow renames inside
+  a merge across multiple regenerations; only the most recent ``/id`` lock is
+  consulted (issue #12).
 
 Not yet recorded anywhere: the fresh values a merge *rejects*
 (``Origin.value_digest`` and the op-log arrive with the evidence layer,
@@ -129,6 +139,36 @@ def _resolve_parent(root: Any, segments: list[str], *, path: str):
     raise ValueError(f"{path}: cannot set into {type(node).__name__}")
 
 
+def _all_steps(steps: list) -> list:
+    """Every step in the tree, depth-first — matching the scope of
+    :func:`~paces.model.validate_document`'s step-id uniqueness check, which
+    is document-wide, not per-sibling-list."""
+    out = []
+    for step in steps:
+        if isinstance(step, Mapping):
+            out.append(step)
+            out.extend(_all_steps(step.get("steps", [])))
+    return out
+
+
+def _containing_list(dump: dict, segments: list[str]) -> list | None:
+    """The list holding the item whose own field the leaf segment addresses
+    (e.g. for ``/steps/a/id``, the ``steps`` list a and its siblings live in),
+    or ``None`` when the leaf isn't a field on a list item."""
+    if len(segments) < 2:
+        return None
+    node: Any = dump
+    for i, segment in enumerate(segments[:-2]):
+        at = "/" + "/".join(segments[: i + 1])
+        if isinstance(node, list):
+            node = node[_index_of(node, segment, at=at)]
+        elif isinstance(node, Mapping):
+            node = node[_key_of(node, segment, at=at)]
+        else:
+            return None
+    return node if isinstance(node, list) else None
+
+
 def _canonical_segments(root: Any, segments: list[str], *, path: str) -> list[str]:
     """The stablest spelling of a path: snake_case fields; list items by id
     when one exists unambiguously in that list, by index otherwise."""
@@ -214,6 +254,33 @@ def apply_edits(
         raw_path = edit.get("path", "")
         segments = _canonical_segments(dump, _split_path(raw_path), path=raw_path)
         container, key = _resolve_parent(dump, segments, path=raw_path)
+        if key == "id" and isinstance(container, Mapping):
+            new_id = edit["value"]
+            all_steps = _all_steps(dump.get("steps", []))
+            is_step = any(s is container for s in all_steps)
+            # A step's id is unique document-wide (validate_document enforces
+            # this across the whole tree, not per sibling list) — check the
+            # same scope here. Everything else (sources, cues, questions)
+            # only needs uniqueness within its own list.
+            candidates = (
+                all_steps if is_step else (_containing_list(dump, segments) or [])
+            )
+            collision = next(
+                (
+                    candidate
+                    for candidate in candidates
+                    if isinstance(candidate, Mapping)
+                    and candidate is not container
+                    and candidate.get("id") == new_id
+                ),
+                None,
+            )
+            if collision is not None:
+                scope = "the document" if is_step else "the same list"
+                raise ValueError(
+                    f"edits[{i}]: cannot rename id to {new_id!r} — already used "
+                    f"by another item in {scope}"
+                )
         # The lock site must resolve BEFORE the mutation: an edit may change
         # the very value a segment addresses (renaming a step's id).
         site, relative = _lock_site(dump, segments)
@@ -352,14 +419,47 @@ def _merged_attrs(committed: Mapping, fresh: Mapping) -> dict:
     return {**copy.deepcopy(dict(fresh)), **copy.deepcopy(dict(committed))}
 
 
+def _renamed_from(committed: list[dict]) -> dict[str, dict]:
+    """old id -> committed step, for steps whose own ``/id`` lock records a
+    rename (``apply_edits`` writes exactly this). Analysis that re-runs
+    without knowledge of the rename still emits the old id — without this,
+    that fresh step would be treated as unrelated and the old id would
+    resurface alongside the renamed one (issue #12)."""
+    out: dict[str, dict] = {}
+    for step in committed:
+        for lock in step.get("locks", []):
+            if lock.get("path") == "/id" and lock.get("was") is not None:
+                out[str(lock["was"])] = step
+    return out
+
+
 def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
     committed_by_id: dict[str, dict] = {}
     for step in committed:  # first occurrence wins, matching apply_edits
         committed_by_id.setdefault(step["id"], step)
+    renamed_from = _renamed_from(committed)
     fresh_ids = {step["id"] for step in fresh}
+
+    # Direct id matches are resolved FIRST and claim their committed step
+    # before any rename substitution runs: if fresh already carries the
+    # renamed id, that's the real match, and a stray fresh entry still using
+    # the old id (analysis emitting both, or simply unrelated) must not also
+    # claim the same committed step — that would merge one committed step
+    # into two output entries with the same id (issue #12, blocking review).
+    matched_committed_ids: set[str] = {
+        committed_by_id[fresh_step["id"]]["id"]
+        for fresh_step in fresh
+        if fresh_step["id"] in committed_by_id
+    }
+
     merged: list[dict] = []
     for fresh_step in fresh:
         committed_step = committed_by_id.get(fresh_step["id"])
+        if committed_step is None:
+            candidate = renamed_from.get(fresh_step["id"])
+            if candidate is not None and candidate["id"] not in matched_committed_ids:
+                committed_step = candidate
+                matched_committed_ids.add(candidate["id"])
         if committed_step is None:
             merged.append(copy.deepcopy(fresh_step))
             continue
@@ -378,7 +478,10 @@ def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
     # Committed-only steps survive when they carry protection (locks anywhere
     # in their subtree, or a user origin); analysis leftovers are superseded.
     for position, committed_step in enumerate(committed):
-        if committed_step["id"] in fresh_ids:
+        if (
+            committed_step["id"] in fresh_ids
+            or committed_step["id"] in matched_committed_ids
+        ):
             continue
         subtree_protected = _is_protected(committed_step) or any(
             _is_protected(child) for child in _walk_dumps(committed_step)

@@ -24,6 +24,8 @@ Design decisions, each argued in ``docs/07-annotation-model.md``:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from datetime import datetime
 from fractions import Fraction
 from typing import Annotated, Any, Literal
 
@@ -169,6 +171,12 @@ class Cue(_Base):
 # ── provenance & edit protection ────────────────────────────────────────────
 
 
+#: ``Lock.at`` is always written by :func:`paces.edits._now_iso`; this is that
+#: same format, enforced on the way in so a hand-authored ``at`` can't smuggle
+#: an unparseable timestamp onto the wire.
+_LOCK_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
 class Lock(_Base):
     """A human (or approved-AI) decision that regeneration MUST NOT overwrite."""
 
@@ -177,6 +185,25 @@ class Lock(_Base):
     at: str  # ISO-8601 UTC, second resolution
     was: Any | None = None  # the pre-edit value — makes the edit reversible
     reason: str | None = None
+
+    @field_validator("by")
+    @classmethod
+    def _by_must_be_attributed(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Lock.by must not be empty — who made this edit?")
+        return value
+
+    @field_validator("at")
+    @classmethod
+    def _at_must_be_iso_utc(cls, value: str) -> str:
+        try:
+            datetime.strptime(value, _LOCK_AT_FORMAT)
+        except ValueError as e:
+            raise ValueError(
+                f"Lock.at must be ISO-8601 UTC, second resolution "
+                f"('2026-08-30T00:00:00Z'); got {value!r}"
+            ) from e
+        return value
 
 
 class Origin(_Base):
@@ -346,6 +373,61 @@ def resolve(doc: StepDocument) -> dict:
     }
 
 
+#: Field names whose schema type is deliberately ``float`` (``docs/07 §6.5``
+#: accepts this as a pre-existing hole in the no-floats-on-the-wire rule) —
+#: everywhere else, a Python ``float`` reaching the wire (typically through an
+#: ``attrs`` bag or a ``Lock.was``, both typed ``Any``) is a leak. (A float
+#: under an ``attrs`` key that happens to be literally named ``confidence``
+#: slips through this same allowlist — a narrow, accepted gap: distinguishing
+#: it would mean knowing ``attrs`` is user data everywhere it appears.)
+_FLOAT_TYPED_KEYS = frozenset({"confidence"})
+
+#: The keys a ``Lock`` always dumps as (``model_dump(mode="python")``, no
+#: ``exclude_none``) — used to recognise a Lock structurally so ``was`` can be
+#: checked against what ``path`` says it actually holds, not the literal key
+#: name ``"was"`` (a ``Lock`` locking a ``confidence`` field legitimately
+#: carries a float in ``was``).
+_LOCK_DUMP_KEYS = frozenset({"path", "by", "at", "was", "reason"})
+
+
+def _scan_floats(node: Any, path: str, *, key: str | None = None) -> list[str]:
+    """Paths where a raw ``float`` reaches the wire outside a typed field."""
+    if isinstance(node, float):
+        if key in _FLOAT_TYPED_KEYS:
+            return []
+        return [
+            f"{path}: float value {node!r} on the no-floats wire (use a decimal string)"
+        ]
+    if isinstance(node, Mapping):
+        if set(node) == _LOCK_DUMP_KEYS and isinstance(node.get("path"), str):
+            was_key = node["path"].rsplit("/", 1)[-1]
+            return [
+                issue
+                for k, v in node.items()
+                for issue in _scan_floats(
+                    v, f"{path}/{k}", key=was_key if k == "was" else k
+                )
+            ]
+        return [
+            issue
+            for k, v in node.items()
+            for issue in _scan_floats(v, f"{path}/{k}", key=k)
+        ]
+    if isinstance(node, (list, tuple)):
+        return [
+            issue
+            for i, v in enumerate(node)
+            for issue in _scan_floats(
+                v,
+                f"{path}/{v['id']}"
+                if isinstance(v, Mapping) and "id" in v
+                else f"{path}/{i}",
+                key=key,
+            )
+        ]
+    return []
+
+
 def validate_document(doc: StepDocument) -> list[str]:
     """Semantic checks beyond the schema. Returns human-readable issues
     (empty list = clean); never raises.
@@ -353,9 +435,11 @@ def validate_document(doc: StepDocument) -> list[str]:
     Checks: children durations account for the parent's (``repeat`` included),
     span sources exist, cue anchors point at real steps, step ids are unique
     (id-addressed edits and the regeneration merge both key on them — a
-    duplicate makes those silently ambiguous).
+    duplicate makes those silently ambiguous), and no raw ``float`` has
+    leaked onto the no-floats wire through an ``attrs`` bag or a ``Lock.was``
+    (both typed ``Any``, so the schema alone cannot catch this).
     """
-    issues: list[str] = []
+    issues: list[str] = _scan_floats(doc.model_dump(mode="python", by_alias=False), "")
     source_ids = {s.id for s in doc.sources}
     step_ids: set[str] = set()
 
