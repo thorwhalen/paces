@@ -24,6 +24,7 @@ Design decisions, each argued in ``docs/07-annotation-model.md``:
 
 from __future__ import annotations
 
+from datetime import datetime
 from fractions import Fraction
 from typing import Annotated, Any, Literal
 
@@ -169,6 +170,12 @@ class Cue(_Base):
 # ── provenance & edit protection ────────────────────────────────────────────
 
 
+#: ``Lock.at`` is always written by :func:`paces.edits._now_iso`; this is that
+#: same format, enforced on the way in so a hand-authored ``at`` can't smuggle
+#: an unparseable timestamp onto the wire.
+_LOCK_AT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
 class Lock(_Base):
     """A human (or approved-AI) decision that regeneration MUST NOT overwrite."""
 
@@ -177,6 +184,25 @@ class Lock(_Base):
     at: str  # ISO-8601 UTC, second resolution
     was: Any | None = None  # the pre-edit value — makes the edit reversible
     reason: str | None = None
+
+    @field_validator("by")
+    @classmethod
+    def _by_must_be_attributed(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Lock.by must not be empty — who made this edit?")
+        return value
+
+    @field_validator("at")
+    @classmethod
+    def _at_must_be_iso_utc(cls, value: str) -> str:
+        try:
+            datetime.strptime(value, _LOCK_AT_FORMAT)
+        except ValueError as e:
+            raise ValueError(
+                f"Lock.at must be ISO-8601 UTC, second resolution "
+                f"('2026-08-30T00:00:00Z'); got {value!r}"
+            ) from e
+        return value
 
 
 class Origin(_Base):
