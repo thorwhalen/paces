@@ -610,6 +610,19 @@ holds at the document layer too), and that append to the op-log.
   pitfall): **WebVTT chapters**, **YouTube chapter block**, W3C Web Annotation, and `.annot`.
   The first three are ~20 lines each and prove the AST/renderer split immediately.
 
+### 6.6 Edit-protection residuals (issue #12)
+
+PR #11's three adversarial review rounds surfaced seven residuals, tracked as `thorwhalen/paces#12`. Four are fixed (`paces/model.py`, `paces/edits.py`):
+
+- `Lock.by` must be non-empty; `Lock.at` must match the ISO-8601 UTC second-resolution format `apply_edits` itself writes. Both previously accepted any string.
+- `validate_document` now flags any raw `float` reaching the wire outside a schema-typed float field (`confidence`) — closing the `Lock.was`/`attrs` hole described in §6.5, since both are typed `Any` and the schema alone can't catch a float landing in either.
+- `apply_edits` refuses renaming a step's `id` onto an id another step in the same list already uses, instead of accepting it and leaving `validate_document` to flag the resulting duplicate after the fact.
+- `merge_regenerated` no longer resurrects the pre-rename id: a step's own `/id` lock records the rename (`was` = old id), and a fresh projection that still emits that old id — because analysis has no knowledge of the rename — is matched to the renamed committed step instead of being merged in as an unrelated new one.
+
+Three are declined; see §7 for the one-line reasons: optional `SourceSpan.id` (the identity-swap fix — needs a schema change, out of scope here), the `Lock.path` camelCase/snake_case mismatch (documented instead, below), and the selection-boost scoring gap (the issue itself already defers it).
+
+**`Lock.path` spelling.** `Lock.path` segments are recorded in **snake_case** (`/spans/0/some_field`), matching Python attribute names — not the wire's camelCase. A consumer resolving a `Lock.path` against the *wire* JSON (camelCase keys) must convert each field segment with the same `alias_generator=to_camel` the model uses (`pydantic.alias_generators.to_camel`) before indexing into it. List-item segments (an id or an index) need no conversion. This is a documented convention, not a bug: changing what gets *recorded* would be an on-disk format change for every already-written lock, which issue #12 was scoped to avoid.
+
 ---
 
 ## 7. What I deliberately left out, and why
@@ -627,6 +640,8 @@ holds at the document layer too), and that append to the op-log.
 | **A `kind`/`type` discriminated union on `Step`** | the POC needed exactly one step type. `Beat`-like non-content steps (a title card, a rest) can be `Step(tags=["rest"], spans=[])`. Add the union at the third real variant, not the first. |
 | **`TimeInterval` on the document's spans** | `{"start":{"v":231300,"r":1000},"end":…}` is correct and unreadable. Decimal strings on the wire, `RationalTime` in memory, one converter in the loader. Inside the lacing store, rational all the way. |
 | **A DSL / Markdown authoring layer** | `an/ir/sync.py` proves it can be done and its bidirectional round-trip is the riskiest code in that package. JSON + typed patches first; add a Markdown face only after the JSON contract has survived two renderers. |
+| **Optional `SourceSpan.id`** (issue #12) | the real cure for the one residual mis-identification case a structural match can't beat (identity-swapping content: a locked span whose start moves while a same-`(source, role)` sibling assumes its exact old start). Fits #4's evidence-layer timeline (store-side identity adoption wants ids anyway) — add it there, as a schema change, not as an unscoped addition here. |
+| **Refusing selection-boost scoring on fact presence vs. usability** (issue #12) | boundaries + N names + N matching chapters can pick `explicit` (unnamed spans + mismatch flag) where `chapters` would have named everything — honestly flagged today (the mismatch flag says so), never silently wrong. Revisiting the scoring function meaningfully needs a third real case to generalize from; the issue itself defers this to when a fourth segmenter lands. |
 
 ---
 
