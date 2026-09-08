@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.edits &mdash; paces 0.0.8 documentation</title>
+  <title>paces.edits &mdash; paces 0.0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=53b53b71"></script>
+      <script src="../../_static/documentation_options.js?v=f7cdbf68"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -121,6 +121,16 @@
 <span class="sd">  edit does not survive; only its lock record does.</span>
 <span class="sd">- ``attrs`` bags merge committed-over-fresh per key: they are user/renderer</span>
 <span class="sd">  data that analysis does not produce, so regeneration never wins there.</span>
+<span class="sd">- Renaming a list item's ``id`` onto an id already used by another item in</span>
+<span class="sd">  the same list is refused at edit time (previously accepted, and only</span>
+<span class="sd">  flagged later by :func:`~paces.model.validate_document`) — issue #12.</span>
+<span class="sd">- A step rename (its own ``/id`` lock) is remembered by :func:`merge_regenerated`:</span>
+<span class="sd">  a fresh projection that still emits the pre-rename id (because analysis</span>
+<span class="sd">  does not know about the rename) is matched to the renamed committed step</span>
+<span class="sd">  instead of being treated as a new, unrelated step — otherwise the old id</span>
+<span class="sd">  resurfaces alongside the renamed one. This does not follow renames inside</span>
+<span class="sd">  a merge across multiple regenerations; only the most recent ``/id`` lock is</span>
+<span class="sd">  consulted (issue #12).</span>
 
 <span class="sd">Not yet recorded anywhere: the fresh values a merge *rejects*</span>
 <span class="sd">(``Origin.value_digest`` and the op-log arrive with the evidence layer,</span>
@@ -216,6 +226,36 @@
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: cannot set into </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_all_steps</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Every step in the tree, depth-first — matching the scope of</span>
+<span class="sd">    :func:`~paces.model.validate_document`'s step-id uniqueness check, which</span>
+<span class="sd">    is document-wide, not per-sibling-list."""</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_all_steps</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">[])))</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_containing_list</span><span class="p">(</span><span class="n">dump</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The list holding the item whose own field the leaf segment addresses</span>
+<span class="sd">    (e.g. for ``/steps/a/id``, the ``steps`` list a and its siblings live in),</span>
+<span class="sd">    or ``None`` when the leaf isn't a field on a list item."""</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">dump</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">segment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]):</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">[:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">_index_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="n">_key_of</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">segment</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">at</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">node</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_canonical_segments</span><span class="p">(</span><span class="n">root</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">segments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""The stablest spelling of a path: snake_case fields; list items by id</span>
 <span class="sd">    when one exists unambiguously in that list, by index otherwise."""</span>
@@ -303,6 +343,33 @@
         <span class="n">raw_path</span> <span class="o">=</span> <span class="n">edit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
         <span class="n">segments</span> <span class="o">=</span> <span class="n">_canonical_segments</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">_split_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">),</span> <span class="n">path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">)</span>
         <span class="n">container</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">_resolve_parent</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"id"</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">new_id</span> <span class="o">=</span> <span class="n">edit</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span>
+            <span class="n">all_steps</span> <span class="o">=</span> <span class="n">_all_steps</span><span class="p">(</span><span class="n">dump</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"steps"</span><span class="p">,</span> <span class="p">[]))</span>
+            <span class="n">is_step</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="ow">is</span> <span class="n">container</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">all_steps</span><span class="p">)</span>
+            <span class="c1"># A step's id is unique document-wide (validate_document enforces</span>
+            <span class="c1"># this across the whole tree, not per sibling list) — check the</span>
+            <span class="c1"># same scope here. Everything else (sources, cues, questions)</span>
+            <span class="c1"># only needs uniqueness within its own list.</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">all_steps</span> <span class="k">if</span> <span class="n">is_step</span> <span class="k">else</span> <span class="p">(</span><span class="n">_containing_list</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">segments</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+            <span class="p">)</span>
+            <span class="n">collision</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="n">candidate</span>
+                    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">candidates</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="n">candidate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">container</span>
+                    <span class="ow">and</span> <span class="n">candidate</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">new_id</span>
+                <span class="p">),</span>
+                <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">collision</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">scope</span> <span class="o">=</span> <span class="s2">"the document"</span> <span class="k">if</span> <span class="n">is_step</span> <span class="k">else</span> <span class="s2">"the same list"</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"edits[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]: cannot rename id to </span><span class="si">{</span><span class="n">new_id</span><span class="si">!r}</span><span class="s2"> — already used "</span>
+                    <span class="sa">f</span><span class="s2">"by another item in </span><span class="si">{</span><span class="n">scope</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
         <span class="c1"># The lock site must resolve BEFORE the mutation: an edit may change</span>
         <span class="c1"># the very value a segment addresses (renaming a step's id).</span>
         <span class="n">site</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">_lock_site</span><span class="p">(</span><span class="n">dump</span><span class="p">,</span> <span class="n">segments</span><span class="p">)</span>
@@ -442,14 +509,47 @@
     <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">fresh</span><span class="p">)),</span> <span class="o">**</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">committed</span><span class="p">))}</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_renamed_from</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""old id -&gt; committed step, for steps whose own ``/id`` lock records a</span>
+<span class="sd">    rename (``apply_edits`` writes exactly this). Analysis that re-runs</span>
+<span class="sd">    without knowledge of the rename still emits the old id — without this,</span>
+<span class="sd">    that fresh step would be treated as unrelated and the old id would</span>
+<span class="sd">    resurface alongside the renamed one (issue #12)."""</span>
+    <span class="n">out</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">committed</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">lock</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"locks"</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="k">if</span> <span class="n">lock</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"/id"</span> <span class="ow">and</span> <span class="n">lock</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"was"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">lock</span><span class="p">[</span><span class="s2">"was"</span><span class="p">])]</span> <span class="o">=</span> <span class="n">step</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_merge_steps</span><span class="p">(</span><span class="n">committed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">fresh</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
     <span class="n">committed_by_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">committed</span><span class="p">:</span>  <span class="c1"># first occurrence wins, matching apply_edits</span>
         <span class="n">committed_by_id</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span> <span class="n">step</span><span class="p">)</span>
+    <span class="n">renamed_from</span> <span class="o">=</span> <span class="n">_renamed_from</span><span class="p">(</span><span class="n">committed</span><span class="p">)</span>
     <span class="n">fresh_ids</span> <span class="o">=</span> <span class="p">{</span><span class="n">step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">fresh</span><span class="p">}</span>
+
+    <span class="c1"># Direct id matches are resolved FIRST and claim their committed step</span>
+    <span class="c1"># before any rename substitution runs: if fresh already carries the</span>
+    <span class="c1"># renamed id, that's the real match, and a stray fresh entry still using</span>
+    <span class="c1"># the old id (analysis emitting both, or simply unrelated) must not also</span>
+    <span class="c1"># claim the same committed step — that would merge one committed step</span>
+    <span class="c1"># into two output entries with the same id (issue #12, blocking review).</span>
+    <span class="n">matched_committed_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">committed_by_id</span><span class="p">[</span><span class="n">fresh_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]][</span><span class="s2">"id"</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">fresh_step</span> <span class="ow">in</span> <span class="n">fresh</span>
+        <span class="k">if</span> <span class="n">fresh_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">committed_by_id</span>
+    <span class="p">}</span>
+
     <span class="n">merged</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">fresh_step</span> <span class="ow">in</span> <span class="n">fresh</span><span class="p">:</span>
         <span class="n">committed_step</span> <span class="o">=</span> <span class="n">committed_by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">committed_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">candidate</span> <span class="o">=</span> <span class="n">renamed_from</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">candidate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">candidate</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">matched_committed_ids</span><span class="p">:</span>
+                <span class="n">committed_step</span> <span class="o">=</span> <span class="n">candidate</span>
+                <span class="n">matched_committed_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">candidate</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">committed_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">fresh_step</span><span class="p">))</span>
             <span class="k">continue</span>
@@ -468,7 +568,10 @@
     <span class="c1"># Committed-only steps survive when they carry protection (locks anywhere</span>
     <span class="c1"># in their subtree, or a user origin); analysis leftovers are superseded.</span>
     <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">committed_step</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">committed</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">committed_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">fresh_ids</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">committed_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">fresh_ids</span>
+            <span class="ow">or</span> <span class="n">committed_step</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">matched_committed_ids</span>
+        <span class="p">):</span>
             <span class="k">continue</span>
         <span class="n">subtree_protected</span> <span class="o">=</span> <span class="n">_is_protected</span><span class="p">(</span><span class="n">committed_step</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
             <span class="n">_is_protected</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">_walk_dumps</span><span class="p">(</span><span class="n">committed_step</span><span class="p">)</span>

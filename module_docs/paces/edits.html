@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.edits &mdash; paces 0.0.8 documentation</title>
+  <title>paces.edits &mdash; paces 0.0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=53b53b71"></script>
+      <script src="../../_static/documentation_options.js?v=f7cdbf68"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -129,6 +129,16 @@ value, so an edited scalar cannot be re-found after regeneration — the
 edit does not survive; only its lock record does.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">attrs</span></code> bags merge committed-over-fresh per key: they are user/renderer
 data that analysis does not produce, so regeneration never wins there.</p></li>
+<li><p>Renaming a list item’s <code class="docutils literal notranslate"><span class="pre">id</span></code> onto an id already used by another item in
+the same list is refused at edit time (previously accepted, and only
+flagged later by <a class="reference internal" href="model.html#paces.model.validate_document" title="paces.model.validate_document"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_document()</span></code></a>) — issue #12.</p></li>
+<li><p>A step rename (its own <code class="docutils literal notranslate"><span class="pre">/id</span></code> lock) is remembered by <a class="reference internal" href="#paces.edits.merge_regenerated" title="paces.edits.merge_regenerated"><code class="xref py py-func docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a>:
+a fresh projection that still emits the pre-rename id (because analysis
+does not know about the rename) is matched to the renamed committed step
+instead of being treated as a new, unrelated step — otherwise the old id
+resurfaces alongside the renamed one. This does not follow renames inside
+a merge across multiple regenerations; only the most recent <code class="docutils literal notranslate"><span class="pre">/id</span></code> lock is
+consulted (issue #12).</p></li>
 </ul>
 <p>Not yet recorded anywhere: the fresh values a merge <em>rejects</em>
 (<code class="docutils literal notranslate"><span class="pre">Origin.value_digest</span></code> and the op-log arrive with the evidence layer,
