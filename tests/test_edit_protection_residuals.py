@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from paces.edits import apply_edits
+from paces.edits import apply_edits, merge_regenerated
 from paces.model import (
     Lock,
     Measure,
@@ -167,3 +167,19 @@ def test_apply_edits_allows_renaming_id_to_itself():
         by="user:thor",
     )
     assert [s.id for s in doc.steps] == ["a", "b"]
+
+
+# ── merge after an id rename does not resurrect the old id ──────────────────
+
+
+def test_merge_regenerated_does_not_resurrect_the_pre_rename_id():
+    committed = apply_edits(
+        _two_step_doc(),
+        [{"op": "set", "path": "/steps/a/id", "value": "a2"}],
+        by="user:thor",
+    )
+    # Analysis re-runs without knowledge of the rename: it still emits "a".
+    fresh = _two_step_doc()
+    merged = merge_regenerated(committed, fresh)
+    assert [s.id for s in merged.steps] == ["a2", "b"]
+    assert merged.steps[0].name == "Step A"

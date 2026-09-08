@@ -37,6 +37,13 @@ Path rules (each earned by an adversarial review, PR #11):
 - Renaming a list item's ``id`` onto an id already used by another item in
   the same list is refused at edit time (previously accepted, and only
   flagged later by :func:`~paces.model.validate_document`) — issue #12.
+- A step rename (its own ``/id`` lock) is remembered by :func:`merge_regenerated`:
+  a fresh projection that still emits the pre-rename id (because analysis
+  does not know about the rename) is matched to the renamed committed step
+  instead of being treated as a new, unrelated step — otherwise the old id
+  resurfaces alongside the renamed one. This does not follow renames inside
+  a merge across multiple regenerations; only the most recent ``/id`` lock is
+  consulted (issue #12).
 
 Not yet recorded anywhere: the fresh values a merge *rejects*
 (``Origin.value_digest`` and the op-log arrive with the evidence layer,
@@ -391,17 +398,36 @@ def _merged_attrs(committed: Mapping, fresh: Mapping) -> dict:
     return {**copy.deepcopy(dict(fresh)), **copy.deepcopy(dict(committed))}
 
 
+def _renamed_from(committed: list[dict]) -> dict[str, dict]:
+    """old id -> committed step, for steps whose own ``/id`` lock records a
+    rename (``apply_edits`` writes exactly this). Analysis that re-runs
+    without knowledge of the rename still emits the old id — without this,
+    that fresh step would be treated as unrelated and the old id would
+    resurface alongside the renamed one (issue #12)."""
+    out: dict[str, dict] = {}
+    for step in committed:
+        for lock in step.get("locks", []):
+            if lock.get("path") == "/id" and lock.get("was") is not None:
+                out[str(lock["was"])] = step
+    return out
+
+
 def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
     committed_by_id: dict[str, dict] = {}
     for step in committed:  # first occurrence wins, matching apply_edits
         committed_by_id.setdefault(step["id"], step)
+    renamed_from = _renamed_from(committed)
     fresh_ids = {step["id"] for step in fresh}
+    matched_committed_ids: set[str] = set()
     merged: list[dict] = []
     for fresh_step in fresh:
-        committed_step = committed_by_id.get(fresh_step["id"])
+        committed_step = committed_by_id.get(fresh_step["id"]) or renamed_from.get(
+            fresh_step["id"]
+        )
         if committed_step is None:
             merged.append(copy.deepcopy(fresh_step))
             continue
+        matched_committed_ids.add(committed_step["id"])
         out = copy.deepcopy(fresh_step)
         out["steps"] = _merge_steps(
             committed_step.get("steps", []), fresh_step.get("steps", [])
@@ -417,7 +443,10 @@ def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
     # Committed-only steps survive when they carry protection (locks anywhere
     # in their subtree, or a user origin); analysis leftovers are superseded.
     for position, committed_step in enumerate(committed):
-        if committed_step["id"] in fresh_ids:
+        if (
+            committed_step["id"] in fresh_ids
+            or committed_step["id"] in matched_committed_ids
+        ):
             continue
         subtree_protected = _is_protected(committed_step) or any(
             _is_protected(child) for child in _walk_dumps(committed_step)
