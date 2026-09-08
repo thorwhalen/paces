@@ -1,0 +1,746 @@
+{
+  "annot://schema/guide-beat/v1": {
+    "additionalProperties": false,
+    "description": "One measured beat. The time is the reference's point interval.",
+    "properties": {
+      "index": {
+        "description": "Position in the measured beat sequence, 0-based.",
+        "title": "Index",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "index"
+    ],
+    "title": "GuideBeatBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-cue/v1": {
+    "additionalProperties": false,
+    "description": "A landmark the learner can hear or watch for, anchored to a step.",
+    "properties": {
+      "at_resolved": {
+        "default": false,
+        "description": "True when the cue's wall-clock position in that source is known, in which case the reference is a point at it. False means the annotation sits at tick 0 because there is nothing better — the one bit that keeps 'at second zero' distinct from 'unknown'.",
+        "title": "At Resolved",
+        "type": "boolean"
+      },
+      "attrs": {
+        "additionalProperties": true,
+        "description": "Open bag.",
+        "title": "Attrs",
+        "type": "object"
+      },
+      "cue_id": {
+        "description": "Stable id within the guide.",
+        "title": "Cue Id",
+        "type": "string"
+      },
+      "doc_id": {
+        "description": "Which guide this cue belongs to.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "duration_unit": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Unit of ``duration_value``.",
+        "title": "Duration Unit"
+      },
+      "duration_value": {
+        "anyOf": [
+          {
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "How long the cue lasts, in the domain unit.",
+        "title": "Duration Value"
+      },
+      "kind": {
+        "description": "lyric | count | audio-landmark | caption | ...",
+        "title": "Kind",
+        "type": "string"
+      },
+      "offset_unit": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Unit of ``offset_value``.",
+        "title": "Offset Unit"
+      },
+      "offset_value": {
+        "anyOf": [
+          {
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Offset into the step, in the domain unit. RELATIVE, always — an absolute cue time is computed by ``resolve()``, never stored.",
+        "title": "Offset Value"
+      },
+      "ordinal": {
+        "description": "Position in the document's cue list, 0-based.",
+        "title": "Ordinal",
+        "type": "integer"
+      },
+      "source": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Which source the cue was heard in, when known.",
+        "title": "Source"
+      },
+      "step_id": {
+        "description": "The step this cue is anchored to.",
+        "title": "Step Id",
+        "type": "string"
+      },
+      "text": {
+        "description": "What the learner hears or reads.",
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "doc_id",
+      "ordinal",
+      "cue_id",
+      "kind",
+      "text",
+      "step_id"
+    ],
+    "title": "GuideCueBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-doc/v1": {
+    "additionalProperties": false,
+    "description": "The guide's envelope: identity, presentation language, and the run.",
+    "properties": {
+      "attrs": {
+        "additionalProperties": true,
+        "description": "Namespaced open bag, as on the document.",
+        "title": "Attrs",
+        "type": "object"
+      },
+      "credits": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Attribution line, when there is one.",
+        "title": "Credits"
+      },
+      "doc_id": {
+        "description": "Stable slug of the guide within a project. Distinct from the annotation id, and the field that lets one store hold several guides over the same asset.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "domain": {
+        "default": "generic",
+        "description": "Domain slug: dance | recipe | workout | ...",
+        "title": "Domain",
+        "type": "string"
+      },
+      "flags": {
+        "description": "The run's honesty flags (``Segmentation.flags``) — 'naming-abstained', 'origin-estimated: ...', and friends. Evidence about the run, never projected into the document.",
+        "items": {
+          "type": "string"
+        },
+        "title": "Flags",
+        "type": "array"
+      },
+      "lang": {
+        "default": "en",
+        "description": "BCP-47 language tag of the guide's prose.",
+        "title": "Lang",
+        "type": "string"
+      },
+      "method": {
+        "default": "",
+        "description": "Which segmentation capability produced the steps (``Segmentation.method``). Empty when unrecorded.",
+        "title": "Method",
+        "type": "string"
+      },
+      "schema_version": {
+        "description": "Version of the StepDocument schema this was projected at.",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "title": {
+        "description": "Human title of the guide.",
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "doc_id",
+      "title",
+      "schema_version"
+    ],
+    "title": "GuideDocBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-grid/v1": {
+    "additionalProperties": false,
+    "description": "How the domain unit relates to wall-clock time, over the region it governs.\n\nThe document's ``metric`` is projected straight back out of this — one\ngrid, one source of truth, no second copy in the document envelope.",
+    "properties": {
+      "beat_count": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "How many beats were actually tracked, when the grid was measured rather than supplied. None means nobody counted.",
+        "title": "Beat Count"
+      },
+      "doc_id": {
+        "description": "Which guide this grid governs. The grid is per-guide, not per-asset: two guides can count the same video differently.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "method": {
+        "default": "",
+        "description": "Which capability produced the grid ('grid-measured', 'grid-placed'). Empty when the caller supplied it outright.",
+        "title": "Method",
+        "type": "string"
+      },
+      "origin": {
+        "anyOf": [
+          {
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Seconds into ``origin_source`` where unit 0 starts.",
+        "title": "Origin"
+      },
+      "origin_source": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Which source ``origin`` is measured in.",
+        "title": "Origin Source"
+      },
+      "subdivisions": {
+        "default": 1,
+        "description": "Beats per unit (8 for an 8-count).",
+        "minimum": 1,
+        "title": "Subdivisions",
+        "type": "integer"
+      },
+      "tempo_bpm": {
+        "anyOf": [
+          {
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Tempo as a decimal string. None spells 'tempo unknown' — never '0'.",
+        "title": "Tempo Bpm"
+      },
+      "unit": {
+        "description": "The domain unit counted: eight | bar | rep.",
+        "title": "Unit",
+        "type": "string"
+      }
+    },
+    "required": [
+      "doc_id",
+      "unit"
+    ],
+    "title": "GuideGridBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-pass/v1": {
+    "additionalProperties": false,
+    "description": "A stretch of one source with a single character (music, speech, ...).",
+    "properties": {
+      "detector": {
+        "default": "",
+        "description": "What produced the split ('mixing.find_segments:speech_music'). Empty when the caller supplied passes without saying.",
+        "title": "Detector",
+        "type": "string"
+      },
+      "label": {
+        "description": "What this stretch is: 'music' | 'speech' | '' when the detector found a segment it would not name.",
+        "title": "Label",
+        "type": "string"
+      }
+    },
+    "required": [
+      "label"
+    ],
+    "title": "GuidePassBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-recipe/v1": {
+    "additionalProperties": false,
+    "description": "One span's derivation parameters, keyed by the span address.",
+    "properties": {
+      "box": {
+        "anyOf": [
+          {
+            "items": {
+              "pattern": "^-?\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The resolved crop box (x, y, w, h) in pixels, as decimal strings. None means full frame — a recorded decision, not a gap.",
+        "title": "Box"
+      },
+      "doc_id": {
+        "description": "Which guide this recipe belongs to.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "frame_height": {
+        "description": "Source frame height the box is in.",
+        "title": "Frame Height",
+        "type": "integer"
+      },
+      "frame_width": {
+        "description": "Source frame width the box is in.",
+        "title": "Frame Width",
+        "type": "integer"
+      },
+      "locator": {
+        "description": "Which subject locator resolved the box ('full_frame', ...).",
+        "title": "Locator",
+        "type": "string"
+      },
+      "locked": {
+        "default": false,
+        "description": "A human set this box; reconcile must not re-derive it.",
+        "title": "Locked",
+        "type": "boolean"
+      },
+      "media_digest": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "What the stored media was actually cut with (box + window + source hash). A hand-edited box or a re-timed window changes it and forces a re-encode instead of serving stale bytes.",
+        "title": "Media Digest"
+      },
+      "params": {
+        "additionalProperties": {
+          "pattern": "^-?\\d+(\\.\\d+)?$",
+          "type": "string"
+        },
+        "description": "Policy parameters the box was resolved under (aspect, pad). A change here re-locates an unlocked entry.",
+        "title": "Params",
+        "type": "object"
+      },
+      "source_asset_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Hash of the media cut from. None = identity unverified.",
+        "title": "Source Asset Id"
+      },
+      "span_key": {
+        "description": "The span address ``{step_id}/{source}/{role}/{start}`` — the same key ``paces.derivation`` writes into the committed sidecar, so the two layers join without a translation table.",
+        "title": "Span Key",
+        "type": "string"
+      },
+      "step_id": {
+        "description": "The step this recipe derives media for.",
+        "title": "Step Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "doc_id",
+      "span_key",
+      "step_id",
+      "frame_width",
+      "frame_height",
+      "locator"
+    ],
+    "title": "GuideRecipeBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-source/v1": {
+    "additionalProperties": false,
+    "description": "One input the guide's spans refer into.",
+    "properties": {
+      "asset_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Content hash of a local copy, if any.",
+        "title": "Asset Id"
+      },
+      "attribution": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Who made it.",
+        "title": "Attribution"
+      },
+      "attrs": {
+        "additionalProperties": true,
+        "description": "Open bag.",
+        "title": "Attrs",
+        "type": "object"
+      },
+      "doc_id": {
+        "description": "Which guide this source belongs to — one store can hold several guides over the same asset, and a projection has to read back only its own.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "duration_s": {
+        "anyOf": [
+          {
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Source duration in seconds, as a decimal string.",
+        "title": "Duration S"
+      },
+      "kind": {
+        "description": "video | audio | image | document | url.",
+        "title": "Kind",
+        "type": "string"
+      },
+      "ordinal": {
+        "description": "Position in the document's source list, 0-based.",
+        "title": "Ordinal",
+        "type": "integer"
+      },
+      "rights": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Usage rights. First-class in this domain (``docs/07 §8.7``): a guide that restyles someone's choreography has to say so.",
+        "title": "Rights"
+      },
+      "source_id": {
+        "description": "Slug of the source within the guide. Not the annotation id.",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "title": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Source title.",
+        "title": "Title"
+      },
+      "uri": {
+        "description": "Where the source lives.",
+        "title": "Uri",
+        "type": "string"
+      }
+    },
+    "required": [
+      "doc_id",
+      "ordinal",
+      "source_id",
+      "kind",
+      "uri"
+    ],
+    "title": "GuideSourceBodyV1",
+    "type": "object"
+  },
+  "annot://schema/guide-step/v1": {
+    "additionalProperties": false,
+    "description": "One step's presence in one span (or its absence from every span).",
+    "properties": {
+      "attrs": {
+        "additionalProperties": true,
+        "description": "Namespaced open bag, as on the step.",
+        "title": "Attrs",
+        "type": "object"
+      },
+      "description": {
+        "default": "",
+        "description": "Prose about the step.",
+        "title": "Description",
+        "type": "string"
+      },
+      "doc_id": {
+        "description": "Which guide this step belongs to.",
+        "title": "Doc Id",
+        "type": "string"
+      },
+      "duration_unit": {
+        "description": "The domain unit: eight | rep | second.",
+        "title": "Duration Unit",
+        "type": "string"
+      },
+      "duration_value": {
+        "description": "Duration in the domain's own unit, as a decimal string.",
+        "pattern": "^-?\\d+(\\.\\d+)?$",
+        "title": "Duration Value",
+        "type": "string"
+      },
+      "name": {
+        "default": "",
+        "description": "The step's name. Empty means found-but-not-named, a valid state.",
+        "title": "Name",
+        "type": "string"
+      },
+      "optional": {
+        "default": false,
+        "description": "'Facultatif — si tu le sens'.",
+        "title": "Optional",
+        "type": "boolean"
+      },
+      "ordinal": {
+        "description": "Position among siblings, 0-based. Order is semantic.",
+        "title": "Ordinal",
+        "type": "integer"
+      },
+      "parent_step_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Enclosing step's id; None for a top-level step.",
+        "title": "Parent Step Id"
+      },
+      "repeat": {
+        "default": 1,
+        "description": "How many times the children cycle.",
+        "title": "Repeat",
+        "type": "integer"
+      },
+      "span_attrs": {
+        "additionalProperties": true,
+        "description": "Open bag on the span.",
+        "title": "Span Attrs",
+        "type": "object"
+      },
+      "span_caption": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Prose about THIS span, not about the step.",
+        "title": "Span Caption"
+      },
+      "span_confidence": {
+        "anyOf": [
+          {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Confidence in this span specifically.",
+        "title": "Span Confidence"
+      },
+      "span_count": {
+        "default": 0,
+        "description": "How many spans the step has, so a reader can tell rows apart.",
+        "title": "Span Count",
+        "type": "integer"
+      },
+      "span_index": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Which of the step's spans this annotation is, 0-based. None means the step has no spans at all and this is its only row.",
+        "title": "Span Index"
+      },
+      "span_label": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Short label for this span.",
+        "title": "Span Label"
+      },
+      "span_open_ended": {
+        "default": false,
+        "description": "The span recorded a start but no end — a deep link, not an interval. The reference interval is then a point at the start, and this flag is what keeps that distinct from a zero-length span.",
+        "title": "Span Open Ended",
+        "type": "boolean"
+      },
+      "span_role": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "performance | instruction | closeup | ... (open vocab).",
+        "title": "Span Role"
+      },
+      "span_source": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Slug of the source the span refers into.",
+        "title": "Span Source"
+      },
+      "step_id": {
+        "description": "Stable id within the guide ('b4'). Distinct from the annotation id — document ids are slugs, store ids are UUIDs, and the two are related by this field, never conflated.",
+        "title": "Step Id",
+        "type": "string"
+      },
+      "tags": {
+        "description": "Open tag vocabulary.",
+        "items": {
+          "type": "string"
+        },
+        "title": "Tags",
+        "type": "array"
+      },
+      "variant_of": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Another angle on that step, not a new step.",
+        "title": "Variant Of"
+      }
+    },
+    "required": [
+      "doc_id",
+      "step_id",
+      "ordinal",
+      "duration_value",
+      "duration_unit"
+    ],
+    "title": "GuideStepBodyV1",
+    "type": "object"
+  }
+}

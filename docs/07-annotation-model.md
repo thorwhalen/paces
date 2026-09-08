@@ -551,34 +551,74 @@ class StepDocument(_Base):
 | survives re-generation; human edits not lost | `Lock` list per node + `Origin.value_digest`; regeneration is `reelee.edits.regen`'s algorithm — re-derive, **adopt the superseded id**, skip locked paths, and use `annotation_value_digest` to stop propagating when nothing changed |
 | plain JSON, git-diffable | see §6.5 |
 
-### 6.3 Projection contract: lacing tiers → document
+### 6.3 Projection contract: lacing tiers → document — **SHIPPED** (issue #4)
 
-Register these body schemas (`lacing.schema.register_body_schema`) in the new package's
-`bodies/`, alongside the ones that already exist:
+Implemented in `paces/bodies/` (the schemas) and `paces/evidence.py` (`to_store`,
+`from_store`), behind the `[lacing]` extra. The table below is what actually ships; the
+column on the right records where it differs from this file's original proposal and why.
 
 | tier | stereotype | parent | body schema | holds |
 |---|---|---|---|---|
-| `source.pass` | `NONE` | — | `annot://schema/media-pass/v1` | *"[45s, 215s] is a performance pass; [220s, 520s] is an instruction pass"* — **detecting this is a first-class Phase-1 job** and is what made the POC's dual timestamps possible |
-| `step` | `NONE` | — | `annot://schema/step/v1` | one annotation **per (step, span)**; body carries `step_id`, `role`, `name`, `description` |
-| `step.sub` | `INCLUDED_IN` | `step` | `annot://schema/step/v1` | sub-steps |
-| `cue` | `INCLUDED_IN` | `step` | `annot://schema/cue/v1` | lyric/audio landmarks |
-| `transcript.segment` / `transcript.word` | `NONE` | — | `word/v1` (**exists**) | whisper output |
-| `beat` | `NONE` | — | `annot://schema/beat/v1` | `beats.npy` |
-| `derivation` | `SYMBOLIC_ASSOCIATION` | `step` | `annot://schema/derivation-recipe/v1` | crop box, fps, palette — the *parameters*, so a re-run is stable and a human override survives |
+| `document` | `NONE` | — | `annot://schema/guide-doc/v1` | the guide's envelope: id, title, lang, domain, plus the run's own `method` and honesty `flags` |
+| `source` | `NONE` | — | `annot://schema/guide-source/v1` | one per `Source` |
+| `source.pass` | `NONE` | — | `annot://schema/guide-pass/v1` | *"[0s, 51.2s] is speech; [51.2s, 400s] is music"* — the split `paces.measure` gets from `mixing.find_segments`, and what made the POC's dual timestamps possible |
+| `step` | `NONE` | — | `annot://schema/guide-step/v1` | one annotation **per (step, span)**; `step_id`, `parent_step_id`, `ordinal`, `span_index`, name, description, duration |
+| `step.sub` | `INCLUDED_IN` | `step` | `annot://schema/guide-step/v1` | sub-steps |
+| `cue` | `INCLUDED_IN` | `step` | `annot://schema/guide-cue/v1` | lyric/audio landmarks |
+| `grid` | `NONE` | — | `annot://schema/guide-grid/v1` | the metric grid, **one** annotation over the region it governs; the document's `metric` is projected straight back out of it |
+| `beat` | `NONE` | — | `annot://schema/guide-beat/v1` | one point annotation per *measured* beat |
+| `transcript.word` | `NONE` | — | `word/v1` (**lacing's, reused unchanged**) | whisper output |
+| `derivation` | `SYMBOLIC_ASSOCIATION` | `step` | `annot://schema/guide-recipe/v1` | the crop box, window, locator and policy params — the *parameters*, so a re-run is stable and a human override survives |
 
-`step/v1` body ≈ `{step_id, parent_step_id, role, name, description, duration_value,
-duration_unit, ordinal}`. Note the shape mirrors `nw/bodies/section.py`'s
-`SectionBodyV1{section_id, label, energy, mood}` — the `*_id` field is *"Stable id within a
-project… **Distinct from the annotation id**"*. Same discipline: document ids are slugs,
-store ids are UUIDs, and they are related by a body field, never conflated.
+**Why `guide-`, and not the bare names this file first proposed.**
+`lacing.schema.register_body_schema` is last-write-wins and silent, and the URI namespace
+is one flat, fleet-wide dict populated by import side effects. `annot://schema/beat/v1` is
+**already** `reelee/bodies/beat.py`'s *narrative* beat — claiming it would have replaced
+reelee's validator in any process importing both. `braidio` had already hit this and named
+its own `narrative-beat/v1`. So paces takes one rule rather than a per-name judgement:
+every URI it owns is prefixed `guide-` (the thing it describes, reusable by any other
+producer of a step guide), and the one URI it does not own — `word/v1` — is reused. The
+URI set and each schema's content are pinned in `tests/test_evidence_schemas.py` against a
+committed snapshot, so a rename or a field change fails the build. Tier names are
+unprefixed: tiers are store-local and cost nothing.
+
+`guide-step/v1`'s `step_id` mirrors `nw/bodies/section.py`'s `SectionBodyV1{section_id,
+…}` — *"Stable id within a project… **Distinct from the annotation id**"*. Same
+discipline: document ids are slugs, store ids are UUIDs, related by a body field, never
+conflated.
+
+**Two rules the implementation holds absolutely.** No interval ever appears in a body —
+these are standoff annotations, and the interval lives on `Annotation.reference`; and no
+float crosses the boundary — times become `RationalTime` ticks at an injectable `rate=`
+(default 24000), where a value the rate cannot hold exactly raises rather than rounding.
+
+**What does not flow into the store**: `locks`, `questions`, `artifacts`, and span
+`excerpt` windows. Those are document-layer records — a human edit, an open question, a
+built file, a hand-picked loop — and §6.0's one-way rule is what says so.
+`from_store` returns them empty, which is exactly what `to_document` emits, so the round
+trip is byte-exact.
 
 ### 6.4 Regeneration algorithm (adapt `reelee/edits.py`, don't reinvent)
 
-1. Re-run analysis → new annotations in the store, each with fresh `uuid4` + provenance.
-2. For each, compute `annotation_value_digest`. Unchanged digest ⇒ **stop propagating**; the
-   downstream artifacts are still valid and cost nothing.
-3. Changed digest ⇒ the regenerated annotation **adopts the id of the one it supersedes**
-   (`_adopt_output_identity`), so downstream `was_derived_from` edges keep resolving.
+Steps 1–3 are the store side and **shipped** with issue #4; steps 4–6 are the document
+side and ship with the edit-protection work (`paces/edits.py`).
+
+1. Re-run analysis → annotations in the store. paces derives each id as
+   `uuid5(PACES_NAMESPACE, f"{tier}\n{evidence_key}")` rather than minting a fresh `uuid4`,
+   where the evidence key is the span address `paces/derivation.py` already uses.
+2. For each, compute `annotation_value_digest`. Unchanged digest ⇒ **stop propagating** —
+   and paces leaves the row *completely* untouched, provenance included, so
+   `generated_at_time` does not churn and freshness does not fire. A second `to_store` of
+   the same input writes zero annotations.
+3. Changed digest ⇒ the regenerated annotation replaces the one it supersedes **under the
+   same id**, so downstream `was_derived_from` edges keep resolving. `reelee` does this
+   procedurally (`_adopt_output_identity`); with a derived id it holds by construction, and
+   `to_store` is reproducible from a fresh store as a bonus.
+   A row the re-run no longer produces is *removed*, not left behind — `reelee`'s
+   *"the graph is a set of nodes whose values are re-derivable, not an append-only log"*,
+   applied. Pruning is scoped to the asset, the `doc_id`, and the tiers that run actually
+   wrote to, so omitting an optional evidence kwarg cannot delete an earlier producer's
+   rows.
 4. Re-project to a candidate `StepDocument`.
 5. Three-way merge against the committed document: for every `Lock.path` on a node, keep the
    committed value and record `Origin.value_digest` of what was rejected. For everything else,
@@ -598,8 +638,13 @@ holds at the document layer too), and that append to the op-log.
   for a model, since declaration order is the semantic order.
 - **No floats anywhere on the wire.** Decimal strings (`"231.3"`) — exact via `Fraction`,
   no `0.30000000000000004`, and they diff as one token. Parse to `RationalTime` on load.
-- **No absolute local paths, no per-run timestamps, no uuid4s** in the committed document.
-  `Lock.at` is the only timestamp, and it changes only when a human edits.
+- **No absolute local paths, no per-run timestamps, and no *churning* ids** in the
+  committed document. `Lock.at` is the only timestamp, and it changes only when a human
+  edits. This bullet used to say "no uuid4s", which contradicted §6.1's
+  `Origin.annotation_id`; issue #4 settled it on the rule's actual reason. A `uuid4` is
+  barred because it is different on every run; paces' annotation ids are `uuid5` over a
+  stable evidence key, so they never churn and `Origin.annotationId` /
+  `Origin.valueDigest` are committed.
 - `ArtifactRef.uri` is relative to the document. `asset_id` is the durable identity.
 - Sidecars: `project.annot` (SQLite lacing store, **gitignored**), `media/` (artifacts, either
   gitignored or LFS), `<stem>.recipes.json` (crop recipes, committed), `document.json`
@@ -640,7 +685,7 @@ Three are declined; see §7 for the one-line reasons: optional `SourceSpan.id` (
 | **A `kind`/`type` discriminated union on `Step`** | the POC needed exactly one step type. `Beat`-like non-content steps (a title card, a rest) can be `Step(tags=["rest"], spans=[])`. Add the union at the third real variant, not the first. |
 | **`TimeInterval` on the document's spans** | `{"start":{"v":231300,"r":1000},"end":…}` is correct and unreadable. Decimal strings on the wire, `RationalTime` in memory, one converter in the loader. Inside the lacing store, rational all the way. |
 | **A DSL / Markdown authoring layer** | `an/ir/sync.py` proves it can be done and its bidirectional round-trip is the riskiest code in that package. JSON + typed patches first; add a Markdown face only after the JSON contract has survived two renderers. |
-| **Optional `SourceSpan.id`** (issue #12) | the real cure for the one residual mis-identification case a structural match can't beat (identity-swapping content: a locked span whose start moves while a same-`(source, role)` sibling assumes its exact old start). Fits #4's evidence-layer timeline (store-side identity adoption wants ids anyway) — add it there, as a schema change, not as an unscoped addition here. |
+| **Optional `SourceSpan.id`** (issue #12) | the real cure for the one residual mis-identification case a structural match can't beat (identity-swapping content: a locked span whose start moves while a same-`(source, role)` sibling assumes its exact old start). This row expected #4 to want it ("store-side identity adoption wants ids anyway"); it turned out not to. Store-side identity is the span address `{step_id}/{source}/{role}/{start}` — already `paces/derivation.py`'s key, and already protected from collision by `validate_document`. So #4 declined it and it stays a #12 document-layer fix, for the lock-reapplication case it was actually diagnosed for. |
 | **Refusing selection-boost scoring on fact presence vs. usability** (issue #12) | boundaries + N names + N matching chapters can pick `explicit` (unnamed spans + mismatch flag) where `chapters` would have named everything — honestly flagged today (the mismatch flag says so), never silently wrong. Revisiting the scoring function meaningfully needs a third real case to generalize from; the issue itself defers this to when a fourth segmenter lands. |
 
 ---

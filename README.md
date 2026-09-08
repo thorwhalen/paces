@@ -114,6 +114,60 @@ run-through and the breakdown are the same step seen twice). Uncertainty is
 content (`OpenQuestion`), and human edits are protected from regeneration
 (`Lock`).
 
+## The evidence layer
+
+The document is the *contract*; the machine evidence behind it — the
+speech/music split, the metric grid, the beats, the transcript, the step
+candidates, the crop recipes, and the lineage between them — lives in a
+[`lacing`](https://github.com/thorwhalen/lacing) store, and the document is a
+**projection** of it. The document is derivable from the store; the store is
+not derivable from the document.
+
+```python
+from lacing import MemoryStore                 # pip install 'paces[lacing]'
+from paces import segment, from_store, to_store
+from paces.model import dumps_document
+
+seg = segment(None, steps=[("Mise en place", 2), ("Déhanchés", 8)], grid=GRID)
+
+store = MemoryStore()                          # or SqliteStore('project.annot')
+write = to_store(seg, store=store, asset_id=asset_sha256,
+                 doc_id="que-calor", title="Que Calor", domain="dance",
+                 source="https://youtu.be/q_TUyxUhoEw")
+
+dumps_document(from_store(store, asset_id=asset_sha256)) == dumps_document(write.document)
+# True — the projection is exact
+
+to_store(seg, store=store, asset_id=asset_sha256, doc_id="que-calor",
+         title="Que Calor", domain="dance",
+         source="https://youtu.be/q_TUyxUhoEw").written
+# 0 — a re-run of the same analysis writes nothing
+```
+
+The store is injected, never constructed for you: `MemoryStore()` in tests, a
+`SqliteStore` for a project sidecar, any `dol` store that conforms. Annotation
+ids are derived (`uuid5`) from the evidence they stand for, so a re-derivation
+*is* the same annotation — which is what keeps `was_derived_from` lineage
+resolving and lets `write.document`'s `Origin.annotationId` be committed. Rows
+whose value digest did not change are left completely alone, so freshness does
+not fire on a no-op re-run.
+
+`to_store` is a **re-derivation** of the guide, not a merge into it: a step
+that no longer exists is dropped rather than left to be resurrected by the
+next projection. It only ever prunes this asset, this `doc_id`, and the tiers
+that call actually wrote to — so omitting `passes=` leaves an earlier
+speech/music split standing. `prune=False` accumulates instead.
+
+Analysis a `Segmentation` cannot carry rides along as keywords: `passes=`
+(the speech/music split), `beats=`, `transcript=`, `cues=`, `recipes=`. What
+stays on the document and never flows back into the store: `locks`,
+`questions`, `artifacts`, and span `excerpt` windows — those are human
+decisions, not measurements. Full table and rationale in
+`docs/07-annotation-model.md` §6.
+
+`import paces` does not import `lacing`: the core stays pydantic-only, and
+`paces.to_store` resolves the extra on first use.
+
 ## The pieces
 
 | you want | reach for |
@@ -126,6 +180,7 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 | the committed artifact | `to_document(seg, ...)` → `StepDocument` |
 | real clips/gifs/posters for the page | `derive_document(doc, media=..., doc_path=...)` / `paces derive` (`pip install paces[media]`) |
 | auto-crop those clips to the people in frame | `derive(..., subject_locator=paces.pose.rtmlib_pose)` / `--subject-locator paces.pose:rtmlib_pose` (`pip install paces[pose]`) |
+| persist the analysis behind a document | `to_store(seg, store=..., asset_id=...)` / `from_store(store, asset_id=...)` (`pip install paces[lacing]`) |
 | a practice page | `render_html(doc)` |
 | wall-clock times from counts | `resolve(doc)` |
 | sanity checks | `validate_document(doc)` |
@@ -137,6 +192,6 @@ content (`OpenQuestion`), and human edits are protected from regeneration
 Young and moving. The document schema is validated by round-tripping a real
 proof of concept ([an interactive dance-practice
 page](https://thorwhalen.com/que_calor_dance/)) through it — see
-`tests/test_roundtrip_poc.py`. Media derivation (auto-cropped looping clips),
-intrinsic segmenters (scene/beat/speech detection), and the evidence layer
-are designed (see `docs/`) and arrive next.
+`tests/test_roundtrip_poc.py`. Media derivation (auto-cropped looping clips)
+and the evidence layer have landed; intrinsic segmenters (scene/beat/speech
+detection) are designed (see `docs/`) and arrive next.

@@ -116,6 +116,36 @@ __all__ = [
     # editing & regeneration
     "apply_edits",
     "merge_regenerated",
+    # the evidence layer (issue #4) — resolved lazily, needs [lacing]
+    "to_store",
+    "from_store",
+    "StoreWrite",
     # rendering
     "render_html",
 ]
+
+#: The evidence layer's public names and where they live. Resolved on first
+#: attribute access rather than imported here, so ``import paces`` keeps the
+#: pydantic-only core of ADR-0004 — installing ``paces`` must not pull
+#: ``lacing`` in, and asking for ``paces.to_store`` without the ``[lacing]``
+#: extra must fail with an install line rather than an AttributeError.
+_LAZY = {
+    "to_store": "paces.evidence",
+    "from_store": "paces.evidence",
+    "StoreWrite": "paces.evidence",
+    "recipes_from_store": "paces.evidence",
+}
+
+
+def __getattr__(name: str):
+    """Resolve the evidence layer on demand (PEP 562)."""
+    module_name = _LAZY.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    import importlib
+
+    return getattr(importlib.import_module(module_name), name)
+
+
+def __dir__() -> list[str]:
+    return sorted({*globals(), *_LAZY})

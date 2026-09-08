@@ -45,9 +45,11 @@ Path rules (each earned by an adversarial review, PR #11):
   a merge across multiple regenerations; only the most recent ``/id`` lock is
   consulted (issue #12).
 
-Not yet recorded anywhere: the fresh values a merge *rejects*
-(``Origin.value_digest`` and the op-log arrive with the evidence layer,
-issue #4).
+Not yet recorded anywhere: the fresh values a merge *rejects*. The evidence
+they would be recorded against now exists — ``paces.evidence`` fills
+``Origin.annotation_id`` / ``Origin.value_digest`` on every projected step
+(issue #4) — but wiring the *rejected* value into the merge is document-side
+work and belongs with the rest of issue #12.
 """
 
 from __future__ import annotations
