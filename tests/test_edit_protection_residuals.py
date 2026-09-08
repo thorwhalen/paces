@@ -111,6 +111,28 @@ def test_validate_document_does_not_flag_the_typed_confidence_float():
     assert not any("float" in issue for issue in issues)
 
 
+def test_validate_document_does_not_flag_a_lock_was_holding_the_old_confidence():
+    # apply_edits itself writes exactly this: a Lock.was carrying the
+    # pre-edit value of a schema-typed float field (SourceSpan.confidence).
+    doc = _doc(
+        steps=[
+            Step(
+                id="a",
+                name="Step A",
+                duration=Measure(value="2", unit="eight"),
+                spans=[SourceSpan(source="vid", start="10", confidence=0.8)],
+            )
+        ]
+    )
+    edited = apply_edits(
+        doc,
+        [{"op": "set", "path": "/steps/a/spans/0/confidence", "value": 0.9}],
+        by="user:thor",
+    )
+    issues = validate_document(edited)
+    assert not any("float" in issue for issue in issues)
+
+
 def test_validate_document_clean_document_has_no_float_issues():
     assert validate_document(_doc()) == []
 
@@ -169,6 +191,30 @@ def test_apply_edits_allows_renaming_id_to_itself():
     assert [s.id for s in doc.steps] == ["a", "b"]
 
 
+def test_apply_edits_refuses_a_nested_rename_onto_a_top_level_id():
+    doc = _two_step_doc(
+        steps=[
+            Step(
+                id="a",
+                name="Step A",
+                duration=Measure(value="2", unit="eight"),
+                steps=[
+                    Step(id="c", name="Sub", duration=Measure(value="2", unit="eight"))
+                ],
+            ),
+            Step(id="b", name="Step B", duration=Measure(value="2", unit="eight")),
+        ]
+    )
+    # "b" isn't a sibling of "c" (it lives one level up) — the collision must
+    # still be caught document-wide, matching validate_document's own scope.
+    with pytest.raises(ValueError, match="already used"):
+        apply_edits(
+            doc,
+            [{"op": "set", "path": "/steps/a/steps/c/id", "value": "b"}],
+            by="user:thor",
+        )
+
+
 # ── merge after an id rename does not resurrect the old id ──────────────────
 
 
@@ -183,3 +229,26 @@ def test_merge_regenerated_does_not_resurrect_the_pre_rename_id():
     merged = merge_regenerated(committed, fresh)
     assert [s.id for s in merged.steps] == ["a2", "b"]
     assert merged.steps[0].name == "Step A"
+
+
+def test_merge_regenerated_does_not_double_match_when_fresh_has_both_ids():
+    committed = apply_edits(
+        _two_step_doc(),
+        [{"op": "set", "path": "/steps/a/id", "value": "a2"}],
+        by="user:thor",
+    )
+    # Fresh carries BOTH the old id and the already-renamed id (e.g. analysis
+    # caught up and emitted "a2", but a stray "a" is also present) — the
+    # renamed committed step must not be matched twice.
+    fresh = _two_step_doc(
+        steps=[
+            Step(id="a", name="Step A", duration=Measure(value="2", unit="eight")),
+            Step(id="a2", name="Step A", duration=Measure(value="2", unit="eight")),
+            Step(id="b", name="Step B", duration=Measure(value="2", unit="eight")),
+        ]
+    )
+    merged = merge_regenerated(committed, fresh)
+    ids = [s.id for s in merged.steps]
+    assert ids == ["a", "a2", "b"]
+    assert len(ids) == len(set(ids))
+    assert validate_document(merged) == []

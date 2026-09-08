@@ -139,6 +139,18 @@ def _resolve_parent(root: Any, segments: list[str], *, path: str):
     raise ValueError(f"{path}: cannot set into {type(node).__name__}")
 
 
+def _all_steps(steps: list) -> list:
+    """Every step in the tree, depth-first — matching the scope of
+    :func:`~paces.model.validate_document`'s step-id uniqueness check, which
+    is document-wide, not per-sibling-list."""
+    out = []
+    for step in steps:
+        if isinstance(step, Mapping):
+            out.append(step)
+            out.extend(_all_steps(step.get("steps", [])))
+    return out
+
+
 def _containing_list(dump: dict, segments: list[str]) -> list | None:
     """The list holding the item whose own field the leaf segment addresses
     (e.g. for ``/steps/a/id``, the ``steps`` list a and its siblings live in),
@@ -244,21 +256,30 @@ def apply_edits(
         container, key = _resolve_parent(dump, segments, path=raw_path)
         if key == "id" and isinstance(container, Mapping):
             new_id = edit["value"]
-            siblings = _containing_list(dump, segments) or []
+            all_steps = _all_steps(dump.get("steps", []))
+            is_step = any(s is container for s in all_steps)
+            # A step's id is unique document-wide (validate_document enforces
+            # this across the whole tree, not per sibling list) — check the
+            # same scope here. Everything else (sources, cues, questions)
+            # only needs uniqueness within its own list.
+            candidates = (
+                all_steps if is_step else (_containing_list(dump, segments) or [])
+            )
             collision = next(
                 (
-                    sibling
-                    for sibling in siblings
-                    if isinstance(sibling, Mapping)
-                    and sibling is not container
-                    and sibling.get("id") == new_id
+                    candidate
+                    for candidate in candidates
+                    if isinstance(candidate, Mapping)
+                    and candidate is not container
+                    and candidate.get("id") == new_id
                 ),
                 None,
             )
             if collision is not None:
+                scope = "the document" if is_step else "the same list"
                 raise ValueError(
                     f"edits[{i}]: cannot rename id to {new_id!r} — already used "
-                    "by another item in the same list"
+                    f"by another item in {scope}"
                 )
         # The lock site must resolve BEFORE the mutation: an edit may change
         # the very value a segment addresses (renaming a step's id).
@@ -418,16 +439,30 @@ def _merge_steps(committed: list[dict], fresh: list[dict]) -> list[dict]:
         committed_by_id.setdefault(step["id"], step)
     renamed_from = _renamed_from(committed)
     fresh_ids = {step["id"] for step in fresh}
-    matched_committed_ids: set[str] = set()
+
+    # Direct id matches are resolved FIRST and claim their committed step
+    # before any rename substitution runs: if fresh already carries the
+    # renamed id, that's the real match, and a stray fresh entry still using
+    # the old id (analysis emitting both, or simply unrelated) must not also
+    # claim the same committed step — that would merge one committed step
+    # into two output entries with the same id (issue #12, blocking review).
+    matched_committed_ids: set[str] = {
+        committed_by_id[fresh_step["id"]]["id"]
+        for fresh_step in fresh
+        if fresh_step["id"] in committed_by_id
+    }
+
     merged: list[dict] = []
     for fresh_step in fresh:
-        committed_step = committed_by_id.get(fresh_step["id"]) or renamed_from.get(
-            fresh_step["id"]
-        )
+        committed_step = committed_by_id.get(fresh_step["id"])
+        if committed_step is None:
+            candidate = renamed_from.get(fresh_step["id"])
+            if candidate is not None and candidate["id"] not in matched_committed_ids:
+                committed_step = candidate
+                matched_committed_ids.add(candidate["id"])
         if committed_step is None:
             merged.append(copy.deepcopy(fresh_step))
             continue
-        matched_committed_ids.add(committed_step["id"])
         out = copy.deepcopy(fresh_step)
         out["steps"] = _merge_steps(
             committed_step.get("steps", []), fresh_step.get("steps", [])

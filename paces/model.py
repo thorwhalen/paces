@@ -376,8 +376,18 @@ def resolve(doc: StepDocument) -> dict:
 #: Field names whose schema type is deliberately ``float`` (``docs/07 §6.5``
 #: accepts this as a pre-existing hole in the no-floats-on-the-wire rule) —
 #: everywhere else, a Python ``float`` reaching the wire (typically through an
-#: ``attrs`` bag or a ``Lock.was``, both typed ``Any``) is a leak.
+#: ``attrs`` bag or a ``Lock.was``, both typed ``Any``) is a leak. (A float
+#: under an ``attrs`` key that happens to be literally named ``confidence``
+#: slips through this same allowlist — a narrow, accepted gap: distinguishing
+#: it would mean knowing ``attrs`` is user data everywhere it appears.)
 _FLOAT_TYPED_KEYS = frozenset({"confidence"})
+
+#: The keys a ``Lock`` always dumps as (``model_dump(mode="python")``, no
+#: ``exclude_none``) — used to recognise a Lock structurally so ``was`` can be
+#: checked against what ``path`` says it actually holds, not the literal key
+#: name ``"was"`` (a ``Lock`` locking a ``confidence`` field legitimately
+#: carries a float in ``was``).
+_LOCK_DUMP_KEYS = frozenset({"path", "by", "at", "was", "reason"})
 
 
 def _scan_floats(node: Any, path: str, *, key: str | None = None) -> list[str]:
@@ -389,6 +399,15 @@ def _scan_floats(node: Any, path: str, *, key: str | None = None) -> list[str]:
             f"{path}: float value {node!r} on the no-floats wire (use a decimal string)"
         ]
     if isinstance(node, Mapping):
+        if set(node) == _LOCK_DUMP_KEYS and isinstance(node.get("path"), str):
+            was_key = node["path"].rsplit("/", 1)[-1]
+            return [
+                issue
+                for k, v in node.items()
+                for issue in _scan_floats(
+                    v, f"{path}/{k}", key=was_key if k == "was" else k
+                )
+            ]
         return [
             issue
             for k, v in node.items()
@@ -398,7 +417,13 @@ def _scan_floats(node: Any, path: str, *, key: str | None = None) -> list[str]:
         return [
             issue
             for i, v in enumerate(node)
-            for issue in _scan_floats(v, f"{path}/{i}", key=key)
+            for issue in _scan_floats(
+                v,
+                f"{path}/{v['id']}"
+                if isinstance(v, Mapping) and "id" in v
+                else f"{path}/{i}",
+                key=key,
+            )
         ]
     return []
 
