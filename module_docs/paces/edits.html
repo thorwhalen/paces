@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.edits &mdash; paces 0.0.9 documentation</title>
+  <title>paces.edits &mdash; paces 0.0.10 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -15,7 +15,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=f7cdbf68"></script>
+      <script src="../../_static/documentation_options.js?v=a83ce22a"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -24,7 +24,7 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="paces.excerpts" href="excerpts.html" />
+    <link rel="next" title="paces.evidence" href="evidence.html" />
     <link rel="prev" title="paces.derivation" href="derivation.html" /> 
 </head>
 
@@ -51,6 +51,12 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies.html">paces.bodies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies/_base.html">paces.bodies._base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies/derivation.html">paces.bodies.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies/document.html">paces.bodies.document</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies/signal.html">paces.bodies.signal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bodies/step.html">paces.bodies.step</a></li>
 <li class="toctree-l1"><a class="reference internal" href="derivation.html">paces.derivation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">paces.edits</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#paces.edits.SUPPORTED_OPS"><code class="docutils literal notranslate"><span class="pre">SUPPORTED_OPS</span></code></a></li>
@@ -58,6 +64,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#paces.edits.merge_regenerated"><code class="docutils literal notranslate"><span class="pre">merge_regenerated()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="evidence.html">paces.evidence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model.html">paces.model</a></li>
@@ -140,9 +147,11 @@ resurfaces alongside the renamed one. This does not follow renames inside
 a merge across multiple regenerations; only the most recent <code class="docutils literal notranslate"><span class="pre">/id</span></code> lock is
 consulted (issue #12).</p></li>
 </ul>
-<p>Not yet recorded anywhere: the fresh values a merge <em>rejects</em>
-(<code class="docutils literal notranslate"><span class="pre">Origin.value_digest</span></code> and the op-log arrive with the evidence layer,
-issue #4).</p>
+<p>Not yet recorded anywhere: the fresh values a merge <em>rejects</em>. The evidence
+they would be recorded against now exists — <code class="docutils literal notranslate"><span class="pre">paces.evidence</span></code> fills
+<code class="docutils literal notranslate"><span class="pre">Origin.annotation_id</span></code> / <code class="docutils literal notranslate"><span class="pre">Origin.value_digest</span></code> on every projected step
+(issue #4) — but wiring the <em>rejected</em> value into the merge is document-side
+work and belongs with the rest of issue #12.</p>
 <dl class="py data">
 <dt class="sig sig-object py" id="paces.edits.SUPPORTED_OPS">
 <span class="sig-prename descclassname"><span class="pre">paces.edits.</span></span><span class="sig-name descname"><span class="pre">SUPPORTED_OPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('set',)</span></span><a class="headerlink" href="#paces.edits.SUPPORTED_OPS" title="Link to this definition"></a></dt>
@@ -201,7 +210,7 @@ JSON without locks are, deliberately, not protected.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="derivation.html" class="btn btn-neutral float-left" title="paces.derivation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="excerpts.html" class="btn btn-neutral float-right" title="paces.excerpts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="evidence.html" class="btn btn-neutral float-right" title="paces.evidence" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

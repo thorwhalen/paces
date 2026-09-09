@@ -4,8 +4,15 @@
 
    module_docs/paces
    module_docs/paces/__main__
+   module_docs/paces/bodies
+   module_docs/paces/bodies/_base
+   module_docs/paces/bodies/derivation
+   module_docs/paces/bodies/document
+   module_docs/paces/bodies/signal
+   module_docs/paces/bodies/step
    module_docs/paces/derivation
    module_docs/paces/edits
+   module_docs/paces/evidence
    module_docs/paces/excerpts
    module_docs/paces/measure
    module_docs/paces/model

@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>paces.edits &mdash; paces 0.0.9 documentation</title>
+  <title>paces.edits &mdash; paces 0.0.10 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=f7cdbf68"></script>
+      <script src="../../_static/documentation_options.js?v=a83ce22a"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/toggleprompt.js?v=d7ede5d2"></script>
@@ -48,8 +48,15 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces.html">paces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/__main__.html">paces.__main__</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies.html">paces.bodies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies/_base.html">paces.bodies._base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies/derivation.html">paces.bodies.derivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies/document.html">paces.bodies.document</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies/signal.html">paces.bodies.signal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/bodies/step.html">paces.bodies.step</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/derivation.html">paces.derivation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/edits.html">paces.edits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/evidence.html">paces.evidence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/excerpts.html">paces.excerpts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/measure.html">paces.measure</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/paces/model.html">paces.model</a></li>
@@ -132,9 +139,11 @@
 <span class="sd">  a merge across multiple regenerations; only the most recent ``/id`` lock is</span>
 <span class="sd">  consulted (issue #12).</span>
 
-<span class="sd">Not yet recorded anywhere: the fresh values a merge *rejects*</span>
-<span class="sd">(``Origin.value_digest`` and the op-log arrive with the evidence layer,</span>
-<span class="sd">issue #4).</span>
+<span class="sd">Not yet recorded anywhere: the fresh values a merge *rejects*. The evidence</span>
+<span class="sd">they would be recorded against now exists — ``paces.evidence`` fills</span>
+<span class="sd">``Origin.annotation_id`` / ``Origin.value_digest`` on every projected step</span>
+<span class="sd">(issue #4) — but wiring the *rejected* value into the merge is document-side</span>
+<span class="sd">work and belongs with the rest of issue #12.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
