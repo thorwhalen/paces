@@ -199,6 +199,12 @@ line-length = 88
 target-version = "py310"
 exclude = [
     "**/*.ipynb",
+    # Markdown is documentation, not source. Ruff >=0.16 formats the Python
+    # fences inside it, and CI runs an UNPINNED `uvx ruff format .` whose
+    # publish job commits the result — so a fence would be silently rewritten
+    # by whichever ruff shipped that week, and README examples that tests
+    # assert against would drift out from under them on main.
+    "*.md",
     ".git",
     ".venv",
     "build",

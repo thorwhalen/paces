@@ -128,19 +128,20 @@ from lacing import MemoryStore                 # pip install 'paces[lacing]'
 from paces import segment, from_store, to_store
 from paces.model import dumps_document
 
-seg = segment(None, steps=[("Mise en place", 2), ("Déhanchés", 8)], grid=GRID)
+grid = {"unit": "eight", "subdivisions": 8, "tempoBpm": "129.2", "origin": "51.2"}
+asset_sha256 = "a" * 64                        # lacing.hash_file(video) in real use
+seg = segment(None, steps=[("Mise en place", 2), ("Déhanchés", 8)], grid=grid)
 
 store = MemoryStore()                          # or SqliteStore('project.annot')
-write = to_store(seg, store=store, asset_id=asset_sha256,
-                 doc_id="que-calor", title="Que Calor", domain="dance",
-                 source="https://youtu.be/q_TUyxUhoEw")
+guide = dict(doc_id="que-calor", title="Que Calor", domain="dance",
+             source="https://youtu.be/q_TUyxUhoEw")
+
+write = to_store(seg, store=store, asset_id=asset_sha256, **guide)
 
 dumps_document(from_store(store, asset_id=asset_sha256)) == dumps_document(write.document)
 # True — the projection is exact
 
-to_store(seg, store=store, asset_id=asset_sha256, doc_id="que-calor",
-         title="Que Calor", domain="dance",
-         source="https://youtu.be/q_TUyxUhoEw").written
+to_store(seg, store=store, asset_id=asset_sha256, **guide).written
 # 0 — a re-run of the same analysis writes nothing
 ```
 
@@ -154,9 +155,12 @@ not fire on a no-op re-run.
 
 `to_store` is a **re-derivation** of the guide, not a merge into it: a step
 that no longer exists is dropped rather than left to be resurrected by the
-next projection. It only ever prunes this asset, this `doc_id`, and the tiers
-that call actually wrote to — so omitting `passes=` leaves an earlier
-speech/music split standing. `prune=False` accumulates instead.
+next projection. Pruning only ever touches this asset, this `doc_id`, and the
+guide's own tiers. Evidence *about the asset* — the speech/music split, the
+beats, the transcript — is shared by every guide over that asset and is never
+pruned, so one guide can't delete what another's lineage points at; a
+re-measure adds a row under a new content-derived key and the old one stays.
+`prune=False` opts out of the rest.
 
 Analysis a `Segmentation` cannot carry rides along as keywords: `passes=`
 (the speech/music split), `beats=`, `transcript=`, `cues=`, `recipes=`. What

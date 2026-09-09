@@ -44,13 +44,21 @@ Three properties this module is built to hold, each with a test:
   :func:`lacing.annotation_value_digest` is unchanged is left *completely*
   alone — provenance included — so ``generated_at_time`` does not churn and
   freshness does not fire. A second :func:`to_store` of the same input
-  writes nothing.
-- **Re-derivation, not accumulation.** A row this run superseded — a step
-  that no longer exists, a cue that was dropped — is removed, scoped to this
-  asset, this guide, and the tiers this call actually wrote to. `reelee`'s
-  phrasing: *"the graph is a set of nodes whose values are re-derivable, not
-  an append-only log"*. A stale row left behind would come back out of
-  :func:`from_store` as a step nobody analysed. ``prune=False`` opts out.
+  writes nothing. The one exception is lineage: the value digest excludes
+  provenance by design, so a row whose answer held but whose
+  ``was_derived_from`` moved is rewritten (``StoreWrite.relinked``) with its
+  ``generated_at_time`` preserved — otherwise a re-measured pass would leave
+  the grid and its steps pointing at the previous run's inputs.
+- **Re-derivation, not accumulation — for the guide's own rows.** A
+  doc-scoped row this run superseded (a step that no longer exists, a cue
+  that was dropped) is removed: `reelee`'s *"the graph is a set of nodes
+  whose values are re-derivable, not an append-only log"*, and a stale one
+  left behind would come back out of :func:`from_store` as a step nobody
+  analysed. :data:`ASSET_SCOPED_TIERS` — the speech/music split, the beats,
+  the transcript — are **never** pruned: they describe the asset, are shared
+  by every guide over it, and deleting one out from under a sibling guide's
+  ``was_derived_from`` would leave that guide pointing at nothing.
+  ``prune=False`` opts out of the rest.
 - **No floats across the boundary.** Every time crosses as
   ``RationalTime`` ticks at ``rate=`` (lacing non-negotiable #1);
   :meth:`RationalTime.from_seconds` raises rather than rounding, so a
@@ -259,16 +267,34 @@ class StoreWrite:
     written: int  # rows that did not exist
     updated: int  # rows whose value digest changed
     unchanged: int  # rows left completely alone — the idempotence count
+    relinked: int  # rows whose value held but whose upstream moved
     removed: int  # rows this re-derivation superseded and dropped
     annotation_ids: tuple[str, ...]  # every row touched, in write order
 
     @property
     def total(self) -> int:
-        return self.written + self.updated + self.unchanged
+        return self.written + self.updated + self.unchanged + self.relinked
 
 
 class CollidingEvidenceKey(ValueError):
     """Two rows in one run would derive the same annotation id."""
+
+
+#: The provenance fields that say where a row came *from*. Compared on every
+#: digest-gated skip, because ``annotation_value_digest`` deliberately excludes
+#: provenance entirely (``lacing/digest.py``'s ``VALUE_FIELDS``): a row can keep
+#: its exact value while the thing it was derived from moves underneath it.
+_LINEAGE_FIELDS = (
+    "was_generated_by",
+    "was_attributed_to",
+    "was_derived_from",
+    "activity",
+)
+
+
+def _same_lineage(one: Provenance, other: Provenance) -> bool:
+    """Do these two provenances agree on everything except *when*?"""
+    return all(getattr(one, f) == getattr(other, f) for f in _LINEAGE_FIELDS)
 
 
 class _Writer:
@@ -282,6 +308,7 @@ class _Writer:
         self.written = 0
         self.updated = 0
         self.unchanged = 0
+        self.relinked = 0
         self.removed = 0
         self.ids: list[str] = []
         self.touched: set[UUID] = set()
@@ -328,11 +355,32 @@ class _Writer:
         existing = self._index.get(annotation_id)
         if existing is not None:
             if annotation_value_digest(existing) == digest:
-                self.unchanged += 1
-                self._record(annotation_id)
-                return annotation_id, digest
-            self._store.remove(annotation_id)
-            self.updated += 1
+                if _same_lineage(existing.provenance, candidate.provenance):
+                    self.unchanged += 1
+                    self._record(annotation_id)
+                    return annotation_id, digest
+                # Same answer, different upstream. The value digest cannot see
+                # this — provenance is excluded from it by design — so the
+                # gate alone would leave the row pointing at the previous
+                # run's inputs, which is the one thing the edge exists to
+                # answer. Rewrite it, but keep ``generated_at_time``: the
+                # value did not change, so freshness has no business firing.
+                candidate = candidate.model_copy(
+                    update={
+                        "provenance": candidate.provenance.model_copy(
+                            update={
+                                "generated_at_time": (
+                                    existing.provenance.generated_at_time
+                                )
+                            }
+                        )
+                    }
+                )
+                self._store.remove(annotation_id)
+                self.relinked += 1
+            else:
+                self._store.remove(annotation_id)
+                self.updated += 1
         else:
             self.written += 1
         self._store.add(candidate)
@@ -348,16 +396,18 @@ class _Writer:
         """Drop rows on *tiers* this run superseded — a re-derivation, not a merge.
 
         Scoped three ways so it can only ever remove what this call is
-        authoritative for: the asset it was given, the guide it was given
-        (a row carrying another guide's ``doc_id`` is left alone), and the
-        tiers this call actually wrote to.
+        authoritative for: the asset it was given, the guide it was given,
+        and the tiers this call actually wrote to. The ``doc_id`` test is a
+        strict match on the body's own field, so a row that does not carry
+        one is never pruned — see :data:`ASSET_SCOPED_TIERS` for why that
+        matters.
         """
         for annotation in list(self._store.all()):
             if annotation.tier not in tiers or annotation.id in self.touched:
                 continue
             if getattr(annotation.reference, "asset_id", None) != asset_id:
                 continue
-            if annotation.body.get("doc_id") not in (None, doc_id):
+            if annotation.body.get("doc_id") != doc_id:
                 continue
             self._store.remove(annotation.id)
             self._index.pop(annotation.id, None)
@@ -435,9 +485,23 @@ def to_store(
             no longer exists, a cue that was dropped. On by default, because
             ``to_store`` is a **re-derivation** of the guide, not a merge
             into it: a stale row left behind would be resurrected by
-            :func:`from_store` as a step nobody analysed. Only tiers this
-            call actually wrote to are pruned, and only for this asset and
-            this ``doc_id``. Pass ``False`` to accumulate instead.
+            :func:`from_store` as a step nobody analysed. Scoped to this
+            asset, this ``doc_id``, and the doc-scoped tiers this call
+            actually wrote to; :data:`ASSET_SCOPED_TIERS` are never pruned.
+            Pass ``False`` to accumulate instead.
+
+    Note:
+        ``doc_id`` names the guide, so changing it writes a **second** guide
+        rather than renaming the first — the old one is still there, and a
+        later ``from_store(store, asset_id=...)`` without a ``doc_id`` will
+        say so by raising :class:`AmbiguousDocument`. Renaming a guide means
+        writing the new one and dropping the old rows deliberately.
+
+    Concurrency:
+        Not safe against another writer on the same store. The digest index
+        is snapshotted at entry and pruning reads-then-removes, both without
+        a lock, so two concurrent ``to_store`` calls on one asset can delete
+        each other's rows. Serialise them, or give each its own store.
         rate: Ticks per second for every interval. Raises rather than
             rounding if a time cannot be represented exactly.
 
@@ -449,7 +513,9 @@ def to_store(
         seg, doc_id=doc_id, title=title, source=source, domain=domain, lang=lang
     )
     if cues:
-        document = document.model_copy(update={"cues": [_as_cue(cue) for cue in cues]})
+        document = document.model_copy(
+            update={"cues": [_as_cue(cue, rate=rate) for cue in cues]}
+        )
 
     register_tiers(store)
     writer = _Writer(
@@ -539,13 +605,7 @@ def to_store(
         writer.prune(
             asset_id=asset_id,
             doc_id=doc_id,
-            tiers=_prunable_tiers(
-                passes=passes,
-                beats=beats,
-                transcript=transcript,
-                cues=document.cues,
-                recipes=recipes,
-            ),
+            tiers=_prunable_tiers(cues=document.cues, recipes=recipes),
         )
 
     return StoreWrite(
@@ -553,36 +613,51 @@ def to_store(
         written=writer.written,
         updated=writer.updated,
         unchanged=writer.unchanged,
+        relinked=writer.relinked,
         removed=writer.removed,
         annotation_ids=tuple(writer.ids),
     )
 
 
-#: Tiers every ``to_store`` writes, because they are projected from the
-#: ``Segmentation`` itself — a re-derivation is authoritative over all of them.
+#: Tiers whose rows describe **the asset**, not one guide over it: the
+#: speech/music split of a video, its beat times, its transcript. Their bodies
+#: carry no ``doc_id`` on purpose — two guides over the same video share one
+#: transcript rather than duplicating it — and that is exactly why they are
+#: never pruned. Pruning is per-guide, and a guide has no authority to delete
+#: evidence another guide's annotations were derived from; deleting a pass row
+#: out from under a sibling guide's ``was_derived_from`` would leave it
+#: pointing at nothing. A re-measure that moves a boundary therefore *adds* a
+#: row under a new content-derived key and leaves the old one standing, where
+#: provenance still says which run used which.
+ASSET_SCOPED_TIERS = frozenset({PASS_TIER, BEAT_TIER, WORD_TIER})
+
+#: Tiers whose rows belong to exactly one guide (every body carries a
+#: ``doc_id``) and which a re-derivation of that guide is therefore
+#: authoritative over.
+DOC_SCOPED_TIERS = frozenset(
+    {DOC_TIER, SOURCE_TIER, GRID_TIER, STEP_TIER, SUB_STEP_TIER, CUE_TIER, RECIPE_TIER}
+)
+
+#: The doc-scoped tiers every ``to_store`` writes, because they are projected
+#: from the ``Segmentation`` itself.
 _ALWAYS_WRITTEN_TIERS = frozenset(
     {DOC_TIER, SOURCE_TIER, GRID_TIER, STEP_TIER, SUB_STEP_TIER}
 )
 
 
-def _prunable_tiers(*, passes, beats, transcript, cues, recipes) -> set[str]:
+def _prunable_tiers(*, cues, recipes) -> set[str]:
     """Which tiers this call may prune: the ones it is authoritative over.
 
-    A tier fed by a keyword is prunable only when that keyword was supplied.
-    Omitting ``passes=`` therefore leaves an earlier speech/music split
-    standing rather than silently deleting it — "a re-derivation replaces
-    what it re-derives", and it re-derives what it was given.
+    Doc-scoped only (:data:`ASSET_SCOPED_TIERS` explains the exclusion), and
+    within those, a tier fed by a keyword is prunable only when that keyword
+    was supplied: "a re-derivation replaces what it re-derives", and it
+    re-derives what it was given.
     """
     tiers = set(_ALWAYS_WRITTEN_TIERS)
-    for supplied, tier in (
-        (passes, PASS_TIER),
-        (beats, BEAT_TIER),
-        (transcript, WORD_TIER),
-        (cues, CUE_TIER),
-        (recipes, RECIPE_TIER),
-    ):
+    for supplied, tier in ((cues, CUE_TIER), (recipes, RECIPE_TIER)):
         if supplied:
             tiers.add(tier)
+    assert tiers <= DOC_SCOPED_TIERS  # the invariant this function exists for
     return tiers
 
 
@@ -595,8 +670,20 @@ def _bind_put(writer: _Writer, *, asset_id: str):
     return put
 
 
-def _as_cue(cue: Cue | Mapping[str, Any]) -> Cue:
-    return cue if isinstance(cue, Cue) else Cue.model_validate(dict(cue))
+def _as_cue(cue: Cue | Mapping[str, Any], *, rate: int) -> Cue:
+    """A cue in the store's own spelling of its time.
+
+    ``at_s`` is the one caller-supplied *time* that reaches the returned
+    document — spans arrive already canonical from
+    :func:`~paces.projection.to_document`. Passing it through the tick round
+    trip here is what keeps ``StoreWrite.document`` and :func:`from_store`
+    literally identical rather than merely equivalent: a hand-written
+    ``"60.50"`` becomes ``"60.5"`` on the way in, not on the way back out.
+    """
+    cue = cue if isinstance(cue, Cue) else Cue.model_validate(dict(cue))
+    if cue.at_s is None:
+        return cue
+    return cue.model_copy(update={"at_s": _decimal(_ticks(cue.at_s, rate=rate))})
 
 
 def _document_span(document: StepDocument) -> tuple[str, str] | None:

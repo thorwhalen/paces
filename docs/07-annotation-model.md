@@ -592,6 +592,24 @@ these are standoff annotations, and the interval lives on `Annotation.reference`
 float crosses the boundary — times become `RationalTime` ticks at an injectable `rate=`
 (default 24000), where a value the rate cannot hold exactly raises rather than rounding.
 
+*Consequence worth stating, because it will surprise someone:* the boundary is decimal
+strings both ways (§6.5's wire rule), so a time with **no finite decimal form** — a third
+of a second, say — is refused with `LossyTimeConversionError` at *every* rate, not just at
+24000. Raising the rate does not help; a third of a second is not a decimal at any of them.
+This is the wire rule doing exactly what it was written for, and the honest answer is to
+record the value the analysis actually measured (`"0.333"`), not a fraction the document
+cannot spell.
+
+**Two scopes, and pruning reads the difference.** A `to_store` is a re-derivation *of one
+guide*, so it drops that guide's rows it no longer produces — otherwise `from_store` would
+resurrect a step nobody analysed. But `source.pass`, `beat` and `transcript.word` describe
+the **asset**, carry no `doc_id` on purpose (two guides over one video share one
+transcript), and are therefore never pruned: deleting a pass row out from under a sibling
+guide's `was_derived_from` would leave that guide's grid and steps pointing at nothing. A
+re-measure adds a row under a new content-derived key and leaves the old one standing,
+where provenance still says which run used which. `tests/test_evidence.py` holds the
+partition — a new tier must be classified into one scope or the other.
+
 **What does not flow into the store**: `locks`, `questions`, `artifacts`, and span
 `excerpt` windows. Those are document-layer records — a human edit, an open question, a
 built file, a hand-picked loop — and §6.0's one-way rule is what says so.
@@ -610,15 +628,22 @@ side and ship with the edit-protection work (`paces/edits.py`).
    and paces leaves the row *completely* untouched, provenance included, so
    `generated_at_time` does not churn and freshness does not fire. A second `to_store` of
    the same input writes zero annotations.
+   **One exception, and it is the digest's own blind spot:** `VALUE_FIELDS` excludes
+   provenance, so a row can keep its exact value while the thing it was derived from moves
+   underneath it — re-measure the music pass and the grid's body is unchanged, but the pass
+   it cites is not the pass that produced it any more. paces compares `was_derived_from`
+   (and the rest of provenance bar the timestamp) on every digest-gated skip and rewrites
+   the row when it differs, keeping `generated_at_time` so freshness still does not fire on
+   a value that did not change. `StoreWrite.relinked` counts those, kept separate from
+   `updated` so idempotence stays a clean zero.
 3. Changed digest ⇒ the regenerated annotation replaces the one it supersedes **under the
    same id**, so downstream `was_derived_from` edges keep resolving. `reelee` does this
    procedurally (`_adopt_output_identity`); with a derived id it holds by construction, and
    `to_store` is reproducible from a fresh store as a bonus.
-   A row the re-run no longer produces is *removed*, not left behind — `reelee`'s
-   *"the graph is a set of nodes whose values are re-derivable, not an append-only log"*,
-   applied. Pruning is scoped to the asset, the `doc_id`, and the tiers that run actually
-   wrote to, so omitting an optional evidence kwarg cannot delete an earlier producer's
-   rows.
+   A doc-scoped row the re-run no longer produces is *removed*, not left behind —
+   `reelee`'s *"the graph is a set of nodes whose values are re-derivable, not an
+   append-only log"*, applied. Pruning is scoped to the asset, the `doc_id`, and the
+   doc-scoped tiers that run actually wrote to; asset-scoped evidence is exempt (§6.3).
 4. Re-project to a candidate `StepDocument`.
 5. Three-way merge against the committed document: for every `Lock.path` on a node, keep the
    committed value and record `Origin.value_digest` of what was rejected. For everything else,
