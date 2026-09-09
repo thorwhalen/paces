@@ -608,7 +608,10 @@ transcript), and are therefore never pruned: deleting a pass row out from under 
 guide's `was_derived_from` would leave that guide's grid and steps pointing at nothing. A
 re-measure adds a row under a new content-derived key and leaves the old one standing,
 where provenance still says which run used which. `tests/test_evidence.py` holds the
-partition — a new tier must be classified into one scope or the other.
+partition — a new tier must be classified into one scope or the other. The open cost of
+that exemption — superseded asset-level rows never retire, so a consumer reading one of
+those tiers directly sees every generation at once — is issue #25; the projection is
+unaffected, since `from_store` does not read them.
 
 **What does not flow into the store**: `locks`, `questions`, `artifacts`, and span
 `excerpt` windows. Those are document-layer records — a human edit, an open question, a

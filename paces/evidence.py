@@ -629,6 +629,13 @@ def to_store(
 #: pointing at nothing. A re-measure that moves a boundary therefore *adds* a
 #: row under a new content-derived key and leaves the old one standing, where
 #: provenance still says which run used which.
+#:
+#: The cost, and it is a real one: superseded rows here have no retirement
+#: path, so a consumer reading one of these tiers *directly* sees every
+#: generation superimposed. :func:`from_store` never reads them, so the
+#: projection is unaffected — but nothing in a row says which measurement is
+#: current, and the fix (a GC verb, a run marker, or a ruling that these
+#: tiers are append-only by design) is thorwhalen/paces#25, sibling of #24.
 ASSET_SCOPED_TIERS = frozenset({PASS_TIER, BEAT_TIER, WORD_TIER})
 
 #: Tiers whose rows belong to exactly one guide (every body carries a
