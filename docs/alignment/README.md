@@ -1,7 +1,7 @@
 # Alignment research
 
 *What this folder is for: preparation for a possible dedicated **alignment tool** in the
-`video_gen` / reelee fleet — the thing that answers "given some artifacts and some media,
+`av` (formerly `video_gen`) / reelee fleet — the thing that answers "given some artifacts and some media,
 which span of the media does each artifact correspond to?". The decision to build it is
 recorded as an intent in `../adr/0001-alignment-engine-as-a-fleet-package.md`; **read that
 first**, then come here for the method-by-method detail.*

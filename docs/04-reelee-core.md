@@ -3,7 +3,7 @@
 **What this file is for.** You are about to design a library that turns instructional media (a
 video of a choreographer + a doc + a steering prompt) into an intermediate annotated
 representation and then renders that into guides. The user wants it to live in — or at least
-integrate with — the `video_gen` federation whose top application package is **reelee**. This
+integrate with — the `av` (formerly `video_gen`) federation whose top application package is **reelee**. This
 file is a first-hand read of the reelee codebase (and its two siblings `reelee-org`,
 `reelee-web`) so you do not have to rediscover: what reelee actually is, what a *genre* is
 (it's an `nw` concept, not a reelee one), what a project is on disk, whether the

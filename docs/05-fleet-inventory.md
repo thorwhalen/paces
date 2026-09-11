@@ -1,4 +1,4 @@
-# 05 — The `video_gen` fleet: what already exists
+# 05 — The `av` fleet (formerly `video_gen`): what already exists
 
 **What this file is for.** You are about to design and build `stepped`, a library that
 parses instructional media (a video + a doc + a steering prompt) into a time-aligned
@@ -32,8 +32,8 @@ behaviour, and whether the module graph has real depth.
 
 **Two corrections to your brief.**
 
-1. The member list you were given is not the `video_gen` workspace. The real file,
-   `$PP/vs_workspaces/video_gen.code-workspace`, also contains **`reelee`**
+1. The member list you were given is not the `av` workspace. The real file,
+   `$PP/vs_workspaces/av.code-workspace`, also contains **`reelee`**
    (`$PP/tt/reelee`) and **`reelee-web`** (`$PP/tt/reelee-web`). A parallel manifest at
    `~/.cache/reelee-review-main/docs/video_gen_manifest.json` adds **`wrapex`** (legacy,
    superseded by `acture`). `reelee` is the most relevant package in the fleet and was
@@ -575,7 +575,7 @@ acquire (yb) ─► pose (rtmlib / YOLO, tracked tori/uke) ─► segment (motio
 |---|---|---|
 | `acquire.py` | `download_techniques(...)`, `download_source(...)`, `list_techniques(...)`, `local_clips(dir)`, `canonical_technique_key(title)` | Thin wrapper over `yb.download`, keeping the source URL with every clip. |
 | `pose.py` / `track.py` | `PoseSequence`, `estimate_poses(video)`, `estimate_poses_tracked(video, source_url=…)`, `identity_swap_rate(seq)` | Pose extraction with persistent person identity — **the obvious enrichment for a dance-step AST**. |
-| `segment.py` | `pose_motion_energy(seq)`, `optical_flow_energy(video, frame_range=…)`, `find_segments(energy, frames, fps, **kw)`, `self_similarity_matrix`, `estimate_period`, `segment_demonstrations(seq, *, min_two_person_frac=0.0, use_optical_flow=False, **kw)`, `Segment` | **Unsupervised segmentation of a continuous take into repeated moves.** Hysteresis thresholding so slow-motion reps are not split; a RepNet-style autocorrelation cross-check on rep count. A *better* fit for "segment a dance run-through" than anything in the `video_gen` fleet. |
+| `segment.py` | `pose_motion_energy(seq)`, `optical_flow_energy(video, frame_range=…)`, `find_segments(energy, frames, fps, **kw)`, `self_similarity_matrix`, `estimate_period`, `segment_demonstrations(seq, *, min_two_person_frac=0.0, use_optical_flow=False, **kw)`, `Segment` | **Unsupervised segmentation of a continuous take into repeated moves.** Hysteresis thresholding so slow-motion reps are not split; a RepNet-style autocorrelation cross-check on rep count. A *better* fit for "segment a dance run-through" than anything in the `av` fleet. |
 | `compare.py` | `joint_angles(kp)`, `angle_features(seq)`, `compare(a, b) -> dict` (DTW distance + warping path), `distance_matrix(seqs)`, `per_angle_deviation(result)`, `time_stretch(...)` | "Am I doing it right?" scoring. Honest caveat in the docstring: 2D joint angles are **not** viewpoint-invariant. |
 | `store.py` | `pose_store(dir)`, `segments_store(dir)`, `sequence_to_tidy_df(seq)`, `sequence_to_parquet_bytes`, `load_all_tidy(store)`, `check_tidy_integrity`, `store_integrity_report()` | dol-backed; tidy/long Parquet as the analysis SSOT. |
 | `viz.py` | `render_skeleton_video(seq, out_path=…, source_video=…, blank_canvas=…)`, `log_to_rerun(...)` | A skeleton-on-blank-canvas render **is** a face-anonymised, stylized clip — free and deterministic, as an alternative to the AnimeGAN path. |
