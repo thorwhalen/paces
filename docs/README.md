@@ -13,7 +13,7 @@ a dance, plus a hand-written HTML aide-mémoire, plus a paragraph of steering pr
 deployed interactive practice page: <https://thorwhalen.com/que_calor_dance/>.
 
 The user now wants that generalised into a library, integrated with the **reelee** /
-`video_gen` fleet. Your job is to research, design and build it. **This folder exists so you
+`av` (formerly `video_gen`) fleet. Your job is to research, design and build it. **This folder exists so you
 do not start from scratch.** It records what was built, the parameters that were expensive to
 find, the failures and what each one teaches, the user's own framing of the generalisation,
 and an inventory of what already exists in the fleet.
@@ -28,7 +28,7 @@ Nothing here is a design you must follow. It is evidence and framing. Argue with
 | 2 | **`03-design-brief.md`** | The user's own framing: the parse→AST→render metaphor they explicitly asked to have recorded, the three generalisation axes, and the constraints the POC discovered. |
 | 3 | **`04-reelee-core.md`** | What reelee is, what a reelee "genre" is, and what to reuse. **This determines the package boundary**, so read it before deciding anything structural. |
 | 4 | **`07-annotation-model.md`** | The proposed shape of the AST — the contract between analysis and rendering. |
-| 5 | **`05-fleet-inventory.md`** | What already exists across `video_gen`, and honestly which parts are stubs. |
+| 5 | **`05-fleet-inventory.md`** | What already exists across `av`, and honestly which parts are stubs. |
 | 6 | **`02-technical-recipes.md`** | Every technique with working parameters. Reference, not narrative — come back to it when implementing. |
 | 7 | **`06-surfaces-and-conventions.md`** | House style: architecture-first seams, qh, py2mcp, storage, frontend, deploy. |
 | 8 | **`08-naming-candidates.md`** | PyPI-verified name options, and a better word for the "subject" axis. |
@@ -37,7 +37,7 @@ Nothing here is a design you must follow. It is evidence and framing. Argue with
 | — | **`adr/`** | The decisions. **`0003` `video + segmenter`** — read it before designing the analysis phase. `0002` the name. `0001` the alignment engine (intent) — note that much of what you'd otherwise build already exists in `muvid`, `mixing` and `kodokan`. |
 | — | **`alignment/`** | The research behind that ADR: one file per method family, prepared so you don't start from a literature search. |
 | — | **`KICKOFF.md`** | A paste-ready prompt to start a fresh session on this. |
-| — | **`REGISTRATION.md`** | **One command still pending** to register `paces` in the `video_gen` group, and why `priv pkg add-package` is deliberately deferred. |
+| — | **`REGISTRATION.md`** | **One command still pending** to register `paces` in the `av` group, and why `priv pkg add-package` is deliberately deferred. |
 | — | **`poc-reference/`** | The actual scripts and data. Read `poc-reference/README.md` first — several of those files are recorded dead ends. |
 
 ## The one-paragraph version

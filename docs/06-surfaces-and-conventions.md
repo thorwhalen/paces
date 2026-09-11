@@ -710,7 +710,7 @@ From `python-project-structure`, `python-iterables`, `python-storage` and the us
 
 **Ecosystem plugin pattern, if you need one:** `xdol.Registry` — a typed, dict-backed
 `MutableMapping` plugin registry with `on_conflict` policy and `subscribe()`
-(`$PP/i/xdol/xdol/registry.py:134`, VERIFIED). The video_gen
+(`$PP/i/xdol/xdol/registry.py:134`, VERIFIED). The `av` (formerly `video_gen`)
 workspace overview names it "the ecosystem-wide plugin pattern". Note the tension with
 `architecture-first` test 2 (a seam that grew a registry means you over-built) — a Registry is
 justified when *third parties* register into it (as genres do in `nw`), not to make your own
@@ -814,8 +814,8 @@ Facts you need up front:
 ## 13. Fleet context you should not re-discover
 
 - The federation overview lives at
-  `$PP/t/priv/data/groups/video_gen/workspace_overview.md`
-  (note: `t/priv/data/…`, **not** `t/priv/priv/data/…`). It has the ASCII stack diagram,
+  `$PP/g/av/workspace_overview.md`
+  (the `av` group repo; formerly `t/priv/data/groups/video_gen/`). It has the ASCII stack diagram,
   ~22 packages with one concern each, and the **prime directive**: *"We work from the top of
   the stack but do as little work as possible in either [app]. Whenever something looks like
   it could be useful to a second application — or already has a natural home in the substrate

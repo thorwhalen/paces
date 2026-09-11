@@ -1,7 +1,7 @@
 # Fleet registration — DONE (kept as the record of how and why)
 
 *Status as of 2026-08-29 (kickoff session): **all registration is complete.** The
-`video_gen` group membership landed (the manifest lists `t/paces`), the package was
+`av` (formerly `video_gen`) group membership landed (the manifest lists `t/paces`), the package was
 scaffolded (`pyproject.toml` + wads CI), `priv pkg add-package` ran with it, and the PyPI
 name was claimed by an actual publish (paces 0.0.1). The interpreter breakage described at
 the bottom turned out to be scoped: the pyenv fallback outside `$HOME` is broken, but the
@@ -11,26 +11,26 @@ The sections below are kept as the reasoning of record.*
 ## Do now — one command
 
 ```bash
-priv group add video_gen $PP/t/paces
+priv group add av $PP/t/paces
 ```
 
 That is the whole registration for a docs-only package. It edits the **SSOT**
-(`$PP/t/priv/data/groups/video_gen/manifest.json`, git-tracked in `thorwhalen/priv`) and
+(`$PP/g/av/manifest.json`, git-tracked in `thorwhalen/av`) and
 regenerates the workspace from it.
 
-Then commit the SSOT change in the `priv` repo — it is tracked, so leaving it dirty is drift:
+Then commit the SSOT change in the `av` group repo — it is tracked, so leaving it dirty is drift:
 
 ```bash
-cd $PP/t/priv && git status --short data/groups/video_gen/manifest.json
+cd $PP/g/av && git status --short manifest.json
 ```
 
 ### Do NOT hand-edit the workspace file
 
-`$PP/vs_workspaces/video_gen.code-workspace` is a **symlink** to
-`$PP/t/priv/data/groups/video_gen/video_gen.code-workspace`, which is **generated** by
+`$PP/vs_workspaces/av.code-workspace` is a **symlink** to
+`$PP/g/av/av.code-workspace`, which is **generated** by
 `_generate_code_workspace()` (`priv/group.py:381`) from the manifest, and is gitignored
-(`t/priv/.gitignore:128`). Any hand-edit is destroyed by the next
-`priv group materialize video_gen` — the same failure mode `CLAUDE.md` warns about for
+(`*.code-workspace` in the group repo's `.gitignore`). Any hand-edit is destroyed by the next
+`priv group materialize av` — the same failure mode `CLAUDE.md` warns about for
 `my_packages.pth`.
 
 ## Do NOT do yet — `priv pkg add-package`
